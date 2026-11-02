@@ -1,0 +1,122 @@
+# 只写与 detekt 默认配置不同的部分，Compose 相关的取值参考 https://detekt.dev/docs/introduction/compose
+
+complexity:
+  # 布局树天然又长又多分支，参数则来自状态提升，这三条只约束非 Composable 函数。
+  CyclomaticComplexMethod:
+    ignoreAnnotated: ['Composable']
+  LongMethod:
+    ignoreAnnotated: ['Composable']
+  LongParameterList:
+    ignoreAnnotated: ['Composable']
+  # 页面文件由许多私有 Composable 组成，只计算对外暴露的函数。
+  TooManyFunctions:
+    ignorePrivate: true
+    ignoreAnnotatedFunctions: ['Preview']
+
+exceptions:
+  # 仓库和 ViewModel 是失败边界，要把各种异常收敛成界面反馈，并先重新抛出 CancellationException。
+  TooGenericExceptionCaught:
+    active: false
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Z][A-Za-z0-9]*'
+
+style:
+  MagicNumber:
+    ignoreAnnotated: ['Preview']
+    ignoreEnums: true
+  # 卫语句有助于展平嵌套，不计入次数。
+  ReturnCount:
+    excludeGuardClauses: true
+  ThrowsCount:
+    excludeGuardClauses: true
+  UnusedPrivateFunction:
+    ignoreAnnotated: ['Preview']
+
+Compose:
+  ComposableAnnotationNaming:
+    active: true
+  ComposableNaming:
+    active: true
+  ComposableParamOrder:
+    active: true
+  CompositionLocalAllowlist:
+    active: true
+    allowedCompositionLocals: LocalIsBlurEnabled,LocalIsDarkTheme
+  CompositionLocalNaming:
+    active: true
+  ConditionHoist:
+    active: true
+  ContentEmitterReturningValues:
+    active: true
+  ContentSlotReused:
+    active: true
+  ContentTrailingLambda:
+    active: true
+  DefaultsVisibility:
+    active: true
+  InvalidReadOnlyComposable:
+    active: true
+  LambdaParameterEventTrailing:
+    active: true
+  LambdaParameterInRestartableEffect:
+    active: true
+  MissingNonRestartableComposable:
+    active: true
+  MissingReadOnlyComposable:
+    active: true
+  ModifierClickableOrder:
+    active: true
+  ModifierComposed:
+    active: true
+  # 整页、弹层和几个专用小组件目前都没有调用方需要 modifier，等真正需要时再加。
+  ModifierMissing:
+    active: false
+  ModifierNaming:
+    active: true
+  ModifierNotUsedAtRoot:
+    active: true
+  ModifierReused:
+    active: true
+  ModifierShouldBeForwardedToEveryBranch:
+    active: true
+  ModifierWithoutDefault:
+    active: true
+  MultipleEmitters:
+    active: true
+  MutableParams:
+    active: true
+  MutableStateAutoboxing:
+    active: true
+  MutableStateParam:
+    active: true
+  # onDismissFinished 与 Miuix 弹层的同名参数保持一致。
+  ParameterNaming:
+    active: true
+    allowedLambdaParameterNames: onDismissFinished
+  PreviewAnnotationNaming:
+    active: true
+  PreviewPublic:
+    active: true
+  RememberContentMissing:
+    active: true
+  RememberMissing:
+    active: true
+  StaleRememberUpdatedStateInRemember:
+    active: true
+  StateParam:
+    active: true
+  UnnecessaryComposable:
+    active: true
+  UnnecessaryLaunchedEffect:
+    active: true
+  VarsWithoutStateBacking:
+    active: true
+  ViewModelForwarding:
+    active: true
+  # XxxRoute 就是注入层，可测试的是无状态的 XxxPage。
+  ViewModelInjection:
+    active: false

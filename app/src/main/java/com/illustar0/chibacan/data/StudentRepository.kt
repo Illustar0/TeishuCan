@@ -17,9 +17,15 @@ import kotlinx.coroutines.flow.StateFlow
 @Singleton
 class StudentRepository @Inject constructor(
     private val session: ZzuSession,
+    snapshots: SignInSnapshotStore,
     @ApplicationScope scope: CoroutineScope,
 ) {
-    private val cache = SignInCache(session.state, scope, StudentData())
+    private val cache = SignInCache(
+        session.state,
+        scope,
+        StudentData(),
+        snapshots.file("student.json", StudentData.serializer()),
+    )
     val student: StateFlow<StudentData> = cache.value
 
     suspend fun refresh() = session.request(CampusFeature.CampusCard) {

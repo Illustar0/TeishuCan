@@ -11,7 +11,8 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
-private val StoreJson = Json {
+/** 本机存储共用的 JSON 格式：容忍旧版本写下的多余字段和未知枚举值。 */
+internal val StoreJson = Json {
     ignoreUnknownKeys = true
     coerceInputValues = true
 }

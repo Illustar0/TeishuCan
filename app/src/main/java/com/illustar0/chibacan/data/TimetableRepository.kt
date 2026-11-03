@@ -26,14 +26,21 @@ import kotlinx.datetime.toJavaDayOfWeek
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalTime
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.serializer
 import kotlin.time.Instant
 
 @Singleton
 class TimetableRepository @Inject constructor(
     private val session: ZzuSession,
+    snapshots: SignInSnapshotStore,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
-    private val cache = SignInCache<List<TimetableTerm>>(session.state, scope, emptyList())
+    private val cache = SignInCache(
+        session.state,
+        scope,
+        emptyList(),
+        snapshots.file("timetable.json", serializer<List<TimetableTerm>>()),
+    )
 
     /** 按校历排列的可选学期，含已加载的每周课程。 */
     val terms: StateFlow<List<TimetableTerm>> = cache.value

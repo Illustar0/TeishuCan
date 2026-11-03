@@ -67,10 +67,12 @@ internal class SignIn(override val clients: ZzuClients, val session: StoredSessi
  * 只读本机就能恢复登录，离线启动不会掉线，令牌留到第一次请求时再激活。
  *
  * 这里也是学生资料的唯一来源：资料与令牌一起存在 [SignIn.session] 中，界面从 [account] 读取。
+ * 其余数据的快照 [snapshots] 同样只在登录期间存在，登录结束时一并删除。
  */
 @Singleton
 class ZzuSession @Inject constructor(
     private val store: EncryptedSessionStore,
+    private val snapshots: SignInSnapshotStore,
     @ApplicationScope scope: CoroutineScope,
 ) {
     private val mutableState = MutableStateFlow<SessionState>(SessionState.Restoring)
@@ -91,7 +93,7 @@ class ZzuSession @Inject constructor(
 
     init {
         scope.launch {
-            mutableState.value = try {
+            val restored = try {
                 restoredState()
             } catch (cause: CancellationException) {
                 throw cause
@@ -99,6 +101,9 @@ class ZzuSession @Inject constructor(
                 Log.w(Tag, "Could not restore the saved session", cause)
                 SessionState.SignedOut
             }
+            // 删除存档后、删除快照前进程被杀，快照就会失去主人。
+            if (restored == SessionState.SignedOut) snapshots.clear()
+            mutableState.value = restored
         }
     }
 
@@ -229,12 +234,14 @@ class ZzuSession @Inject constructor(
         replaceState(SessionState.SignedOut) { it.clients === owner }
     }
 
-    /** 当前状态满足 [condition] 时切换到 [next]，同时删除被替换登录的存档并释放它的客户端。 */
+    /** 当前状态满足 [condition] 时切换到 [next]，同时删除被替换登录的存档与快照并释放它的客户端。 */
     private suspend fun replaceState(next: SessionState, condition: (SessionState) -> Boolean = { true }) {
         val replaced = transition {
             mutableState.value.takeIf(condition)?.also { current ->
                 if (current is SignIn) store.clear()
                 mutableState.value = next
+                // 先切换状态再删快照：此后的写入都会发现登录已结束而放弃。
+                if (current is SignIn) snapshots.clear()
             }
         }
         replaced?.clients?.close()

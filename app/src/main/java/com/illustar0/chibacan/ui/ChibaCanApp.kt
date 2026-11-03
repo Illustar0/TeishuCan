@@ -20,9 +20,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.illustar0.chibacan.R
@@ -30,6 +28,7 @@ import com.illustar0.chibacan.domain.AccountState
 import com.illustar0.chibacan.domain.ThemeSettings
 import com.illustar0.chibacan.ui.component.FailureToasts
 import com.illustar0.chibacan.ui.component.OutcomeHaptics
+import com.illustar0.chibacan.ui.component.isWideWindow
 import com.illustar0.chibacan.ui.component.liquid.LiquidGlassNavigationBar
 import com.illustar0.chibacan.ui.home.HomeRoute
 import com.illustar0.chibacan.ui.home.SignedOutHomePage
@@ -297,15 +296,6 @@ private fun AppBottomBar(
             }
         }
     }
-}
-
-private const val WideWindowMaxAspectRatio = 1.2f
-
-/** 沿用 Miuix 示例应用的分栏断点。 */
-@Composable
-private fun isWideWindow(): Boolean {
-    val size = LocalWindowInfo.current.containerDpSize
-    return size.width >= 840.dp || (size.width >= 600.dp && size.height / size.width < WideWindowMaxAspectRatio)
 }
 
 @Composable

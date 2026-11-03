@@ -215,19 +215,21 @@ private fun EntryCell(
         showIndication = true,
         onClick = onClick,
     ) {
+        // 标题占满剩余高度，把地点压到卡片底部；空间不足时先截断标题，保住门牌号
         Text(
             text = entry.title,
-            modifier = Modifier.weight(1f, fill = false),
+            modifier = Modifier.weight(1f),
             color = colors.entryContentColor,
+            fontWeight = FontWeight.Medium,
             overflow = TextOverflow.Ellipsis,
             style = MiuixTheme.textStyles.footnote2,
         )
         if (entry.location != null) {
             Text(
                 text = entry.location,
-                color = colors.entryContentColor,
+                color = colors.entryLocationColor,
                 overflow = TextOverflow.Ellipsis,
-                maxLines = 1,
+                maxLines = TimetableDefaults.LocationMaxLines,
                 style = MiuixTheme.textStyles.footnote2,
             )
         }
@@ -254,6 +256,17 @@ object TimetableDefaults {
     /** 课程卡片的内边距。 */
     val EntryPadding = 4.dp
 
+    /** 地点最多显示的行数，两行足以放下“楼名_门牌号”而不截掉门牌号。 */
+    const val LocationMaxLines = 2
+
+    /**
+     * 地点文字相对课程名的不透明度。
+     *
+     * Miuix 没有与 tertiaryContainer 配对的次要文字 token，这里沿用浅色主题下
+     * onSurfaceVariantSummary 相对正文的 60% 不透明度。
+     */
+    private const val LocationAlpha = 0.6f
+
     /** [Timetable] 的默认颜色。 */
     @Composable
     fun timetableColors(
@@ -262,6 +275,7 @@ object TimetableDefaults {
         periodColor: Color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         entryColor: Color = MiuixTheme.colorScheme.tertiaryContainer,
         entryContentColor: Color = MiuixTheme.colorScheme.onTertiaryContainer,
+        entryLocationColor: Color = entryContentColor.copy(alpha = LocationAlpha),
         gridLineColor: Color = MiuixTheme.colorScheme.dividerLine,
     ): TimetableColors = remember(
         dayColor,
@@ -269,6 +283,7 @@ object TimetableDefaults {
         periodColor,
         entryColor,
         entryContentColor,
+        entryLocationColor,
         gridLineColor,
     ) {
         TimetableColors(
@@ -277,6 +292,7 @@ object TimetableDefaults {
             periodColor = periodColor,
             entryColor = entryColor,
             entryContentColor = entryContentColor,
+            entryLocationColor = entryLocationColor,
             gridLineColor = gridLineColor,
         )
     }
@@ -289,5 +305,6 @@ data class TimetableColors(
     val periodColor: Color,
     val entryColor: Color,
     val entryContentColor: Color,
+    val entryLocationColor: Color,
     val gridLineColor: Color,
 )

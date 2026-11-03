@@ -17,12 +17,13 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
+import kotlin.time.Instant
 
 private const val Tag = "ChibaCan.Snapshot"
 
-/** [account] 登录期间查询到的 [value]。 */
+/** [account] 登录期间查询到的 [value]，[fetchedAt] 是它最近一次与服务端核对的时间。 */
 @Serializable
-internal data class Snapshot<T>(val account: String, val value: T)
+internal data class Snapshot<T>(val account: String, val fetchedAt: Instant?, val value: T)
 
 /**
  * 登录期间查询到的数据在本机的快照，冷启动恢复登录后先显示它，再等刷新。

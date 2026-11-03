@@ -27,6 +27,7 @@ import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalTime
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.serializer
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 @Singleton
@@ -44,6 +45,9 @@ class TimetableRepository @Inject constructor(
 
     /** 按校历排列的可选学期，含已加载的每周课程。 */
     val terms: StateFlow<List<TimetableTerm>> = cache.value
+
+    /** 学期列表与当前学期的课程在 [now] 是否超过 [maxAge] 未更新。 */
+    suspend fun isStaleAt(now: Instant, maxAge: Duration): Boolean = cache.isStaleAt(now, maxAge)
 
     private class SharedRefresh(val owner: ZzuClients, val result: Deferred<Unit>)
 
@@ -86,7 +90,7 @@ class TimetableRepository @Inject constructor(
 
     suspend fun loadTerm(termId: String) = session.request(CampusFeature.Timetable) {
         val weeks = eas().teachingWeeks(SemesterId(termId.toLong())).associateBy { it.weekIndex }
-        cache.update(this) { terms ->
+        cache.amend(this) { terms ->
             terms.map { term ->
                 if (term.id != termId) term else term.copy(
                     weeks = term.weeks.map { week ->

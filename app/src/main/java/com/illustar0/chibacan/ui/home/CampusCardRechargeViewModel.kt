@@ -74,8 +74,9 @@ class CampusCardRechargeViewModel @Inject constructor(
         }
     }
 
-    /** 收银台已在浏览器中打开。支付结果要等回到应用时靠刷新得知。 */
+    /** 收银台已在浏览器中打开。支付结果要等回到应用时靠刷新得知，所以让余额届时必定刷新。 */
     fun finishCheckout() {
+        student.expire()
         outcomeChannel.trySend(ActionOutcome.Succeeded)
         dismiss()
     }

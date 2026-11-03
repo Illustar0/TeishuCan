@@ -47,7 +47,7 @@ class HomeViewModel @Inject constructor(
     private val now = MutableStateFlow(LocalDateTime.now(CampusZone))
 
     val tasks = BackgroundTasks(viewModelScope)
-    val isRefreshing: StateFlow<Boolean> = refresher.tasks.isRefreshing
+    val isRefreshing: StateFlow<Boolean> = refresher.isRefreshing
 
     /** 等待在浏览器中打开的邮箱地址。 */
     val mailUrl = PendingUrl(tasks)

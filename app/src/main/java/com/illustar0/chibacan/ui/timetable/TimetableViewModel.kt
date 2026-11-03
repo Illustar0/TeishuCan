@@ -57,7 +57,7 @@ class TimetableViewModel @Inject constructor(
         selectedTermId,
         termLoads,
         tasks.isRefreshing,
-        refresher.tasks.isRefreshing,
+        refresher.isRefreshing,
     ) { terms, selectedId, loads, isPageRefreshing, isAppRefreshing ->
         val term = terms.find { it.id == selectedId } ?: terms.defaultTerm(LocalDate.now(CampusZone))
         val isRefreshing = isPageRefreshing || isAppRefreshing

@@ -13,6 +13,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
+import kotlin.time.Duration
+import kotlin.time.Instant
 
 @Singleton
 class StudentRepository @Inject constructor(
@@ -28,10 +30,18 @@ class StudentRepository @Inject constructor(
     )
     val student: StateFlow<StudentData> = cache.value
 
+    /** [student] 在 [now] 是否超过 [maxAge] 未更新，或被 [expire] 过。 */
+    suspend fun isStaleAt(now: Instant, maxAge: Duration): Boolean = cache.isStaleAt(now, maxAge)
+
     suspend fun refresh() = session.request(CampusFeature.CampusCard) {
         val info = cas.userInfo()
         session.saveProfile(this, info.toStudentProfile())
         cache.update(this) { info.toStudentData() }
+    }
+
+    /** 余额可能已在应用外变化，例如在收银台付了款。下次自动刷新时必定更新。 */
+    fun expire() {
+        cache.expire()
     }
 
     /** 创建校园卡充值订单，订单连同各支付渠道的收银台地址一起返回。 */

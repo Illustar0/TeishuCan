@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.serializer
+import kotlin.time.Duration
+import kotlin.time.Instant
 
 private val Context.meterStore: DataStore<List<ElectricityMeter>> by dataStore(
     fileName = "electricity_meters.json",
@@ -57,6 +59,16 @@ class ElectricityRepository @Inject constructor(
     val meters: StateFlow<List<MeterReading>?> = combine(savedMeters, remainingEnergy.value) { meters, energy ->
         meters.map { MeterReading(it, energy[it.location.meterId]) }
     }.stateIn(scope, SharingStarted.Eagerly, null)
+
+    /**
+     * 已保存电表的读数在 [now] 是否需要更新：超过 [maxAge] 未更新，或有电表还没有读数。
+     * 只看位置有效的电表，位置无效要用户重选，刷新解决不了；没有这样的电表就没有可更新的内容。
+     */
+    suspend fun isStaleAt(now: Instant, maxAge: Duration): Boolean {
+        val roomIds = savedMeters.first().map { it.location.meterId }.filter { parseRoom(it) != null }
+        if (roomIds.isEmpty()) return false
+        return remainingEnergy.isStaleAt(now, maxAge) { energy -> roomIds.all { it in energy } }
+    }
 
     /** 添加 [meter]，或替换 id 相同的电表。 */
     suspend fun saveMeter(meter: ElectricityMeter) {

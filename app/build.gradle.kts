@@ -1,6 +1,8 @@
+import com.mikepenz.aboutlibraries.plugin.DuplicateRule
 import dev.detekt.gradle.Detekt
 
 plugins {
+    alias(libs.plugins.aboutlibraries.android)
     alias(libs.plugins.android.application)
     alias(libs.plugins.detekt)
     alias(libs.plugins.hilt)
@@ -57,10 +59,18 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
+        buildConfig = true
         compose = true
     }
     androidResources {
         generateLocaleConfig = true
+    }
+}
+
+aboutLibraries {
+    library {
+        // 同一项目拆出的多个构件（如 androidx.compose.*）按 groupId 与名称合并为一条
+        duplicationRule = DuplicateRule.SIMPLE
     }
 }
 
@@ -77,6 +87,7 @@ tasks.withType<Detekt>().configureEach {
 
 dependencies {
     detektPlugins(libs.compose.rules.detekt)
+    implementation(libs.aboutlibraries.core)
     implementation(libs.zzu)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.datetime)

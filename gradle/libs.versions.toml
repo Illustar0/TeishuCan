@@ -1,4 +1,5 @@
 [versions]
+aboutLibraries = "15.3.0"
 agp = "9.5.0"
 androidxHilt = "1.4.0"
 appcompat = "1.8.0"
@@ -19,6 +20,7 @@ serialization = "1.12.0"
 datetime = "0.8.0"
 
 [libraries]
+aboutlibraries-core = { module = "com.mikepenz:aboutlibraries-core", version.ref = "aboutLibraries" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
 zzu = { module = "dev.zzu:zzu", version = "0.1.0" }
@@ -52,6 +54,7 @@ miuix-preference = { group = "top.yukonga.miuix.kmp", name = "miuix-preference-a
 miuix-ui = { group = "top.yukonga.miuix.kmp", name = "miuix-ui-android", version.ref = "miuix" }
 
 [plugins]
+aboutlibraries-android = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutLibraries" }
 android-application = { id = "com.android.application", version.ref = "agp" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
 hilt ={ id = "com.google.dagger.hilt.android", version.ref = "hilt" }

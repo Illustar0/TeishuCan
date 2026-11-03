@@ -133,6 +133,18 @@
     <string name="meter_options_failed">加载失败</string>
     <string name="meter_options_retry">重试</string>
 
+    <string name="settings_about">关于</string>
+    <string name="settings_about_summary">版本信息与许可证</string>
+    <string name="settings_about_source_code">源代码</string>
+    <string name="settings_about_source_code_summary">在 GitHub 上查看源代码</string>
+    <string name="settings_about_license">许可证</string>
+    <string name="settings_about_license_summary">本应用以 GPL-3.0 许可证发布</string>
+    <string name="settings_about_open_source_licenses">开放源代码许可</string>
+    <string name="settings_about_open_source_licenses_summary">本应用使用的第三方库</string>
+    <string name="settings_about_open_source_licenses_license">许可证：%1$s</string>
+    <string name="settings_about_open_source_licenses_no_text">没有许可证正文</string>
+    <string name="settings_about_open_source_licenses_website">访问主页</string>
+    <string name="settings_about_open_source_licenses_close">关闭</string>
     <string name="settings_electricity">电表</string>
     <string name="settings_electricity_summary">添加和管理电表</string>
     <string name="settings_language">语言</string>

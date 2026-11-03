@@ -40,6 +40,7 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.ContactsCircle
+import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.icon.extended.Theme
 import top.yukonga.miuix.kmp.icon.extended.Translate
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
@@ -56,6 +57,7 @@ fun SettingsRoute(
     onLogout: () -> Unit,
     onOpenThemeSettings: () -> Unit,
     onOpenElectricitySettings: () -> Unit,
+    onOpenAbout: () -> Unit,
     bottomPadding: Dp,
 ) {
     // 切换语言会重建 Activity，因此每个组合周期读取一次就够了。
@@ -69,6 +71,7 @@ fun SettingsRoute(
         onAppLanguageChange = ::applyAppLanguage,
         onOpenThemeSettings = onOpenThemeSettings,
         onOpenElectricitySettings = onOpenElectricitySettings,
+        onOpenAbout = onOpenAbout,
         bottomPadding = bottomPadding,
     )
 }
@@ -82,6 +85,7 @@ fun SettingsPage(
     onAppLanguageChange: (AppLanguage) -> Unit,
     onOpenThemeSettings: () -> Unit,
     onOpenElectricitySettings: () -> Unit,
+    onOpenAbout: () -> Unit,
     bottomPadding: Dp,
 ) {
     val scrollBehavior = MiuixScrollBehavior()
@@ -137,6 +141,16 @@ fun SettingsPage(
                         selectedIndex = appLanguage.ordinal,
                         startAction = { SettingsRowIcon(MiuixIcons.Translate) },
                         onSelectedIndexChange = { index -> onAppLanguageChange(AppLanguage.entries[index]) },
+                    )
+                }
+            }
+            item(key = "about") {
+                Card(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp)) {
+                    ArrowPreference(
+                        title = stringResource(R.string.settings_about),
+                        summary = stringResource(R.string.settings_about_summary),
+                        startAction = { SettingsRowIcon(MiuixIcons.Info) },
+                        onClick = onOpenAbout,
                     )
                 }
             }
@@ -247,6 +261,7 @@ private fun SettingsPagePreview() {
             onAppLanguageChange = {},
             onOpenThemeSettings = {},
             onOpenElectricitySettings = {},
+            onOpenAbout = {},
             bottomPadding = 0.dp,
         )
     }

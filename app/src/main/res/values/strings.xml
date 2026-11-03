@@ -139,6 +139,19 @@
     <string name="meter_options_failed">読み込めませんでした</string>
     <string name="meter_options_retry">再試行</string>
 
+    <string name="settings_about">このアプリについて</string>
+    <string name="settings_about_summary">バージョン情報とライセンス</string>
+    <string name="settings_about_version" translatable="false">%1$s (%2$d)</string>
+    <string name="settings_about_source_code">ソースコード</string>
+    <string name="settings_about_source_code_summary">GitHub でソースコードを表示します</string>
+    <string name="settings_about_license">ライセンス</string>
+    <string name="settings_about_license_summary">このアプリは GPL-3.0 で公開されています</string>
+    <string name="settings_about_open_source_licenses">オープンソースライセンス</string>
+    <string name="settings_about_open_source_licenses_summary">このアプリで使用しているライブラリ</string>
+    <string name="settings_about_open_source_licenses_license">ライセンス：%1$s</string>
+    <string name="settings_about_open_source_licenses_no_text">ライセンス本文はありません</string>
+    <string name="settings_about_open_source_licenses_website">ホームページ</string>
+    <string name="settings_about_open_source_licenses_close">閉じる</string>
     <string name="settings_electricity">電力メーター</string>
     <string name="settings_electricity_summary">メーターを追加・管理します</string>
     <string name="settings_language">言語</string>

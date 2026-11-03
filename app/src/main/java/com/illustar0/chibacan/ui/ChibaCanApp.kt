@@ -34,9 +34,11 @@ import com.illustar0.chibacan.ui.home.HomeRoute
 import com.illustar0.chibacan.ui.home.SignedOutHomePage
 import com.illustar0.chibacan.ui.services.ServicesRoute
 import com.illustar0.chibacan.ui.services.UndergradEasRoute
+import com.illustar0.chibacan.ui.settings.AboutPage
 import com.illustar0.chibacan.ui.settings.AccountViewModel
 import com.illustar0.chibacan.ui.settings.ElectricitySettingsRoute
 import com.illustar0.chibacan.ui.settings.LoginSheet
+import com.illustar0.chibacan.ui.settings.OpenSourceLicensesPage
 import com.illustar0.chibacan.ui.settings.SettingsRoute
 import com.illustar0.chibacan.ui.settings.ThemeSettingsPage
 import com.illustar0.chibacan.ui.theme.BlurredBar
@@ -80,6 +82,12 @@ private sealed interface Route : NavKey {
 
     @Serializable
     data object UndergradEas : Route
+
+    @Serializable
+    data object About : Route
+
+    @Serializable
+    data object OpenSourceLicenses : Route
 }
 
 private enum class AppDestination(
@@ -100,17 +108,18 @@ fun ChibaCanApp(
     onThemeSettingsUpdate: ((ThemeSettings) -> ThemeSettings) -> Unit,
 ) {
     val navController = rememberNavController<Route>(Route.Main)
+    val navigate: (Route) -> Unit = { route ->
+        // 转场期间入口仍可点击，而返回栈不接受重复的键。
+        if (navController.backStack.last() != route) {
+            navController.push(route)
+        }
+    }
 
     NavDisplay(navController = navController) {
         entry<Route.Main> {
             MainScreen(
                 isFloatingNavigationBar = themeSettings.isFloatingNavigationBarEnabled,
-                onNavigate = { route ->
-                    // 转场期间入口仍可点击，而返回栈不接受重复的键。
-                    if (navController.backStack.last() != route) {
-                        navController.push(route)
-                    }
-                },
+                onNavigate = navigate,
             )
         }
         entry<Route.ThemeSettings> {
@@ -137,6 +146,23 @@ fun ChibaCanApp(
                 onCommit = { navController.pop() },
             )
             UndergradEasRoute(onBack = { navController.pop() })
+        }
+        entry<Route.About> {
+            CommitOnlyBackHandler(
+                enabled = !themeSettings.isPredictiveBackEnabled,
+                onCommit = { navController.pop() },
+            )
+            AboutPage(
+                onBack = { navController.pop() },
+                onOpenOpenSourceLicenses = { navigate(Route.OpenSourceLicenses) },
+            )
+        }
+        entry<Route.OpenSourceLicenses> {
+            CommitOnlyBackHandler(
+                enabled = !themeSettings.isPredictiveBackEnabled,
+                onCommit = { navController.pop() },
+            )
+            OpenSourceLicensesPage(onBack = { navController.pop() })
         }
     }
 }
@@ -244,6 +270,7 @@ private fun MainScreen(
                         onLogout = accountViewModel::logout,
                         onOpenThemeSettings = { onNavigate(Route.ThemeSettings) },
                         onOpenElectricitySettings = { onNavigate(Route.ElectricitySettings) },
+                        onOpenAbout = { onNavigate(Route.About) },
                         bottomPadding = bottomPadding,
                     )
                 }

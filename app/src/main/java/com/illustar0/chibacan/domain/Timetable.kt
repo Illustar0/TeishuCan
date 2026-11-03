@@ -1,3 +1,5 @@
+@file:UseSerializers(LocalDateAsStringSerializer::class, LocalTimeAsStringSerializer::class)
+
 package com.illustar0.chibacan.domain
 
 import java.time.DayOfWeek
@@ -5,11 +7,14 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 
 /** 课表中所有日期与时刻所在的时区，与设备当前所在地无关。 */
 val CampusZone: ZoneId = ZoneId.of("Asia/Shanghai")
 
 /** [date] 当天的一节课，从第 [startPeriod] 节（从 1 开始）起连续占用 [periodSpan] 节。 */
+@Serializable
 data class TimetableEntry(
     val day: DayOfWeek,
     val date: LocalDate,
@@ -23,6 +28,7 @@ data class TimetableEntry(
 )
 
 /** 学期的第 [number] 周及其覆盖的 [dates]，每天一个日期。 */
+@Serializable
 data class TimetableWeek(
     val number: Int,
     val dates: List<LocalDate>,
@@ -34,6 +40,7 @@ data class TimetableWeek(
  *
  * [isLoaded] 为 false 时 [weeks] 只有日期，课程为空只代表还不知道，不代表没有课。
  */
+@Serializable
 data class TimetableTerm(
     val id: String,
     val schoolYear: String,

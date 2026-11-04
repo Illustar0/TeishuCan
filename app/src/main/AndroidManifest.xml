@@ -16,6 +16,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TeishuCan"
         android:usesCleartextTraffic="false">
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="${applicationId}.firebaseinitprovider"
+            android:enabled="${isFirebaseEnabled}" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -1,3 +1,5 @@
+import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
+import com.google.gms.googleservices.GoogleServicesTask
 import com.mikepenz.aboutlibraries.plugin.DuplicateRule
 import dev.detekt.gradle.Detekt
 
@@ -6,6 +8,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.androidx.baselineprofile)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.firebase.crashlytics)
+    alias(libs.plugins.google.services)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
@@ -24,6 +28,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+        manifestPlaceholders["isFirebaseEnabled"] = true
     }
 
     buildTypes {
@@ -43,6 +48,10 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".perf"
             matchingFallbacks += listOf("release")
+            manifestPlaceholders["isFirebaseEnabled"] = false
+            configure<CrashlyticsExtension> {
+                mappingFileUploadEnabled = false
+            }
         }
     }
     compileOptions {
@@ -63,6 +72,10 @@ android {
         includeInApk = false
         includeInBundle = false
     }
+}
+
+tasks.withType<GoogleServicesTask>().configureEach {
+    onlyIf { !applicationId.get().endsWith(".perf") }
 }
 
 aboutLibraries {
@@ -91,6 +104,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.datetime)
     implementation(platform(libs.androidx.compose.bom))
+    implementation(platform(libs.firebase.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.compose.foundation)
@@ -106,6 +120,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.viewmodel.savedstate)
     implementation(libs.androidx.profileinstaller)
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
     implementation(libs.hilt.android)
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)

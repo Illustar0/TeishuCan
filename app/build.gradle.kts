@@ -66,6 +66,13 @@ android {
     }
     androidResources {
         generateLocaleConfig = true
+        // 默认 values 是日语，只保留依赖库中与之对应的日语和中文翻译
+        localeFilters += listOf("ja", "zh")
+    }
+    // 不上架 Google Play，不需要只有 Play 能解密的依赖清单
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
     }
 }
 

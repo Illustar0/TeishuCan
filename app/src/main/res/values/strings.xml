@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">ChibaCan</string>
+    <string name="app_name" translatable="false">TeishuCan</string>
 
     <string name="destination_home">ホーム</string>
     <string name="destination_timetable">時間割</string>
@@ -62,9 +62,9 @@
     <string name="home_profile_identity">身分</string>
 
     <string name="home_support_title">開発を支援</string>
-    <string name="home_support_summary">ChibaCan は自由でオープンソースの無料ソフトウェアです。開発者への寄付で支援できます。</string>
+    <string name="home_support_summary">TeishuCan は自由でオープンソースの無料ソフトウェアです。開発者への寄付で支援できます。</string>
     <string name="home_support_url" translatable="false">https://example.com/support</string>
-    <string name="home_learn_title">ChibaCan について知る</string>
+    <string name="home_learn_title">TeishuCan について知る</string>
     <string name="home_learn_summary">機能や使い方を確認します</string>
     <string name="home_learn_url" translatable="false">https://example.com/learn</string>
     <string name="home_campus_card_balance">学生カードの残高</string>

@@ -22,7 +22,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ChibaCan"
+rootProject.name = "TeishuCan"
 include(":app")
 include(":baselineprofile")
 

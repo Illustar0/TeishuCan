@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.illustar0.chibacan.baselineprofile"
+    namespace = "com.illustar0.teishucan.baselineprofile"
     compileSdk {
         version = release(37)
     }

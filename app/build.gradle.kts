@@ -13,13 +13,13 @@ plugins {
 }
 
 android {
-    namespace = "com.illustar0.chibacan"
+    namespace = "com.illustar0.teishucan"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.illustar0.chibacan"
+        applicationId = "com.illustar0.teishucan"
         minSdk = 29
         targetSdk = 37
         versionCode = 1

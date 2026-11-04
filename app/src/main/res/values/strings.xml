@@ -63,10 +63,10 @@
 
     <string name="home_support_title">開発を支援</string>
     <string name="home_support_summary">TeishuCan は自由でオープンソースの無料ソフトウェアです。開発者への寄付で支援できます。</string>
-    <string name="home_support_url" translatable="false">https://example.com/support</string>
+    <string name="home_support_url" translatable="false">https://afdian.com/a/Illustar0</string>
     <string name="home_learn_title">TeishuCan について知る</string>
     <string name="home_learn_summary">機能や使い方を確認します</string>
-    <string name="home_learn_url" translatable="false">https://example.com/learn</string>
+    <string name="home_learn_url" translatable="false">https://github.com/Illustar0/TeishuCan</string>
     <string name="home_campus_card_balance">学生カードの残高</string>
     <string name="home_not_fetched">未取得</string>
     <string name="campus_card_recharge_notice">これは実験的な機能です。ご利用は自己責任でお願いします。</string>

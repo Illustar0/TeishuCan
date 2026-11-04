@@ -24,6 +24,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "ChibaCan"
 include(":app")
+include(":baselineprofile")
 
 // The project is named zzu-kotlin but publishes dev.zzu:zzu, so Gradle cannot match them by itself.
 includeBuild("../../IDEA/zzu-kotlin") {

@@ -4,6 +4,7 @@ import dev.detekt.gradle.Detekt
 plugins {
     alias(libs.plugins.aboutlibraries.android)
     alias(libs.plugins.android.application)
+    alias(libs.plugins.androidx.baselineprofile)
     alias(libs.plugins.detekt)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.compose)
@@ -28,10 +29,11 @@ android {
     buildTypes {
 
         release {
-            optimization {
-                enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
-            }
+            // Baseline Profile 插件只认这对旧开关，要靠它们派生出不混淆的 nonMinifiedRelease，
+            // 所以这里不用 optimization {} DSL
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
 
         create("perf") {
@@ -86,6 +88,7 @@ tasks.withType<Detekt>().configureEach {
 }
 
 dependencies {
+    baselineProfile(project(":baselineprofile"))
     detektPlugins(libs.compose.rules.detekt)
     implementation(libs.aboutlibraries.core)
     implementation(libs.zzu)
@@ -106,6 +109,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.viewmodel.savedstate)
+    implementation(libs.androidx.profileinstaller)
     implementation(libs.hilt.android)
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)

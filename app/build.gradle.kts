@@ -1,5 +1,3 @@
-import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
-import com.google.gms.googleservices.GoogleServicesTask
 import com.mikepenz.aboutlibraries.plugin.DuplicateRule
 import dev.detekt.gradle.Detekt
 
@@ -28,30 +26,15 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
-        manifestPlaceholders["isFirebaseEnabled"] = true
     }
 
     buildTypes {
-
         release {
             // Baseline Profile 插件只认这对旧开关，要靠它们派生出不混淆的 nonMinifiedRelease，
             // 所以这里不用 optimization {} DSL。
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
-        }
-
-        create("perf") {
-            initWith(getByName("release"))
-            isDebuggable = false
-            isProfileable = true
-            signingConfig = signingConfigs.getByName("debug")
-            applicationIdSuffix = ".perf"
-            matchingFallbacks += listOf("release")
-            manifestPlaceholders["isFirebaseEnabled"] = false
-            configure<CrashlyticsExtension> {
-                mappingFileUploadEnabled = false
-            }
         }
     }
     compileOptions {
@@ -72,10 +55,6 @@ android {
         includeInApk = false
         includeInBundle = false
     }
-}
-
-tasks.withType<GoogleServicesTask>().configureEach {
-    onlyIf { !applicationId.get().endsWith(".perf") }
 }
 
 aboutLibraries {

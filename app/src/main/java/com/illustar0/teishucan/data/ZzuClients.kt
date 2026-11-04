@@ -53,7 +53,6 @@ internal class ZzuClients(private val account: String, private val password: Str
         }
     }
 
-    /** 把恢复出来的 [tokens] 交给 SDK。 */
     suspend fun presetTokens(tokens: Tokens) {
         try {
             cas.setTokens(tokens)
@@ -62,7 +61,6 @@ internal class ZzuClients(private val account: String, private val password: Str
         }
     }
 
-    /** 恢复这次登录所需的全部内容。 */
     suspend fun storedSession(profile: StudentProfile) = StoredSession(account, password, currentTokens(), profile)
 
     private suspend fun currentTokens(): Tokens = checkNotNull(cas.tokens()) { "Missing session tokens" }

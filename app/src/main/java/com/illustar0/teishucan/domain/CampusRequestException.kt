@@ -6,6 +6,5 @@ enum class CampusFeature { Account, Timetable, CampusCard, Electricity, Mail, Se
 class CampusRequestException(val feature: CampusFeature, val reason: String?, cause: Exception) :
     Exception("Campus request failed: $feature", cause)
 
-/** 校园服务给出的失败原因，其他异常没有。 */
 val Exception.campusReason: String?
     get() = (this as? CampusRequestException)?.reason

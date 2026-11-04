@@ -41,10 +41,8 @@ class SignInSnapshotStore @Inject constructor(
     /** 串行化写入与 [clear]，这样登录结束之后不会再有它的快照落盘。 */
     private val lock = Mutex()
 
-    /** 名为 [name] 的快照文件，内容按 [serializer] 编码。 */
     internal fun <T> file(name: String, serializer: KSerializer<T>) = SnapshotFile(name, Snapshot.serializer(serializer))
 
-    /** 删除全部快照。 */
     suspend fun clear(): Unit = withContext(ioDispatcher) {
         lock.withLock { directory.deleteRecursively() }
     }

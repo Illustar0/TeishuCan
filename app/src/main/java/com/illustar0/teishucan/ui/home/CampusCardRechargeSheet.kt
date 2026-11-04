@@ -37,10 +37,6 @@ import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-/**
- * 输入金额后用 [onSubmitAmount] 创建订单，再在浏览器中打开所选渠道的收银台。
- * [campusCardBalanceYuan] 尚未查询到时为 null。
- */
 @Composable
 fun CampusCardRechargeSheet(
     state: CampusCardRechargeState,

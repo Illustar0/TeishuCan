@@ -48,7 +48,6 @@ class BackgroundTasks(private val scope: CoroutineScope, private val refreshCont
         refreshRequests.trySend(Unit)
     }
 
-    /** 在后台运行 [task]，失败时记入 [failure]。 */
     fun launch(task: suspend () -> Unit): Job = scope.launch { reportingFailure(task) }
 
     /** 确认 [failure] 已告知用户。这期间又发生的新失败会保留。 */

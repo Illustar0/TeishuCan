@@ -43,7 +43,6 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
-/** 列出 [meters] 及其剩余电量；[meters] 为 null 表示保存的列表尚未读出。 */
 @Composable
 fun ElectricitySettingsPage(
     meters: List<MeterReading>?,

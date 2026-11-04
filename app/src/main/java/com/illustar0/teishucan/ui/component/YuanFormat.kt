@@ -15,5 +15,4 @@ fun formatYuan(amount: BigDecimal): String =
         maximumFractionDigits = 2
     }.format(amount)
 
-/** 把用户输入收敛成合法的充值金额文本。 */
 fun rechargeAmountInput(input: String): String = input.filter(Char::isDigit).take(MaxRechargeAmountDigits)

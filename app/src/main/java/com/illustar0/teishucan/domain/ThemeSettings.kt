@@ -53,7 +53,6 @@ data class ThemeSettings(
     val effectiveColorSpec: ColorSpec
         get() = if (paletteStyle.supportsSpec2025) colorSpec else ColorSpec.Spec2021
 
-    /** 是否用壁纸主色而不是 [seedColor] 作为调色板的种子色。 */
     fun usesWallpaperColor(isWallpaperColorSupported: Boolean): Boolean =
         isMonetEnabled && isWallpaperColorEnabled && isWallpaperColorSupported
 }

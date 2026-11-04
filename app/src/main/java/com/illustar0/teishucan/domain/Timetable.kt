@@ -27,7 +27,6 @@ data class TimetableEntry(
     val periodSpan: Int = 1,
 )
 
-/** 学期的第 [number] 周及其覆盖的 [dates]，每天一个日期。 */
 @Serializable
 data class TimetableWeek(
     val number: Int,
@@ -35,11 +34,7 @@ data class TimetableWeek(
     val entries: List<TimetableEntry> = emptyList(),
 )
 
-/**
- * 可选的学期，即 [schoolYear] 学年的第 [number] 学期，[weeks] 按校历排列。
- *
- * [isLoaded] 为 false 时 [weeks] 只有日期，课程为空只代表还不知道，不代表没有课。
- */
+/** [isLoaded] 为 false 时 [weeks] 只有日期，课程为空只代表还不知道，不代表没有课。 */
 @Serializable
 data class TimetableTerm(
     val id: String,
@@ -55,7 +50,6 @@ data class TimetableTerm(
 fun List<TimetableTerm>.defaultTerm(today: LocalDate): TimetableTerm? =
     filter { it.startDate <= today }.maxByOrNull { it.startDate } ?: firstOrNull()
 
-/** 一门课占用的节次：从第 [startPeriod] 节（从 1 开始）起连续 [periodSpan] 节。 */
 data class ClassPeriods(val startPeriod: Int, val periodSpan: Int) {
     operator fun contains(period: Int): Boolean = period in startPeriod until startPeriod + periodSpan
 }
@@ -65,11 +59,9 @@ sealed interface UpcomingClass {
     /** 课程还没加载，不知道这两天有没有课。 */
     data object NotFetched : UpcomingClass
 
-    /** 这两天都没有课了。 */
     data object None : UpcomingClass
 }
 
-/** 下一节课，占用 [periods]，[isTomorrow] 时在明天；[dayClasses] 列出当天所有课程。 */
 data class NextClass(
     val name: String,
     val location: String,

@@ -30,29 +30,18 @@ android {
 
         release {
             // Baseline Profile 插件只认这对旧开关，要靠它们派生出不混淆的 nonMinifiedRelease，
-            // 所以这里不用 optimization {} DSL
+            // 所以这里不用 optimization {} DSL。
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
         }
 
         create("perf") {
-            // 继承 Release 的 R8 优化配置
             initWith(getByName("release"))
-
-            // 关闭 Debug 运行时开销
             isDebuggable = false
-
-            // 允许低开销性能分析
             isProfileable = true
-
-            // 使用 Debug 签名，方便安装
             signingConfig = signingConfigs.getByName("debug")
-
-            // 可以和正式 App 同时安装
             applicationIdSuffix = ".perf"
-
-            // 多模块依赖的变体回退
             matchingFallbacks += listOf("release")
         }
     }
@@ -66,10 +55,10 @@ android {
     }
     androidResources {
         generateLocaleConfig = true
-        // 默认 values 是日语，只保留依赖库中与之对应的日语和中文翻译
+        // 默认 values 是日语，只保留依赖库中与之对应的日语和中文翻译。
         localeFilters += listOf("ja", "zh")
     }
-    // 不上架 Google Play，不需要只有 Play 能解密的依赖清单
+    // 不上架 Google Play，不需要只有 Play 能解密的依赖清单。
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
@@ -78,7 +67,7 @@ android {
 
 aboutLibraries {
     library {
-        // 同一项目拆出的多个构件（如 androidx.compose.*）按 groupId 与名称合并为一条
+        // 同一项目拆出的多个构件（如 androidx.compose.*）按 groupId 与名称合并为一条。
         duplicationRule = DuplicateRule.SIMPLE
     }
 }

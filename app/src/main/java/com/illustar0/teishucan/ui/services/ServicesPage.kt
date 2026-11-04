@@ -56,7 +56,6 @@ private val ServiceGroups = listOf(
     ),
 )
 
-/** [openingService] 正在获取地址，它的入口保持按下状态。 */
 @Composable
 fun ServicesPage(
     openingService: CampusService?,
@@ -116,7 +115,6 @@ fun ServicesPage(
     }
 }
 
-/** [openingService] 正在获取地址，它的入口保持按下状态。 */
 @Composable
 internal fun ServiceGroupSection(
     group: ServiceGroup,

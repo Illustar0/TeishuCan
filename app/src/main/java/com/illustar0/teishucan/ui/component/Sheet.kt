@@ -36,7 +36,6 @@ fun pageSlide(isForward: Boolean): ContentTransform {
         slideOutHorizontally(PageSlideSpec) { width -> -direction * width }
 }
 
-/** [isLoading] 期间在文字前转圈，告诉用户请求还在进行。 */
 @Composable
 fun LoadingButton(
     text: String,

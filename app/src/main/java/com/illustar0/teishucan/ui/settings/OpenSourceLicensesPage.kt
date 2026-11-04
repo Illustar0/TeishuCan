@@ -60,7 +60,6 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 private const val LicenseChipAlpha = 0.2f
 
-/** 列出 AboutLibraries 在构建时收集的依赖，点击某个库查看其许可证全文。 */
 @Composable
 fun OpenSourceLicensesPage(onBack: () -> Unit) {
     val context = LocalContext.current

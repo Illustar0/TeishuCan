@@ -22,7 +22,6 @@ import com.illustar0.teishucan.domain.StudentData
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.totalKilowattHours
 import com.illustar0.teishucan.domain.upcomingClassAfter
-import com.illustar0.teishucan.domain.upcomingClassAfter
 import com.illustar0.teishucan.ui.component.FailureToasts
 import com.illustar0.teishucan.ui.component.OpenPendingUrl
 import com.illustar0.teishucan.ui.component.OutcomeHaptics
@@ -48,8 +47,6 @@ class HomeViewModel @Inject constructor(
 
     val tasks = BackgroundTasks(viewModelScope)
     val isRefreshing: StateFlow<Boolean> = refresher.isRefreshing
-
-    /** 等待在浏览器中打开的邮箱地址。 */
     val mailUrl = PendingUrl(tasks)
 
     val state: StateFlow<HomeState> = combine(

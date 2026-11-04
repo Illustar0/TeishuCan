@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 
 enum class LoginAction { Login, SendCode, VerifyCode }
 
-/** 登录表单的内容。放在 ViewModel 里，转屏时验证码流程才不会丢。 */
+/** 放在 ViewModel 里，转屏时验证码流程才不会丢。 */
 class LoginFormState {
     var isVisible by mutableStateOf(false)
     var account by mutableStateOf("")
@@ -47,7 +47,6 @@ class LoginFormState {
     }
 }
 
-/** 登录失败的提示：优先用校园服务给出的 [reason]，没有时用 [fallbackMessage]。 */
 data class LoginFailure(@param:StringRes val fallbackMessage: Int, val reason: String?)
 
 @HiltViewModel

@@ -42,7 +42,6 @@ class CampusRefresher @Inject constructor(
 
     private val isAutoRefreshing = MutableStateFlow(false)
 
-    /** 用户要求的刷新或自动刷新正在进行。 */
     val isRefreshing: StateFlow<Boolean> =
         combine(tasks.isRefreshing, isAutoRefreshing) { isRequested, isAutomatic -> isRequested || isAutomatic }
             .stateIn(scope, SharingStarted.Eagerly, false)
@@ -83,7 +82,6 @@ class CampusRefresher @Inject constructor(
     }
 }
 
-/** 自动刷新的一类数据：仓库按新鲜时长 [maxAge] 判断 [isStale] 时，用 [refresh] 更新。 */
 private class AutoRefreshed(
     private val maxAge: Duration,
     private val isStale: suspend (now: Instant, maxAge: Duration) -> Boolean,

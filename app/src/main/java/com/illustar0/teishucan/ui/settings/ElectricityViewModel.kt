@@ -40,7 +40,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.SnackbarHostState
 
-/** 电费页展示的内容；保存的电表读出之前 [meters] 为 null。 */
 data class ElectricityUiState(
     val meters: List<MeterReading>?,
     val campusCardBalanceYuan: BigDecimal?,

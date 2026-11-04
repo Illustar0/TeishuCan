@@ -19,7 +19,6 @@ import com.illustar0.teishucan.domain.campusReason
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 
-/** 下拉 [content] 时调用 [onRefresh]，[isRefreshing] 期间显示刷新指示器。 */
 @Composable
 fun RefreshContainer(
     isRefreshing: Boolean,
@@ -45,7 +44,6 @@ fun RefreshContainer(
     )
 }
 
-/** 处于前台时用 Toast 提示 [tasks] 的失败，校园服务给出原因时直接显示原因。 */
 @Composable
 fun FailureToasts(tasks: BackgroundTasks) {
     val failure by tasks.failure.collectAsStateWithLifecycle()

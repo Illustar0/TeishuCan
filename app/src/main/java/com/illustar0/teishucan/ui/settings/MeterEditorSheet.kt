@@ -117,11 +117,6 @@ class MeterEditorState(val meter: ElectricityMeter?) {
             rechargeStatus != RechargeStatus.Submitting
 }
 
-/**
- * 展示电表及其 [reading]，可以充值或编辑；新增电表时直接打开表单。[onLoadOptions] 接收已选的
- * 层级，把下一级选项加载进 [state]。支付密码不会比弹层活得更久。充值页展示
- * [campusCardBalanceYuan]，尚未查询到时为 null。
- */
 @Composable
 fun MeterEditorSheet(
     show: Boolean,

@@ -45,7 +45,6 @@ class PendingUrl(private val tasks: BackgroundTasks) {
     }
 }
 
-/** 页面处于前台时打开 [pendingUrl]，无法打开时提示 [failureMessage]。 */
 @Composable
 fun OpenPendingUrl(pendingUrl: PendingUrl, @StringRes failureMessage: Int) {
     val url by pendingUrl.url.collectAsStateWithLifecycle()

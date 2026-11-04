@@ -27,8 +27,6 @@ class ServicesViewModel @Inject constructor(
     private val openingServiceFlow = MutableStateFlow<CampusService?>(null)
 
     val tasks = BackgroundTasks(viewModelScope)
-
-    /** 等待在浏览器中打开的服务地址。 */
     val serviceUrl = PendingUrl(tasks)
 
     /** 正在获取地址的服务，没有时为 null。 */

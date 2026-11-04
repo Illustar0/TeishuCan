@@ -3,7 +3,6 @@ package com.illustar0.teishucan.ui.settings
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 
-/** 应用可用的语言；[System] 表示跟随设备设置。 */
 enum class AppLanguage(val languageTag: String) {
     System(""),
     Japanese("ja"),

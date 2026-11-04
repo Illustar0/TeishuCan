@@ -25,7 +25,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
-/** 恢复登录所需的全部内容；[toString] 不输出凭据。 */
 @Serializable
 internal data class StoredSession(
     val account: String,

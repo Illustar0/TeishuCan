@@ -17,15 +17,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-/** 一次打开校园卡充值弹层时的草稿。 */
 class CampusCardRechargeState {
     var isVisible by mutableStateOf(false)
     var amount by mutableStateOf("")
     var order by mutableStateOf<RechargeOrder?>(null)
     var isSubmitting by mutableStateOf(false)
     var hasFailed by mutableStateOf(false)
-
-    /** 校园服务给出的失败原因，没有时为 null。 */
     var failureReason by mutableStateOf<String?>(null)
 
     val amountYuan: Int?

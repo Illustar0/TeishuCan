@@ -16,7 +16,6 @@ import kotlinx.coroutines.SupervisorJob
 @Retention(AnnotationRetention.BINARY)
 annotation class ApplicationScope
 
-/** 运行阻塞 I/O 的调度器。 */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class IoDispatcher

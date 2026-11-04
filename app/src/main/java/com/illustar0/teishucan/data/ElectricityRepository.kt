@@ -8,6 +8,7 @@ import com.illustar0.teishucan.domain.CampusFeature
 import com.illustar0.teishucan.domain.CampusRequestException
 import com.illustar0.teishucan.domain.ElectricityMeter
 import com.illustar0.teishucan.domain.InvalidMeterLocationException
+import com.illustar0.teishucan.domain.MeterLocation
 import com.illustar0.teishucan.domain.MeterOption
 import com.illustar0.teishucan.domain.MeterReading
 import com.illustar0.teishucan.domain.MeterRechargeResult
@@ -47,7 +48,7 @@ class ElectricityRepository @Inject constructor(
     private val store = context.meterStore
     private val savedMeters = store.dataOr(emptyList())
 
-    /** 各房间的剩余电量，以 [com.illustar0.teishucan.domain.MeterLocation.meterId] 为键。 */
+    /** 各房间的剩余电量，以 [MeterLocation.meterId] 为键。 */
     private val remainingEnergy = SignInCache(
         session.state,
         scope,

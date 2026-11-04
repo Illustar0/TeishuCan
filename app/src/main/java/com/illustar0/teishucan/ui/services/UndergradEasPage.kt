@@ -54,7 +54,6 @@ private val UndergradEasGroups = listOf(
     ),
 )
 
-/** 本科教务系统的子应用列表。[openingService] 正在获取地址，它的入口保持按下状态。 */
 @Composable
 fun UndergradEasPage(
     openingService: CampusService?,

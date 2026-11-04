@@ -36,7 +36,6 @@ internal suspend fun <T> logged(operation: String, block: suspend () -> T): T {
     return block().also { Log.i(Tag, "$operation finished in ${startedAt.elapsedNow()}") }
 }
 
-/** 出现这些认证失败时，账号只能重新登录。 */
 private val SignInEndingFailures = setOf(
     AuthenticationErrorKind.INVALID_CREDENTIALS,
     AuthenticationErrorKind.TOKEN_EXPIRED,
@@ -189,7 +188,6 @@ class ZzuSession @Inject constructor(
         }
     }
 
-    /** 更新 [owner] 这次登录的学生资料。 */
     internal suspend fun saveProfile(owner: ZzuClients, profile: StudentProfile) {
         updateSession(owner) { it.copy(profile = profile) }
     }
@@ -229,7 +227,6 @@ class ZzuSession @Inject constructor(
         }
     }
 
-    /** 结束 [owner] 这次登录或登录尝试。它已经结束时什么也不做。 */
     private suspend fun end(owner: ZzuClients) {
         replaceState(SessionState.SignedOut) { it.clients === owner }
     }

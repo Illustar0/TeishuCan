@@ -43,10 +43,8 @@ class TimetableRepository @Inject constructor(
         snapshots.file("timetable.json", serializer<List<TimetableTerm>>()),
     )
 
-    /** 按校历排列的可选学期，含已加载的每周课程。 */
     val terms: StateFlow<List<TimetableTerm>> = cache.value
 
-    /** 学期列表与当前学期的课程在 [now] 是否超过 [maxAge] 未更新。 */
     suspend fun isStaleAt(now: Instant, maxAge: Duration): Boolean = cache.isStaleAt(now, maxAge)
 
     private class SharedRefresh(val owner: ZzuClients, val result: Deferred<Unit>)

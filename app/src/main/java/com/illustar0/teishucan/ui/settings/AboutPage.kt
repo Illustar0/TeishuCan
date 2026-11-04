@@ -245,7 +245,6 @@ private fun AboutContent(
     }
 }
 
-/** 图标、应用名与版本号依次在滚动的不同阶段淡出并微缩。 */
 @Composable
 private fun AboutHeader(
     backdrop: LayerBackdrop?,
@@ -318,7 +317,6 @@ private fun AboutHeader(
 private const val FadeOutSpan = 0.15f
 private const val FadeOutShrink = 0.05f
 
-/** 在 [start] 起的一小段滚动进度内淡出并缩小 5%。 */
 private fun Modifier.fadeOutOnScroll(scrollProgress: () -> Float, start: Float): Modifier = graphicsLayer {
     val progress = ((scrollProgress() - start) / FadeOutSpan).coerceIn(0f, 1f)
     alpha = 1f - progress
@@ -336,7 +334,6 @@ private fun AppIcon(modifier: Modifier = Modifier) {
     Image(bitmap = icon, contentDescription = stringResource(R.string.app_name), modifier = modifier)
 }
 
-/** 有 [backdrop] 时透出动态背景，否则用普通卡片底色。 */
 @Composable
 private fun AboutCard(backdrop: LayerBackdrop?, content: @Composable () -> Unit) {
     val blendColors = if (LocalIsDarkTheme.current) OverlayExtraThinDark else PuredRegularLight

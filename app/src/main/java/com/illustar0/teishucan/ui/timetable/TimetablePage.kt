@@ -91,10 +91,8 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.utils.springAnimateToPage
 
-/** [TimetableState.term] 的课程处于什么情况。 */
 enum class TimetableStatus { Ready, NoLessons, Loading, Failed, NotFetched }
 
-/** 课表页展示的内容；[term] 是从 [terms] 中选出要展示的学期，还没有学期时为 null。 */
 data class TimetableState(
     val terms: List<TimetableTerm> = emptyList(),
     val term: TimetableTerm? = null,
@@ -102,7 +100,6 @@ data class TimetableState(
     val isRefreshing: Boolean = false,
 )
 
-/** 每次展示 [TimetableState.term] 的一周，打开时停在 [today] 所在的周。 */
 @Composable
 fun TimetablePage(
     state: TimetableState,
@@ -231,7 +228,6 @@ fun TimetablePage(
     }
 }
 
-/** 没有课程可展示时代替课表，说明 [status] 并在需要时提供调用 [onRefresh] 的按钮。 */
 @Composable
 private fun TimetableStatusMessage(
     status: TimetableStatus,
@@ -325,7 +321,6 @@ private fun EntryDetailSheet(
     }
 }
 
-/** 把 [value] 复制到剪贴板，然后调用 [onCopy]。 */
 @Composable
 private fun copyAction(
     title: String,
@@ -342,7 +337,6 @@ private fun copyAction(
     }
 }
 
-/** 长按时运行 [copy]，同时给出标准的长按触感。 */
 @Composable
 private fun Modifier.longPressToCopy(copy: () -> Unit): Modifier = combinedClickable(
     onLongClickLabel = stringResource(R.string.timetable_detail_copy),
@@ -399,7 +393,6 @@ private fun CopyButtonRow(title: String, value: String) {
     )
 }
 
-/** [entry] 的星期与节次，后接具体时刻。 */
 @Composable
 private fun entryScheduleText(entry: TimetableEntry): String {
     val dayName = entry.day.getDisplayName(TextStyle.FULL, LocalConfiguration.current.locales[0])
@@ -537,7 +530,6 @@ private fun formatDateRange(start: LocalDate, end: LocalDate, pattern: String): 
     return "${start.format(formatter)} – ${end.format(formatter)}"
 }
 
-/** 代替课表显示的说明，课程正常展示时没有。 */
 @get:StringRes
 private val TimetableStatus.messageRes: Int?
     get() = when (this) {
@@ -548,7 +540,6 @@ private val TimetableStatus.messageRes: Int?
         TimetableStatus.NotFetched -> R.string.timetable_not_fetched
     }
 
-/** 说明下方刷新按钮的文字，刷新解决不了问题或已在进行时没有。 */
 @get:StringRes
 private val TimetableStatus.actionRes: Int?
     get() = when (this) {

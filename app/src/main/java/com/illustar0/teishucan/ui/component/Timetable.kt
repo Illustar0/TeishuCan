@@ -41,10 +41,8 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
 /**
- * [week] 周一到周日的课表网格，每天 [periodCount] 节。
- *
  * 起始节次在网格之外的课程不显示，超出最后一节的部分被截断，占用同一格的课程按列表顺序重叠。
- * 表头显示这一周的日期，并在 [today] 落在这一周时突出显示。点击课程时调用 [onEntryClick]。
+ * 表头显示这一周的日期，并在 [today] 落在这一周时突出显示。
  */
 @Composable
 fun Timetable(
@@ -215,7 +213,7 @@ private fun EntryCell(
         showIndication = true,
         onClick = onClick,
     ) {
-        // 标题占满剩余高度，把地点压到卡片底部；空间不足时先截断标题，保住门牌号
+        // 标题占满剩余高度，把地点压到卡片底部；空间不足时先截断标题，保住门牌号。
         Text(
             text = entry.title,
             modifier = Modifier.weight(1f),
@@ -236,38 +234,23 @@ private fun EntryCell(
     }
 }
 
-/** [Timetable] 使用的默认值。 */
 object TimetableDefaults {
-    /** 每天的默认节数。 */
     const val PeriodCount = 10
-
-    /** 一节课的默认高度。 */
     val PeriodHeight = 64.dp
-
-    /** 节次序号列的宽度。 */
     val PeriodLabelWidth = 24.dp
-
-    /** 课程与周围网格线之间的间隙。 */
     val EntryGap = 2.dp
-
-    /** 课程卡片的圆角半径。 */
     val EntryCornerRadius = 6.dp
-
-    /** 课程卡片的内边距。 */
     val EntryPadding = 4.dp
 
-    /** 地点最多显示的行数，两行足以放下“楼名_门牌号”而不截掉门牌号。 */
+    /** 两行足以放下“楼名_门牌号”而不截掉门牌号。 */
     const val LocationMaxLines = 2
 
     /**
-     * 地点文字相对课程名的不透明度。
-     *
      * Miuix 没有与 tertiaryContainer 配对的次要文字 token，这里沿用浅色主题下
      * onSurfaceVariantSummary 相对正文的 60% 不透明度。
      */
     private const val LocationAlpha = 0.6f
 
-    /** [Timetable] 的默认颜色。 */
     @Composable
     fun timetableColors(
         dayColor: Color = MiuixTheme.colorScheme.onSurfaceVariantSummary,

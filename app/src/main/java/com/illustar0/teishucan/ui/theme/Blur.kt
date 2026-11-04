@@ -27,7 +27,6 @@ val LocalIsLiquidGlassEnabled = staticCompositionLocalOf { false }
 val isBlurSupported: Boolean
     get() = isRuntimeShaderSupported()
 
-/** 返回供各栏模糊的图层；未 [isEnabled] 或设备无法渲染时为 null。 */
 @Composable
 fun rememberBlurBackdrop(isEnabled: Boolean = LocalIsBlurEnabled.current): LayerBackdrop? {
     if (!isEnabled || !isBlurSupported) return null
@@ -42,7 +41,6 @@ fun rememberBlurBackdrop(isEnabled: Boolean = LocalIsBlurEnabled.current): Layer
 fun Modifier.blurSource(backdrop: LayerBackdrop?): Modifier =
     if (backdrop != null) layerBackdrop(backdrop) else this
 
-/** 悬浮栏的模糊背景，模糊 [shape] 范围内的 [backdrop]。 */
 @Composable
 fun Modifier.floatingBarBlur(backdrop: LayerBackdrop, shape: Shape): Modifier {
     val tintColor = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = FloatingBarTintAlpha)
@@ -54,7 +52,6 @@ fun Modifier.floatingBarBlur(backdrop: LayerBackdrop, shape: Shape): Modifier {
     )
 }
 
-/** 承载通栏，并把应使用的容器颜色传给 [content]。 */
 @Composable
 fun BlurredBar(
     backdrop: LayerBackdrop?,

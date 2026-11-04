@@ -13,7 +13,6 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class ThemeViewModel @Inject constructor(private val repository: ThemeRepository) : ViewModel() {
-    /** 保存的主题设置，读出之前为 null。 */
     val settings: StateFlow<ThemeSettings?> = repository.settings
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 

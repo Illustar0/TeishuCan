@@ -30,7 +30,6 @@ class StudentRepository @Inject constructor(
     )
     val student: StateFlow<StudentData> = cache.value
 
-    /** [student] 在 [now] 是否超过 [maxAge] 未更新，或被 [expire] 过。 */
     suspend fun isStaleAt(now: Instant, maxAge: Duration): Boolean = cache.isStaleAt(now, maxAge)
 
     suspend fun refresh() = session.request(CampusFeature.CampusCard) {
@@ -44,7 +43,6 @@ class StudentRepository @Inject constructor(
         cache.expire()
     }
 
-    /** 创建校园卡充值订单，订单连同各支付渠道的收银台地址一起返回。 */
     suspend fun createRechargeOrder(amountYuan: Int): RechargeOrder {
         require(amountYuan > 0)
         return session.request(CampusFeature.CampusCard) {
@@ -57,11 +55,9 @@ class StudentRepository @Inject constructor(
         }
     }
 
-    /** 免登录打开学生邮箱的地址。 */
     suspend fun mailLoginUrl(): String =
         session.request(CampusFeature.Mail) { cas.serviceLoginUrl(SsoService.EMAIL) }
 
-    /** 免登录打开 [service] 的地址。 */
     suspend fun serviceLoginUrl(service: CampusService): String =
         session.request(CampusFeature.Services) { cas.serviceLoginUrl(service.toSsoService()) }
 }

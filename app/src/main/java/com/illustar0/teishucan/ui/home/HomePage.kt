@@ -94,7 +94,6 @@ private const val FinishedClassAlpha = 0.15f
 
 private const val StatColumnCount = 2
 
-/** 首页展示的内容；可空的值为 null 表示尚未查询到。[electricityKilowattHours] 是所有电表的合计。 */
 data class HomeState(
     val upcomingClass: UpcomingClass = UpcomingClass.NotFetched,
     val campusCardBalanceYuan: BigDecimal? = null,
@@ -105,7 +104,6 @@ data class HomeState(
     val profile: StudentProfile? = null,
 )
 
-/** 一张小卡片。占位的 [value] 代替数字，比如提示添加电表。 */
 private data class HomeStat(
     val title: String,
     val value: AnnotatedString,
@@ -160,7 +158,6 @@ fun HomePage(
     }
 }
 
-/** 登录之前的首页，不提供任何需要账号的内容。 */
 @Composable
 fun SignedOutHomePage(onLoginClick: () -> Unit, bottomPadding: Dp) {
     HomeScaffold(bottomPadding = bottomPadding, onRefresh = null) {
@@ -173,7 +170,6 @@ fun SignedOutHomePage(onLoginClick: () -> Unit, bottomPadding: Dp) {
     }
 }
 
-/** 只有提供 [onRefresh] 时页面才能下拉刷新。 */
 @Composable
 private fun HomeScaffold(
     bottomPadding: Dp,
@@ -229,7 +225,6 @@ private fun HomeScaffold(
     }
 }
 
-/** 页面顶部的着色卡片，[icon] 从右下角探出卡片边缘。 */
 @Composable
 private fun LeadCard(
     icon: ImageVector,
@@ -354,7 +349,6 @@ private fun LeadDescription(text: String) {
     )
 }
 
-/** 当天每节课一格，着色以融入卡片，下一节课用实心主色。 */
 @Composable
 private fun DayPeriodStrip(
     nextClass: NextClass,

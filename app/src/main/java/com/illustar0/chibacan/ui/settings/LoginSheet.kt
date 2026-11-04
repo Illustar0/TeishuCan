@@ -39,7 +39,7 @@ import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private const val MfaCodeLength = 6
+private const val MfaCodeLength = 4
 private const val MfaResendIntervalSeconds = 60
 private const val MillisPerSecond = 1000L
 

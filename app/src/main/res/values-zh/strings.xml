@@ -10,6 +10,8 @@
     <string name="service_library_summary">馆藏检索与借阅</string>
     <string name="service_library_reservation">空间预约</string>
     <string name="service_library_reservation_summary">预约座位与研讨间</string>
+    <string name="service_campus_card">一卡通</string>
+    <string name="service_campus_card_summary">校园卡相关服务</string>
     <string name="service_leave">请假</string>
     <string name="service_leave_summary">提交和查看请假申请</string>
     <string name="services_academic">教务</string>

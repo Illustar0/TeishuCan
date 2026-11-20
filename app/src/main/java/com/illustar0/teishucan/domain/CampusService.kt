@@ -4,6 +4,7 @@ package com.illustar0.teishucan.domain
 enum class CampusService {
     Library,
     LibraryReservation,
+    CampusCard,
     Leave,
     PresidentMailbox,
     StudentStatus,

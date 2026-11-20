@@ -52,7 +52,7 @@ private val ServiceGroups = listOf(
     ),
     ServiceGroup(
         titleRes = R.string.services_student_affairs,
-        services = listOf(CampusService.Leave, CampusService.PresidentMailbox),
+        services = listOf(CampusService.CampusCard, CampusService.Leave, CampusService.PresidentMailbox),
     ),
 )
 
@@ -166,6 +166,7 @@ private val CampusService.titleRes: Int
     get() = when (this) {
         CampusService.Library -> R.string.service_library
         CampusService.LibraryReservation -> R.string.service_library_reservation
+        CampusService.CampusCard -> R.string.service_campus_card
         CampusService.Leave -> R.string.service_leave
         CampusService.PresidentMailbox -> R.string.service_president_mailbox
         CampusService.StudentStatus -> R.string.service_student_status
@@ -185,6 +186,7 @@ private val CampusService.summaryRes: Int
     get() = when (this) {
         CampusService.Library -> R.string.service_library_summary
         CampusService.LibraryReservation -> R.string.service_library_reservation_summary
+        CampusService.CampusCard -> R.string.service_campus_card_summary
         CampusService.Leave -> R.string.service_leave_summary
         CampusService.PresidentMailbox -> R.string.service_president_mailbox_summary
         CampusService.StudentStatus -> R.string.service_student_status_summary
@@ -203,6 +205,7 @@ private val CampusService.icon: ImageVector
     @Composable get() = when (this) {
         CampusService.Library -> ImageVector.vectorResource(R.drawable.ic_lucide_library_big)
         CampusService.LibraryReservation -> ImageVector.vectorResource(R.drawable.ic_lucide_armchair)
+        CampusService.CampusCard -> ImageVector.vectorResource(R.drawable.ic_lucide_id_card)
         CampusService.Leave -> ImageVector.vectorResource(R.drawable.ic_lucide_calendar_off)
         CampusService.PresidentMailbox -> MiuixIcons.Email
         CampusService.StudentStatus -> MiuixIcons.ContactsBook

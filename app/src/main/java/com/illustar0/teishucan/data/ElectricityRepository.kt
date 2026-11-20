@@ -12,9 +12,9 @@ import com.illustar0.teishucan.domain.MeterLocation
 import com.illustar0.teishucan.domain.MeterOption
 import com.illustar0.teishucan.domain.MeterReading
 import com.illustar0.teishucan.domain.MeterRechargeResult
+import com.illustar0.zzu.ZzuException
+import com.illustar0.zzu.ecard.RoomId
 import dagger.hilt.android.qualifiers.ApplicationContext
-import dev.zzu.ZzuException
-import dev.zzu.ecard.RoomId
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope

@@ -6,8 +6,8 @@ import android.security.keystore.KeyProperties
 import android.util.AtomicFile
 import com.illustar0.teishucan.di.IoDispatcher
 import com.illustar0.teishucan.domain.StudentProfile
+import com.illustar0.zzu.cas.Tokens
 import dagger.hilt.android.qualifiers.ApplicationContext
-import dev.zzu.cas.Tokens
 import java.io.File
 import java.io.FileNotFoundException
 import java.security.GeneralSecurityException

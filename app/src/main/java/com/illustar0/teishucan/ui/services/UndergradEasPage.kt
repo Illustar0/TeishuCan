@@ -39,8 +39,8 @@ private val UndergradEasGroups = listOf(
         ),
     ),
     ServiceGroup(
-        titleRes = R.string.services_eas_courses,
-        services = listOf(CampusService.CourseSelection, CampusService.Exams, CampusService.Grades),
+        titleRes = R.string.services_eas_exams_and_grades,
+        services = listOf(CampusService.Exams, CampusService.Grades),
     ),
     ServiceGroup(
         titleRes = R.string.services_eas_schedule,

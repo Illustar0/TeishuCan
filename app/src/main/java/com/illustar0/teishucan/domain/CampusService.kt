@@ -9,7 +9,6 @@ enum class CampusService {
     StudentStatus,
     ProgramCompletion,
     AcademicWarnings,
-    CourseSelection,
     Exams,
     Grades,
     Timetable,

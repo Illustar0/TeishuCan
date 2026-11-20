@@ -1,12 +1,12 @@
 package com.illustar0.teishucan.data
 
 import com.illustar0.teishucan.domain.StudentProfile
-import dev.zzu.AuthenticationErrorKind
-import dev.zzu.ZzuException
-import dev.zzu.cas.CasClient
-import dev.zzu.cas.Tokens
-import dev.zzu.eas.EasClient
-import dev.zzu.ecard.EcardClient
+import com.illustar0.zzu.AuthenticationErrorKind
+import com.illustar0.zzu.ZzuException
+import com.illustar0.zzu.cas.CasClient
+import com.illustar0.zzu.cas.Tokens
+import com.illustar0.zzu.eas.EasClient
+import com.illustar0.zzu.ecard.EcardClient
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 

@@ -14,10 +14,10 @@
     <string name="service_leave_summary">提交和查看请假申请</string>
     <string name="services_academic">教务</string>
     <string name="services_eas_records">学籍与培养</string>
-    <string name="services_eas_courses">选课与考试</string>
+    <string name="services_eas_exams_and_grades">考试与成绩</string>
     <string name="services_eas_schedule">课表与教室</string>
     <string name="service_undergrad_eas">本科教务系统</string>
-    <string name="service_undergrad_eas_summary">学籍、选课、考试与成绩</string>
+    <string name="service_undergrad_eas_summary">学籍、考试与成绩</string>
     <string name="service_president_mailbox">校长信箱</string>
     <string name="service_president_mailbox_summary">向校长提交意见与建议</string>
     <string name="service_student_status">学籍信息</string>
@@ -26,8 +26,6 @@
     <string name="service_program_completion_summary">查看培养方案完成情况</string>
     <string name="service_academic_warnings">学业预警</string>
     <string name="service_academic_warnings_summary">查询学业预警记录</string>
-    <string name="service_course_selection">选课</string>
-    <string name="service_course_selection_summary">选择和退选课程</string>
     <string name="service_exams">考试</string>
     <string name="service_exams_summary">查询考试安排</string>
     <string name="service_grades">成绩</string>

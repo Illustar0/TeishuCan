@@ -171,7 +171,6 @@ private val CampusService.titleRes: Int
         CampusService.StudentStatus -> R.string.service_student_status
         CampusService.ProgramCompletion -> R.string.service_program_completion
         CampusService.AcademicWarnings -> R.string.service_academic_warnings
-        CampusService.CourseSelection -> R.string.service_course_selection
         CampusService.Exams -> R.string.service_exams
         CampusService.Grades -> R.string.service_grades
         CampusService.Timetable -> R.string.service_timetable
@@ -191,7 +190,6 @@ private val CampusService.summaryRes: Int
         CampusService.StudentStatus -> R.string.service_student_status_summary
         CampusService.ProgramCompletion -> R.string.service_program_completion_summary
         CampusService.AcademicWarnings -> R.string.service_academic_warnings_summary
-        CampusService.CourseSelection -> R.string.service_course_selection_summary
         CampusService.Exams -> R.string.service_exams_summary
         CampusService.Grades -> R.string.service_grades_summary
         CampusService.Timetable -> R.string.service_timetable_summary
@@ -210,7 +208,6 @@ private val CampusService.icon: ImageVector
         CampusService.StudentStatus -> MiuixIcons.ContactsBook
         CampusService.ProgramCompletion -> MiuixIcons.Tasks
         CampusService.AcademicWarnings -> ImageVector.vectorResource(R.drawable.ic_lucide_triangle_alert)
-        CampusService.CourseSelection -> ImageVector.vectorResource(R.drawable.ic_lucide_book_plus)
         CampusService.Exams -> ImageVector.vectorResource(R.drawable.ic_lucide_file_pen_line)
         CampusService.Grades -> ImageVector.vectorResource(R.drawable.ic_lucide_award)
         CampusService.Timetable -> MiuixIcons.Months

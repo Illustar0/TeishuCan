@@ -5,11 +5,11 @@ import com.illustar0.teishucan.domain.CampusFeature
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.TimetableWeek
-import dev.zzu.ZzuTimeZone
-import dev.zzu.eas.Lesson
-import dev.zzu.eas.Semester
-import dev.zzu.eas.SemesterId
-import dev.zzu.eas.TeachingWeek
+import com.illustar0.zzu.ZzuTimeZone
+import com.illustar0.zzu.eas.Lesson
+import com.illustar0.zzu.eas.Semester
+import com.illustar0.zzu.eas.SemesterId
+import com.illustar0.zzu.eas.TeachingWeek
 import java.time.DayOfWeek
 import java.time.LocalTime
 import java.time.temporal.TemporalAdjusters

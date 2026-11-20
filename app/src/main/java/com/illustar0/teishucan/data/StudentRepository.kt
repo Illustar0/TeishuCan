@@ -7,8 +7,8 @@ import com.illustar0.teishucan.domain.PaymentChannel
 import com.illustar0.teishucan.domain.RechargeOrder
 import com.illustar0.teishucan.domain.StudentData
 import com.illustar0.teishucan.domain.StudentProfile
-import dev.zzu.cas.PersonalInfo
-import dev.zzu.cas.SsoService
+import com.illustar0.zzu.cas.PersonalInfo
+import com.illustar0.zzu.cas.SsoService
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -70,7 +70,6 @@ private fun CampusService.toSsoService() = when (this) {
     CampusService.StudentStatus -> SsoService.UndergradEas.STUDENT_STATUS
     CampusService.ProgramCompletion -> SsoService.UndergradEas.PROGRAM_COMPLETION
     CampusService.AcademicWarnings -> SsoService.UndergradEas.ACADEMIC_WARNINGS
-    CampusService.CourseSelection -> SsoService.UndergradEas.COURSE_SELECTION
     CampusService.Exams -> SsoService.UndergradEas.EXAMS
     CampusService.Grades -> SsoService.UndergradEas.GRADES
     CampusService.Timetable -> SsoService.UndergradEas.TIMETABLE

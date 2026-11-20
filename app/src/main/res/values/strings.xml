@@ -16,10 +16,10 @@
     <string name="service_leave_summary">休暇の申請と確認</string>
     <string name="services_academic">教務</string>
     <string name="services_eas_records">学籍と教育課程</string>
-    <string name="services_eas_courses">履修と試験</string>
+    <string name="services_eas_exams_and_grades">試験と成績</string>
     <string name="services_eas_schedule">時間割と教室</string>
     <string name="service_undergrad_eas">学部教務システム</string>
-    <string name="service_undergrad_eas_summary">学籍、履修、試験、成績</string>
+    <string name="service_undergrad_eas_summary">学籍、試験、成績</string>
     <string name="service_president_mailbox">学長メールボックス</string>
     <string name="service_president_mailbox_summary">学長に意見や提案を送信</string>
     <string name="service_student_status">学籍情報</string>
@@ -28,8 +28,6 @@
     <string name="service_program_completion_summary">教育課程の修了状況を確認</string>
     <string name="service_academic_warnings">学業警告</string>
     <string name="service_academic_warnings_summary">学業警告の記録を確認</string>
-    <string name="service_course_selection">履修登録</string>
-    <string name="service_course_selection_summary">科目の登録と取り消し</string>
     <string name="service_exams">試験</string>
     <string name="service_exams_summary">試験日程を確認</string>
     <string name="service_grades">成績</string>

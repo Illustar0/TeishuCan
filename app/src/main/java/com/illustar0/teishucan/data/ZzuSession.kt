@@ -7,8 +7,8 @@ import com.illustar0.teishucan.domain.CampusFeature
 import com.illustar0.teishucan.domain.CampusRequestException
 import com.illustar0.teishucan.domain.LoginResult
 import com.illustar0.teishucan.domain.StudentProfile
-import dev.zzu.AuthenticationErrorKind
-import dev.zzu.ZzuException
+import com.illustar0.zzu.AuthenticationErrorKind
+import com.illustar0.zzu.ZzuException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException

@@ -1,6 +1,6 @@
 [versions]
 aboutLibraries = "15.3.0"
-agp = "9.5.0"
+agp = "9.5.1"
 androidxHilt = "1.4.0"
 appcompat = "1.8.0"
 benchmark = "1.5.0"

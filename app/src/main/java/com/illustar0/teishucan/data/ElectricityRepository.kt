@@ -42,18 +42,16 @@ private val Context.meterStore: DataStore<List<ElectricityMeter>> by dataStore(
 class ElectricityRepository @Inject constructor(
     @ApplicationContext context: Context,
     private val session: ZzuSession,
-    snapshots: SignInSnapshotStore,
     @ApplicationScope scope: CoroutineScope,
 ) {
     private val store = context.meterStore
     private val savedMeters = store.dataOr(emptyList())
 
     /** 各房间的剩余电量，以 [MeterLocation.meterId] 为键。 */
-    private val remainingEnergy = SignInCache(
-        session.state,
-        scope,
+    private val remainingEnergy = session.createSnapshotCache(
+        "electricity.json",
         emptyMap(),
-        snapshots.file("electricity.json", serializer<Map<String, Double>>()),
+        serializer<Map<String, Double>>(),
     )
 
     /** 已添加的电表及其读数；保存的列表读出之前为 null。 */

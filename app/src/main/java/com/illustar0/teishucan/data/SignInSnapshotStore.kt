@@ -21,9 +21,9 @@ import kotlin.time.Instant
 
 private const val Tag = "TeishuCan.Snapshot"
 
-/** [account] 登录期间查询到的 [value]，[fetchedAt] 是它最近一次与服务端核对的时间。 */
+/** [signInId] 对应的登录期间查询到的 [value]，[fetchedAt] 是最近一次与服务端核对的时间。 */
 @Serializable
-internal data class Snapshot<T>(val account: String, val fetchedAt: Instant?, val value: T)
+internal data class Snapshot<T>(val signInId: String, val fetchedAt: Instant?, val value: T)
 
 /**
  * 登录期间查询到的数据在本机的快照，冷启动恢复登录后先显示它，再等刷新。
@@ -56,14 +56,18 @@ class SignInSnapshotStore @Inject constructor(
     internal inner class SnapshotFile<T>(name: String, private val serializer: KSerializer<Snapshot<T>>) {
         private val file = AtomicFile(File(directory, name))
 
-        /** 读取快照。没有快照、文件不可读或格式已过时都为 null，快照只是加速显示，缺了也无妨。 */
-        suspend fun read(): Snapshot<T>? = withContext(ioDispatcher) {
+        /** 只有属于这次登录的快照才可恢复。 */
+        suspend fun read(signInId: String): Snapshot<T>? = withContext(ioDispatcher) {
             try {
                 val content = lock.withLock { file.readFully() }
                 StoreJson.decodeFromString(serializer, content.decodeToString())
+                    .takeIf { it.signInId == signInId }
             } catch (_: FileNotFoundException) {
                 null
             } catch (cause: IOException) {
+                Log.w(Tag, "Could not read the snapshot", cause)
+                null
+            } catch (cause: SecurityException) {
                 Log.w(Tag, "Could not read the snapshot", cause)
                 null
             } catch (_: SerializationException) {

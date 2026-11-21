@@ -17,7 +17,6 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -25,6 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.KSerializer
 import kotlin.time.TimeSource
 
 private const val Tag = "TeishuCan.Zzu"
@@ -57,7 +57,9 @@ internal sealed interface SessionState {
 }
 
 /** 一次已完成的登录，[session] 与磁盘上的存档相同。存档更新时实例随之替换，[clients] 不变。 */
-internal class SignIn(override val clients: ZzuClients, val session: StoredSession) : SessionState
+internal class SignIn(override val clients: ZzuClients, val session: StoredSession) : SessionState {
+    val id: String get() = session.signInId
+}
 
 /**
  * 账号的登录状态机，也是各功能仓库访问校园服务的唯一入口 [request]。
@@ -72,10 +74,9 @@ internal class SignIn(override val clients: ZzuClients, val session: StoredSessi
 class ZzuSession @Inject constructor(
     private val store: EncryptedSessionStore,
     private val snapshots: SignInSnapshotStore,
-    @ApplicationScope scope: CoroutineScope,
+    @ApplicationScope private val scope: CoroutineScope,
 ) {
     private val mutableState = MutableStateFlow<SessionState>(SessionState.Restoring)
-    internal val state: StateFlow<SessionState> = mutableState.asStateFlow()
 
     /** 串行化状态切换与存档读写，两者才能保持一致。持有期间只做本地操作，不等待网络。 */
     private val transitionLock = Mutex()
@@ -117,6 +118,9 @@ class ZzuSession @Inject constructor(
         }
         return SignIn(clients, saved)
     }
+
+    internal fun <T : Any> createSnapshotCache(name: String, initial: T, serializer: KSerializer<T>) =
+        SignInCache(mutableState, scope, initial, snapshots.file(name, serializer))
 
     suspend fun login(account: String, password: String): LoginResult {
         require(account.isNotBlank() && password.isNotEmpty())

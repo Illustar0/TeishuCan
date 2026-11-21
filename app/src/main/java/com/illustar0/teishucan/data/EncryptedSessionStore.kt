@@ -28,6 +28,7 @@ import kotlinx.serialization.json.Json
 
 @Serializable
 internal data class StoredSession(
+    val signInId: String,
     val account: String,
     val password: String,
     val tokens: Tokens,

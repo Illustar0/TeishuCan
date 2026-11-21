@@ -33,14 +33,12 @@ import kotlin.time.Instant
 @Singleton
 class TimetableRepository @Inject constructor(
     private val session: ZzuSession,
-    snapshots: SignInSnapshotStore,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
-    private val cache = SignInCache(
-        session.state,
-        scope,
+    private val cache = session.createSnapshotCache(
+        "timetable.json",
         emptyList(),
-        snapshots.file("timetable.json", serializer<List<TimetableTerm>>()),
+        serializer<List<TimetableTerm>>(),
     )
 
     val terms: StateFlow<List<TimetableTerm>> = cache.value
@@ -61,7 +59,11 @@ class TimetableRepository @Inject constructor(
         val running = latestRefresh.updateAndGet { latest ->
             if (latest != null && latest.owner === clients && !latest.result.isCompleted) latest else candidate
         }
-        if (running !== candidate) candidate.result.cancel()
+        if (running === candidate) {
+            candidate.result.invokeOnCompletion { latestRefresh.compareAndSet(candidate, null) }
+        } else {
+            candidate.result.cancel()
+        }
         checkNotNull(running).result.await()
     }
 

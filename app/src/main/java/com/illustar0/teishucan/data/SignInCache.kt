@@ -5,11 +5,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChangedBy
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -22,7 +23,7 @@ import kotlin.time.Instant
 /**
  * 当前这次登录查询到的数据，每次更新都存一份快照到 [file]。
  *
- * 登录开始时读回同一账号的快照，冷启动后刷新完成之前也有内容可显示。
+ * 恢复同一次登录时读回快照，冷启动后刷新完成之前也有内容可显示。
  * 登录结束后读回 [initial]，上一次登录迟到的响应也绝不会落到下一次登录上。
  */
 internal class SignInCache<T : Any>(
@@ -33,17 +34,15 @@ internal class SignInCache<T : Any>(
 ) {
     private data class Entry<T>(
         val owner: ZzuClients,
-        val account: String,
+        val signInId: String,
         val snapshot: Snapshot<T>? = null,
         val version: Long = 0,
+        val isRestored: Boolean = false,
     )
 
     private val entry = MutableStateFlow<Entry<T>?>(null)
     private val versions = AtomicLong()
     private val publishLock = Mutex()
-
-    /** 已经尝试过读回快照的登录，读回之前 [entry] 还不能代表这次登录。 */
-    private val restoredOwner = MutableStateFlow<ZzuClients?>(null)
 
     val value: StateFlow<T> = combine(session, entry) { state, latest -> valueFor(state.clients, latest) }
         .stateIn(scope, SharingStarted.Eagerly, initial)
@@ -51,11 +50,14 @@ internal class SignInCache<T : Any>(
     init {
         scope.launch {
             // 存档更新会替换 SignIn 实例，只有换了登录才需要读快照。
-            session.filterIsInstance<SignIn>().distinctUntilChangedBy { it.clients }.collect { restore(it) }
+            session.map { it as? SignIn }.distinctUntilChangedBy { it?.clients }.collectLatest { signIn ->
+                entry.update { current -> current?.takeIf { it.owner === session.value.clients } }
+                if (signIn != null) restore(signIn)
+            }
         }
         scope.launch {
             // StateFlow 会合并来不及写的中间值，最后落盘的总是最新的一份。
-            entry.filterNotNull().collect { latest ->
+            entry.filterNotNull().distinctUntilChangedBy { it.owner to it.snapshot }.collect { latest ->
                 val snapshot = latest.snapshot ?: return@collect
                 file.write(snapshot) {
                     session.value.clients === latest.owner
@@ -84,7 +86,7 @@ internal class SignInCache<T : Any>(
                 latest
             } else {
                 val value = transform(latest.snapshot?.value ?: initial)
-                latest.copy(snapshot = Snapshot(latest.account, fetchedAt, value), version = refreshVersion)
+                latest.copy(snapshot = Snapshot(latest.signInId, fetchedAt, value), version = refreshVersion)
             }
         }
     }
@@ -93,7 +95,7 @@ internal class SignInCache<T : Any>(
     fun amend(owner: ZzuClients, transform: (T) -> T) {
         modify(owner) { latest ->
             val value = transform(latest.snapshot?.value ?: initial)
-            latest.copy(snapshot = Snapshot(latest.account, latest.snapshot?.fetchedAt, value))
+            latest.copy(snapshot = Snapshot(latest.signInId, latest.snapshot?.fetchedAt, value))
         }
     }
 
@@ -114,38 +116,34 @@ internal class SignInCache<T : Any>(
      * 会等快照读回再判断。没有登录时没有可刷新的内容，不算过期。
      */
     suspend fun isStaleAt(now: Instant, maxAge: Duration, isComplete: (T) -> Boolean = { true }): Boolean {
-        val owner = session.value.clients ?: return false
-        combine(session, restoredOwner) { state, restored -> state.clients !== owner || restored === owner }
-            .first { it }
+        val owner = (session.value as? SignIn)?.clients ?: return false
+        combine(session, entry) { state, current ->
+            state.clients !== owner || (current?.owner === owner && current.isRestored)
+        }.first { it }
         val snapshot = entry.value?.takeIf { it.owner === owner }?.snapshot
         val fetchedAt = snapshot?.fetchedAt
-        return snapshot == null || fetchedAt == null || now - fetchedAt !in Duration.ZERO..maxAge ||
-            !isComplete(snapshot.value)
+        return session.value.clients === owner &&
+            (snapshot == null || fetchedAt == null || now - fetchedAt !in Duration.ZERO..maxAge ||
+                !isComplete(snapshot.value))
     }
 
     private fun modify(owner: ZzuClients, transform: (Entry<T>) -> Entry<T>) {
         entry.update { latest ->
             val signIn = session.value as? SignIn
             if (signIn?.clients !== owner) return@update latest
-            val current = latest?.takeIf { it.owner === owner } ?: Entry(owner, signIn.session.account)
+            val current = latest?.takeIf { it.owner === owner } ?: Entry(owner, signIn.id)
             transform(current)
         }
     }
 
-    /** 让 [signIn] 从它账号的快照开始。读盘期间已有更新或登录已结束时，快照作废。 */
     private suspend fun restore(signIn: SignIn) {
-        val snapshot = file.read()?.takeIf { it.account == signIn.session.account }
-        if (snapshot != null) {
-            entry.update { latest ->
-                if (session.value.clients !== signIn.clients) return@update latest
-                when {
-                    latest?.owner !== signIn.clients -> Entry(signIn.clients, snapshot.account, snapshot)
-                    latest.snapshot == null -> latest.copy(snapshot = snapshot.copy(fetchedAt = null))
-                    else -> latest
-                }
+        val saved = file.read(signIn.id)
+        modify(signIn.clients) { latest ->
+            val snapshot = latest.snapshot ?: saved?.let {
+                if (latest.version == 0L) it else it.copy(fetchedAt = null)
             }
+            latest.copy(snapshot = snapshot, isRestored = true)
         }
-        restoredOwner.value = signIn.clients
     }
 
     private fun valueFor(owner: ZzuClients?, latest: Entry<T>?): T =

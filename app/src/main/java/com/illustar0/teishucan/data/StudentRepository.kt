@@ -1,6 +1,5 @@
 package com.illustar0.teishucan.data
 
-import com.illustar0.teishucan.di.ApplicationScope
 import com.illustar0.teishucan.domain.CampusFeature
 import com.illustar0.teishucan.domain.CampusService
 import com.illustar0.teishucan.domain.PaymentChannel
@@ -11,7 +10,6 @@ import com.illustar0.zzu.cas.PersonalInfo
 import com.illustar0.zzu.cas.SsoService
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -19,14 +17,11 @@ import kotlin.time.Instant
 @Singleton
 class StudentRepository @Inject constructor(
     private val session: ZzuSession,
-    snapshots: SignInSnapshotStore,
-    @ApplicationScope scope: CoroutineScope,
 ) {
-    private val cache = SignInCache(
-        session.state,
-        scope,
+    private val cache = session.createSnapshotCache(
+        "student.json",
         StudentData(),
-        snapshots.file("student.json", StudentData.serializer()),
+        StudentData.serializer(),
     )
     val student: StateFlow<StudentData> = cache.value
 

@@ -7,6 +7,7 @@ import com.illustar0.zzu.cas.CasClient
 import com.illustar0.zzu.cas.Tokens
 import com.illustar0.zzu.eas.EasClient
 import com.illustar0.zzu.ecard.EcardClient
+import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -61,7 +62,13 @@ internal class ZzuClients(private val account: String, private val password: Str
         }
     }
 
-    suspend fun storedSession(profile: StudentProfile) = StoredSession(account, password, currentTokens(), profile)
+    suspend fun storedSession(profile: StudentProfile) = StoredSession(
+        signInId = UUID.randomUUID().toString(),
+        account = account,
+        password = password,
+        tokens = currentTokens(),
+        profile = profile,
+    )
 
     private suspend fun currentTokens(): Tokens = checkNotNull(cas.tokens()) { "Missing session tokens" }
 

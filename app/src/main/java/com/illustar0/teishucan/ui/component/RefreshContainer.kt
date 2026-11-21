@@ -49,17 +49,17 @@ fun RefreshContainer(
 fun FailureToasts(
     failures: StateFlow<Exception?>,
     @StringRes fallbackMessage: Int = R.string.refresh_failed,
-    onShown: (Exception) -> Unit,
+    onAcknowledge: (Exception) -> Unit,
 ) {
     val failure by failures.collectAsStateWithLifecycle()
-    val currentOnShown by rememberUpdatedState(onShown)
+    val currentOnAcknowledge by rememberUpdatedState(onAcknowledge)
     val context = LocalContext.current
 
     failure?.let { shownFailure ->
         LaunchedEffect(shownFailure) {
             val message = shownFailure.campusReason ?: context.getString(shownFailure.messageRes ?: fallbackMessage)
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            currentOnShown(shownFailure)
+            currentOnAcknowledge(shownFailure)
         }
     }
 }

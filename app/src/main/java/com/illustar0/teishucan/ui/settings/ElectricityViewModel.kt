@@ -176,7 +176,7 @@ fun ElectricitySettingsRoute(onBack: () -> Unit) {
     val snackbarHostState = remember { SnackbarHostState() }
     val rechargeSuccessMessage = stringResource(R.string.electricity_recharge_success)
 
-    FailureToasts(viewModel.failure, onShown = viewModel::onFailureShown)
+    FailureToasts(viewModel.failure, onAcknowledge = viewModel::onFailureShown)
     OutcomeHaptics(
         outcomes = viewModel.rechargeOutcomes,
         onSucceed = { snackbarHostState.showSnackbar(rechargeSuccessMessage) },

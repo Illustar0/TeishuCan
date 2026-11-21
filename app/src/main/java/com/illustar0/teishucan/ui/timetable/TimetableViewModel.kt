@@ -137,7 +137,7 @@ fun TimetableRoute(bottomPadding: Dp) {
     val viewModel = hiltViewModel<TimetableViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    FailureToasts(viewModel.failure, onShown = viewModel::onFailureShown)
+    FailureToasts(viewModel.failure, onAcknowledge = viewModel::onFailureShown)
 
     TimetablePage(
         state = state,

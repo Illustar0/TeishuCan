@@ -59,7 +59,7 @@ fun OpenPendingUrl(pendingUrl: PendingUrl, @StringRes failureMessage: Int) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
 
-    FailureToasts(pendingUrl.failure, fallbackMessage = failureMessage, onShown = pendingUrl::onFailureShown)
+    FailureToasts(pendingUrl.failure, fallbackMessage = failureMessage, onAcknowledge = pendingUrl::onFailureShown)
 
     url?.let { readyUrl ->
         LaunchedEffect(readyUrl) {

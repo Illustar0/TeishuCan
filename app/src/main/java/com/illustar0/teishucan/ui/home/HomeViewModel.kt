@@ -15,14 +15,12 @@ import com.illustar0.teishucan.data.StudentRepository
 import com.illustar0.teishucan.data.TimetableRepository
 import com.illustar0.teishucan.data.ZzuSession
 import com.illustar0.teishucan.domain.AccountState
-import com.illustar0.teishucan.domain.BackgroundTasks
 import com.illustar0.teishucan.domain.CampusZone
 import com.illustar0.teishucan.domain.MeterReading
 import com.illustar0.teishucan.domain.StudentData
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.totalKilowattHours
 import com.illustar0.teishucan.domain.upcomingClassAfter
-import com.illustar0.teishucan.ui.component.FailureToasts
 import com.illustar0.teishucan.ui.component.OpenPendingUrl
 import com.illustar0.teishucan.ui.component.OutcomeHaptics
 import com.illustar0.teishucan.ui.component.PendingUrl
@@ -45,9 +43,8 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
     private val now = MutableStateFlow(LocalDateTime.now(CampusZone))
 
-    val tasks = BackgroundTasks(viewModelScope)
     val isRefreshing: StateFlow<Boolean> = refresher.isRefreshing
-    val mailUrl = PendingUrl(tasks)
+    val mailUrl = PendingUrl(viewModelScope)
 
     val state: StateFlow<HomeState> = combine(
         timetable.terms, now, student.student, electricity.meters, session.account,
@@ -72,7 +69,7 @@ class HomeViewModel @Inject constructor(
 
     fun refresh() {
         updateTime()
-        refresher.tasks.refresh()
+        refresher.refresh()
     }
 
     fun openMail() {
@@ -106,7 +103,6 @@ fun HomeRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
-    FailureToasts(viewModel.tasks)
     OpenPendingUrl(viewModel.mailUrl, failureMessage = R.string.mail_open_failed)
     OutcomeHaptics(recharge.outcomes)
     // ViewModel 比分页页面活得久，不更新的话时间会停在第一次进入时。

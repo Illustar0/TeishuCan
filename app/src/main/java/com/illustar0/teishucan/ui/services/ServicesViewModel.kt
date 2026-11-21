@@ -9,9 +9,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.data.StudentRepository
-import com.illustar0.teishucan.domain.BackgroundTasks
 import com.illustar0.teishucan.domain.CampusService
-import com.illustar0.teishucan.ui.component.FailureToasts
 import com.illustar0.teishucan.ui.component.OpenPendingUrl
 import com.illustar0.teishucan.ui.component.PendingUrl
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,8 +24,7 @@ class ServicesViewModel @Inject constructor(
 ) : ViewModel() {
     private val openingServiceFlow = MutableStateFlow<CampusService?>(null)
 
-    val tasks = BackgroundTasks(viewModelScope)
-    val serviceUrl = PendingUrl(tasks)
+    val serviceUrl = PendingUrl(viewModelScope)
 
     /** 正在获取地址的服务，没有时为 null。 */
     val openingService: StateFlow<CampusService?> = openingServiceFlow.asStateFlow()
@@ -49,7 +46,6 @@ fun ServicesRoute(onOpenUndergradEas: () -> Unit, bottomPadding: Dp) {
     val viewModel = hiltViewModel<ServicesViewModel>()
     val openingService by viewModel.openingService.collectAsStateWithLifecycle()
 
-    FailureToasts(viewModel.tasks)
     OpenPendingUrl(viewModel.serviceUrl, failureMessage = R.string.service_open_failed)
 
     ServicesPage(
@@ -65,7 +61,6 @@ fun UndergradEasRoute(onBack: () -> Unit) {
     val viewModel = hiltViewModel<ServicesViewModel>()
     val openingService by viewModel.openingService.collectAsStateWithLifecycle()
 
-    FailureToasts(viewModel.tasks)
     OpenPendingUrl(viewModel.serviceUrl, failureMessage = R.string.service_open_failed)
 
     UndergradEasPage(

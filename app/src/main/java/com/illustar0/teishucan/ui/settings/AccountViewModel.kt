@@ -9,9 +9,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.illustar0.teishucan.R
+import com.illustar0.teishucan.concurrency.captureFailure
 import com.illustar0.teishucan.data.ZzuSession
 import com.illustar0.teishucan.domain.AccountState
-import com.illustar0.teishucan.domain.BackgroundTasks
 import com.illustar0.teishucan.domain.LoginResult
 import com.illustar0.teishucan.domain.campusReason
 import com.illustar0.teishucan.ui.component.ActionOutcome
@@ -20,7 +20,9 @@ import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
@@ -53,11 +55,12 @@ data class LoginFailure(@param:StringRes val fallbackMessage: Int, val reason: S
 @HiltViewModel
 class AccountViewModel @Inject constructor(private val session: ZzuSession) : ViewModel() {
     private val outcomes = Channel<ActionOutcome>(Channel.CONFLATED)
+    private val pendingLogoutFailure = MutableStateFlow<Exception?>(null)
 
     val account: StateFlow<AccountState> = session.account
     val loginForm = LoginFormState()
     val loginOutcomes: Flow<ActionOutcome> = outcomes.receiveAsFlow()
-    val logoutTasks = BackgroundTasks(viewModelScope)
+    val logoutFailure = pendingLogoutFailure.asStateFlow()
 
     fun submitCredentials() {
         submit(LoginAction.Login, R.string.login_failed, onFailure = { loginForm.password = "" }) {
@@ -83,7 +86,11 @@ class AccountViewModel @Inject constructor(private val session: ZzuSession) : Vi
     }
 
     fun logout() {
-        logoutTasks.launch { session.logout() }
+        viewModelScope.launch { pendingLogoutFailure.captureFailure { session.logout() } }
+    }
+
+    fun onLogoutFailureShown(failure: Exception) {
+        pendingLogoutFailure.compareAndSet(failure, null)
     }
 
     private fun finishLogin() {

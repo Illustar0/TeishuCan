@@ -11,15 +11,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.illustar0.teishucan.R
+import com.illustar0.teishucan.concurrency.RefreshQueue
+import com.illustar0.teishucan.concurrency.captureFailure
+import com.illustar0.teishucan.concurrency.refreshAll
 import com.illustar0.teishucan.data.ElectricityRepository
 import com.illustar0.teishucan.data.StudentRepository
-import com.illustar0.teishucan.domain.BackgroundTasks
 import com.illustar0.teishucan.domain.ElectricityMeter
 import com.illustar0.teishucan.domain.MeterOption
 import com.illustar0.teishucan.domain.MeterReading
 import com.illustar0.teishucan.domain.MeterRechargeResult
 import com.illustar0.teishucan.domain.campusReason
-import com.illustar0.teishucan.domain.refreshAll
 import com.illustar0.teishucan.ui.component.ActionOutcome
 import com.illustar0.teishucan.ui.component.FailureToasts
 import com.illustar0.teishucan.ui.component.OutcomeHaptics
@@ -30,8 +31,10 @@ import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -51,13 +54,18 @@ class ElectricityViewModel @Inject constructor(
     student: StudentRepository,
 ) : ViewModel() {
     private val rechargeOutcomeChannel = Channel<ActionOutcome>(Channel.CONFLATED)
+    private val pendingFailure = MutableStateFlow<Exception?>(null)
 
-    val tasks = BackgroundTasks(viewModelScope) {
-        // 这里的余额只服务于电表充值，没有电表就没有要更新的内容。
-        if (electricity.meters.filterNotNull().first().isNotEmpty()) {
-            refreshAll(electricity::refresh, student::refresh)
+    private val refreshQueue = RefreshQueue(viewModelScope) {
+        pendingFailure.captureFailure {
+            // 这里的余额只服务于电表充值，没有电表就没有要更新的内容。
+            if (electricity.meters.filterNotNull().first().isNotEmpty()) {
+                refreshAll(electricity::refresh, student::refresh)
+            }
         }
     }
+    val isRefreshing = refreshQueue.isRefreshing
+    val failure = pendingFailure.asStateFlow()
     val rechargeOutcomes: Flow<ActionOutcome> = rechargeOutcomeChannel.receiveAsFlow()
 
     val state: StateFlow<ElectricityUiState> = combine(electricity.meters, student.student) { meters, data ->
@@ -83,6 +91,12 @@ class ElectricityViewModel @Inject constructor(
         isEditorVisible = false
     }
 
+    fun refresh() = refreshQueue.request()
+
+    fun onFailureShown(failure: Exception) {
+        pendingFailure.compareAndSet(failure, null)
+    }
+
     fun saveMeter() {
         val location = editor.location ?: return
         val meter = ElectricityMeter(
@@ -91,16 +105,18 @@ class ElectricityViewModel @Inject constructor(
             location = location,
         )
         dismissEditor()
-        tasks.launch {
-            electricity.saveMeter(meter)
-            electricity.refresh()
+        viewModelScope.launch {
+            pendingFailure.captureFailure {
+                electricity.saveMeter(meter)
+                electricity.refresh()
+            }
         }
     }
 
     fun deleteMeter() {
         val meter = editor.meter ?: return
         dismissEditor()
-        tasks.launch { electricity.deleteMeter(meter) }
+        viewModelScope.launch { pendingFailure.captureFailure { electricity.deleteMeter(meter) } }
     }
 
     /** 把 [path] 下一级的选项加载进当前草稿。已加载或正在加载时不做事，失败后再调用即重试。 */
@@ -134,7 +150,7 @@ class ElectricityViewModel @Inject constructor(
                     draft.rechargeStatus = RechargeStatus.Idle
                     rechargeOutcomeChannel.trySend(ActionOutcome.Succeeded)
                     dismissEditor()
-                    tasks.refresh()
+                    refresh()
                 }
 
                 is MeterRechargeResult.Rejected -> {
@@ -145,7 +161,7 @@ class ElectricityViewModel @Inject constructor(
                 MeterRechargeResult.Unconfirmed -> {
                     draft.rechargeStatus = RechargeStatus.Unconfirmed
                     rechargeOutcomeChannel.trySend(ActionOutcome.Failed)
-                    tasks.refresh()
+                    refresh()
                 }
             }
         }
@@ -156,11 +172,11 @@ class ElectricityViewModel @Inject constructor(
 fun ElectricitySettingsRoute(onBack: () -> Unit) {
     val viewModel = hiltViewModel<ElectricityViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val isRefreshing by viewModel.tasks.isRefreshing.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val rechargeSuccessMessage = stringResource(R.string.electricity_recharge_success)
 
-    FailureToasts(viewModel.tasks)
+    FailureToasts(viewModel.failure, onShown = viewModel::onFailureShown)
     OutcomeHaptics(
         outcomes = viewModel.rechargeOutcomes,
         onSucceed = { snackbarHostState.showSnackbar(rechargeSuccessMessage) },
@@ -170,7 +186,7 @@ fun ElectricitySettingsRoute(onBack: () -> Unit) {
         meters = state.meters,
         campusCardBalanceYuan = state.campusCardBalanceYuan,
         isRefreshing = isRefreshing,
-        onRefresh = viewModel.tasks::refresh,
+        onRefresh = viewModel::refresh,
         editor = viewModel.editor,
         isEditorVisible = viewModel.isEditorVisible,
         onOpenEditor = viewModel::openEditor,

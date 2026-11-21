@@ -1,9 +1,10 @@
 package com.illustar0.teishucan.data
 
+import com.illustar0.teishucan.concurrency.RefreshQueue
+import com.illustar0.teishucan.concurrency.captureFailure
+import com.illustar0.teishucan.concurrency.refreshAll
 import com.illustar0.teishucan.di.ApplicationScope
 import com.illustar0.teishucan.domain.AccountState
-import com.illustar0.teishucan.domain.BackgroundTasks
-import com.illustar0.teishucan.domain.refreshAll
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -25,7 +27,7 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
 
 /**
- * 全应用数据的刷新入口：首页下拉走 [tasks]，进入前台时的自动刷新由 [refreshOnForeground] 安排。
+ * 全应用数据的刷新入口：首页下拉调用 [refresh]，自动刷新由 [refreshOnForeground] 安排。
  *
  * 不归属任何页面，所以无论应用恢复到哪一页，数据都会加载。
  */
@@ -37,13 +39,15 @@ class CampusRefresher @Inject constructor(
     electricity: ElectricityRepository,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
-    /** 用户要求的刷新：不论新旧全部更新，失败会提示。 */
-    val tasks = BackgroundTasks(scope) { refreshAll(timetable::refresh, student::refresh, electricity::refresh) }
-
+    private val pendingFailure = MutableStateFlow<Exception?>(null)
+    private val manualRefresh = RefreshQueue(scope) {
+        pendingFailure.captureFailure { refreshAll(timetable::refresh, student::refresh, electricity::refresh) }
+    }
     private val isAutoRefreshing = MutableStateFlow(false)
 
+    val refreshFailure = pendingFailure.asStateFlow()
     val isRefreshing: StateFlow<Boolean> =
-        combine(tasks.isRefreshing, isAutoRefreshing) { isRequested, isAutomatic -> isRequested || isAutomatic }
+        combine(manualRefresh.isRefreshing, isAutoRefreshing) { isRequested, isAutomatic -> isRequested || isAutomatic }
             .stateIn(scope, SharingStarted.Eagerly, false)
 
     /** 余额随消费常变，电量下降缓慢，课表一学期都很少变动。 */
@@ -52,6 +56,12 @@ class CampusRefresher @Inject constructor(
         AutoRefreshed(maxAge = 30.minutes, electricity::isStaleAt, electricity::refresh),
         AutoRefreshed(maxAge = 12.hours, timetable::isStaleAt, timetable::refresh),
     )
+
+    fun refresh() = manualRefresh.request()
+
+    fun onRefreshFailureShown(failure: Exception) {
+        pendingFailure.compareAndSet(failure, null)
+    }
 
     /** 全应用唯一的自动刷新：应用进入前台时，或在前台完成登录时。 */
     fun refreshOnForeground(isForeground: Flow<Boolean>) {

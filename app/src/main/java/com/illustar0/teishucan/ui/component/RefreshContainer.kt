@@ -6,16 +6,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.illustar0.teishucan.R
-import com.illustar0.teishucan.domain.BackgroundTasks
 import com.illustar0.teishucan.domain.CampusFeature
 import com.illustar0.teishucan.domain.CampusRequestException
 import com.illustar0.teishucan.domain.InvalidMeterLocationException
 import com.illustar0.teishucan.domain.campusReason
+import kotlinx.coroutines.flow.StateFlow
 import top.yukonga.miuix.kmp.basic.PullToRefresh
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 
@@ -45,15 +46,20 @@ fun RefreshContainer(
 }
 
 @Composable
-fun FailureToasts(tasks: BackgroundTasks, @StringRes fallbackMessage: Int = R.string.refresh_failed) {
-    val failure by tasks.failure.collectAsStateWithLifecycle()
+fun FailureToasts(
+    failures: StateFlow<Exception?>,
+    @StringRes fallbackMessage: Int = R.string.refresh_failed,
+    onShown: (Exception) -> Unit,
+) {
+    val failure by failures.collectAsStateWithLifecycle()
+    val currentOnShown by rememberUpdatedState(onShown)
     val context = LocalContext.current
 
     failure?.let { shownFailure ->
         LaunchedEffect(shownFailure) {
             val message = shownFailure.campusReason ?: context.getString(shownFailure.messageRes ?: fallbackMessage)
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            tasks.consumeFailure(shownFailure)
+            currentOnShown(shownFailure)
         }
     }
 }

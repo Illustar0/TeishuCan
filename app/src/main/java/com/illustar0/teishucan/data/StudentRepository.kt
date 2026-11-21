@@ -33,9 +33,13 @@ class StudentRepository @Inject constructor(
     suspend fun isStaleAt(now: Instant, maxAge: Duration): Boolean = cache.isStaleAt(now, maxAge)
 
     suspend fun refresh() = session.request(CampusFeature.CampusCard) {
+        val refreshVersion = cache.nextRefreshVersion()
         val info = cas.userInfo()
-        session.saveProfile(this, info.toStudentProfile())
-        cache.update(this) { info.toStudentData() }
+        cache.update(
+            this,
+            refreshVersion,
+            saveRelatedData = { session.saveProfile(this, info.toStudentProfile()) },
+        ) { info.toStudentData() }
     }
 
     /** 余额可能已在应用外变化，例如在收银台付了款。下次自动刷新时必定更新。 */

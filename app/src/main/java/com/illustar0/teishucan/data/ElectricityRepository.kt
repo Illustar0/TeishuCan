@@ -114,6 +114,7 @@ class ElectricityRepository @Inject constructor(
 
     /** 查询已保存电表的剩余电量。有无效位置时，其余电表照常更新后抛出 [InvalidMeterLocationException]。 */
     suspend fun refresh() {
+        val refreshVersion = remainingEnergy.nextRefreshVersion()
         val roomIds = savedMeters.first().map { it.location.meterId }.distinct()
         val rooms = roomIds.mapNotNull { id -> parseRoom(id)?.let { room -> id to room } }.toMap()
         if (rooms.isNotEmpty()) {
@@ -122,7 +123,7 @@ class ElectricityRepository @Inject constructor(
                 val energy = coroutineScope {
                     rooms.map { (id, room) -> async { id to card.remainingEnergy(room) } }.awaitAll().toMap()
                 }
-                remainingEnergy.update(this) { energy }
+                remainingEnergy.update(this, refreshVersion) { energy }
             }
         }
         if (rooms.size < roomIds.size) throw InvalidMeterLocationException()

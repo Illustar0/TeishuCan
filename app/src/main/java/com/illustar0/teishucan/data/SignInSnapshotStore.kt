@@ -38,10 +38,10 @@ class SignInSnapshotStore @Inject constructor(
 ) {
     private val directory = File(context.noBackupFilesDir, "sign_in_snapshots")
 
-    /** 串行化写入与 [clear]，这样登录结束之后不会再有它的快照落盘。 */
     private val lock = Mutex()
 
-    internal fun <T> file(name: String, serializer: KSerializer<T>) = SnapshotFile(name, Snapshot.serializer(serializer))
+    internal fun <T> file(name: String, serializer: KSerializer<T>) =
+        SnapshotFile(name, Snapshot.serializer(serializer))
 
     suspend fun clear(): Unit = withContext(ioDispatcher) {
         lock.withLock { directory.deleteRecursively() }
@@ -53,7 +53,8 @@ class SignInSnapshotStore @Inject constructor(
         /** 读取快照。没有快照、文件不可读或格式已过时都为 null，快照只是加速显示，缺了也无妨。 */
         suspend fun read(): Snapshot<T>? = withContext(ioDispatcher) {
             try {
-                StoreJson.decodeFromString(serializer, file.readFully().decodeToString())
+                val content = lock.withLock { file.readFully() }
+                StoreJson.decodeFromString(serializer, content.decodeToString())
             } catch (_: FileNotFoundException) {
                 null
             } catch (cause: IOException) {

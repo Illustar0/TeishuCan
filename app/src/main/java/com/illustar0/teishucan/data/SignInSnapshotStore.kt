@@ -44,7 +44,13 @@ class SignInSnapshotStore @Inject constructor(
         SnapshotFile(name, Snapshot.serializer(serializer))
 
     suspend fun clear(): Unit = withContext(ioDispatcher) {
-        lock.withLock { directory.deleteRecursively() }
+        lock.withLock {
+            try {
+                if (!directory.deleteRecursively()) Log.w(Tag, "Could not clear sign-in snapshots")
+            } catch (cause: SecurityException) {
+                Log.w(Tag, "Could not clear sign-in snapshots", cause)
+            }
+        }
     }
 
     internal inner class SnapshotFile<T>(name: String, private val serializer: KSerializer<Snapshot<T>>) {

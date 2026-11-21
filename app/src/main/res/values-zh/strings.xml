@@ -171,6 +171,7 @@
     <string name="logout_title">确定要退出登录吗？</string>
     <string name="logout_summary">保存在本机的账户密码将被删除。</string>
     <string name="logout_cancel">取消</string>
+    <string name="logout_failed">退出登录失败，请重试</string>
     <string name="settings_theme">主题</string>
     <string name="settings_theme_summary">自定义外观和配色</string>
     <string name="settings_theme_mode">深色模式</string>

@@ -182,8 +182,8 @@ class ZzuSession @Inject constructor(
         } catch (cause: CancellationException) {
             throw cause
         } catch (cause: Exception) {
+            endOnAuthenticationFailure(clients, cause)
             Log.w(Tag, "$feature request failed", cause)
-            if (cause is ZzuException.Authentication && cause.kind in SignInEndingFailures) end(clients)
             throw CampusRequestException(feature, (cause as? ZzuException)?.message, cause)
         }
     }
@@ -229,6 +229,17 @@ class ZzuSession @Inject constructor(
 
     private suspend fun end(owner: ZzuClients) {
         replaceState(SessionState.SignedOut) { it.clients === owner }
+    }
+
+    private suspend fun endOnAuthenticationFailure(owner: ZzuClients, cause: Exception) {
+        if (cause !is ZzuException.Authentication || cause.kind !in SignInEndingFailures) return
+        try {
+            end(owner)
+        } catch (cleanupFailure: CancellationException) {
+            throw cleanupFailure
+        } catch (cleanupFailure: Exception) {
+            cause.addSuppressed(cleanupFailure)
+        }
     }
 
     /** 当前状态满足 [condition] 时切换到 [next]，同时删除被替换登录的存档与快照并释放它的客户端。 */

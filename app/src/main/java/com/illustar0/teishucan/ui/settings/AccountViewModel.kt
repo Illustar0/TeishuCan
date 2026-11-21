@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.data.ZzuSession
 import com.illustar0.teishucan.domain.AccountState
+import com.illustar0.teishucan.domain.BackgroundTasks
 import com.illustar0.teishucan.domain.LoginResult
 import com.illustar0.teishucan.domain.campusReason
 import com.illustar0.teishucan.ui.component.ActionOutcome
@@ -56,6 +57,7 @@ class AccountViewModel @Inject constructor(private val session: ZzuSession) : Vi
     val account: StateFlow<AccountState> = session.account
     val loginForm = LoginFormState()
     val loginOutcomes: Flow<ActionOutcome> = outcomes.receiveAsFlow()
+    val logoutTasks = BackgroundTasks(viewModelScope)
 
     fun submitCredentials() {
         submit(LoginAction.Login, R.string.login_failed, onFailure = { loginForm.password = "" }) {
@@ -81,7 +83,7 @@ class AccountViewModel @Inject constructor(private val session: ZzuSession) : Vi
     }
 
     fun logout() {
-        viewModelScope.launch { session.logout() }
+        logoutTasks.launch { session.logout() }
     }
 
     private fun finishLogin() {

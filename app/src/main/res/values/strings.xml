@@ -180,6 +180,7 @@
     <string name="logout_title">ログアウトしますか？</string>
     <string name="logout_summary">端末に保存されたアカウントとパスワードは削除されます。</string>
     <string name="logout_cancel">キャンセル</string>
+    <string name="logout_failed">ログアウトできませんでした。もう一度お試しください</string>
     <string name="settings_theme">テーマ</string>
     <string name="settings_theme_summary">外観とカラーをカスタマイズします</string>
     <string name="settings_theme_mode">ダークモード</string>

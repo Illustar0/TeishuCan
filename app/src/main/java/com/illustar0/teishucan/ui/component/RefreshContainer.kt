@@ -45,13 +45,13 @@ fun RefreshContainer(
 }
 
 @Composable
-fun FailureToasts(tasks: BackgroundTasks) {
+fun FailureToasts(tasks: BackgroundTasks, @StringRes fallbackMessage: Int = R.string.refresh_failed) {
     val failure by tasks.failure.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     failure?.let { shownFailure ->
         LaunchedEffect(shownFailure) {
-            val message = shownFailure.campusReason ?: context.getString(shownFailure.messageRes)
+            val message = shownFailure.campusReason ?: context.getString(shownFailure.messageRes ?: fallbackMessage)
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             tasks.consumeFailure(shownFailure)
         }
@@ -59,7 +59,7 @@ fun FailureToasts(tasks: BackgroundTasks) {
 }
 
 @get:StringRes
-private val Exception.messageRes: Int
+private val Exception.messageRes: Int?
     get() = when (this) {
         is InvalidMeterLocationException -> R.string.electricity_meter_reselect_location
         is CampusRequestException -> when (feature) {
@@ -71,5 +71,5 @@ private val Exception.messageRes: Int
             CampusFeature.Services -> R.string.service_open_failed
         }
 
-        else -> R.string.refresh_failed
+        else -> null
     }

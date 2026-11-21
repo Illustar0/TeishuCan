@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.AtomicFile
+import android.util.Log
 import com.illustar0.teishucan.di.IoDispatcher
 import com.illustar0.teishucan.domain.StudentProfile
 import com.illustar0.zzu.cas.Tokens
@@ -74,8 +75,13 @@ class EncryptedSessionStore @Inject constructor(
     }
 
     suspend fun clear() = withContext(ioDispatcher) {
-        file.delete()
+        // 先撤销密钥。即使文件清理中断，旧凭据也无法恢复。
         KeyStore.getInstance(KeyStoreProvider).apply { load(null) }.deleteEntry(SessionKeyAlias)
+        try {
+            file.delete()
+        } catch (cause: SecurityException) {
+            Log.w("TeishuCan.Session", "Could not remove the revoked session file", cause)
+        }
     }
 
     private fun discard(): StoredSession? {

@@ -14,6 +14,38 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+fun git(vararg args: String): String =
+    providers.exec { commandLine("git", *args) }.standardOutput.asText.get().trim()
+
+val gitCommitCount = git("rev-list", "--count", "HEAD").toInt()
+
+// 还没有 tag 时 --always 只输出 hash，这里当作根提交上有个 v0.0.0，补全成与有 tag 时相同的格式。
+val gitDescription = git("describe", "--tags", "--long", "--dirty", "--always", "--match", "v[0-9]*")
+    .let { if (it.startsWith("v")) it else "v0.0.0-$gitCommitCount-g$it" }
+
+val gitDescriptionPattern = Regex("""v(\d+)\.(\d+)\.(\d+)-(\d+)-g([0-9a-f]+)(-dirty)?""")
+
+/**
+ * 把形如 `v0.2.0-3-gabc1234-dirty` 的 [description] 转成 SemVer 2.0.0 版本号。
+ *
+ * 正好位于 tag 上时就是 tag 本身，如 `0.2.0`。tag 之后第 N 个提交是 `0.2.1-dev.N+gabc1234`：
+ * 下一个正式版至少是 patch + 1，所以它排在该 tag 之后、之后任何正式版之前。
+ * 有未提交改动时在 build metadata 末尾追加 `.dirty`。
+ */
+fun semVerFromGitDescription(description: String): String {
+    val match = requireNotNull(gitDescriptionPattern.matchEntire(description)) {
+        "Cannot parse `git describe` output: $description"
+    }
+    val (major, minor, patch, distance, hash, dirtyMarker) = match.destructured
+    val isDirty = dirtyMarker.isNotEmpty()
+    val buildMetadata = if (isDirty) "g$hash.dirty" else "g$hash"
+    return when {
+        distance != "0" -> "$major.$minor.${patch.toInt() + 1}-dev.$distance+$buildMetadata"
+        isDirty -> "$major.$minor.$patch+$buildMetadata"
+        else -> "$major.$minor.$patch"
+    }
+}
+
 android {
     namespace = "com.illustar0.teishucan"
     compileSdk {
@@ -24,8 +56,9 @@ android {
         applicationId = "com.illustar0.teishucan"
         minSdk = 29
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        // 偏移量给日后改写历史或更换方案留余地：调大它就能保证 versionCode 不倒退。
+        versionCode = 1000 + gitCommitCount
+        versionName = semVerFromGitDescription(gitDescription)
     }
 
     buildTypes {

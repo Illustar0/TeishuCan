@@ -79,6 +79,16 @@ jobs:
         id: collect
         run: .github/scripts/collect-apks.sh dist
 
+      # 下面的上传步骤每个只传一个 ABI 的 APK，各自找不到文件时会失败；
+      # 这里再核对总数，splits.abi 新增 ABI 却没补上传步骤时就会报错，不会悄悄漏传。
+      - name: Check APK count
+        run: |
+          apks=(dist/*.apk)
+          if [ "${#apks[@]}" -ne 5 ]; then
+            echo "::error::Expected 5 APKs but found ${#apks[@]}: ${apks[*]}. Keep the upload steps in sync with splits.abi."
+            exit 1
+          fi
+
       # 每个 APK 单独上传且不套 zip，用户只下载自己架构的那个，下载到的直接就是 APK。
       # archive 为 false 时一次只能传一个文件，所以每个 ABI 一个步骤，列表要与 app/build.gradle.kts 的 splits.abi 保持一致。
       - uses: actions/upload-artifact@v7

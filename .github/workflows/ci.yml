@@ -24,6 +24,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # 开发构建的 versionName 由 Gradle 调用 git-cliff 算出。
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
       - uses: actions/setup-java@v6
         with:
           distribution: temurin

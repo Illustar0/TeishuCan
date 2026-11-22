@@ -35,6 +35,20 @@
                 android:name="autoStoreLocales"
                 android:value="true" />
         </service>
+
+        <!-- App 没有广告：Analytics 不收集广告 ID，广告相关的同意项默认拒绝，只保留使用统计。 -->
+        <meta-data
+            android:name="google_analytics_adid_collection_enabled"
+            android:value="false" />
+        <meta-data
+            android:name="google_analytics_default_allow_ad_storage"
+            android:value="false" />
+        <meta-data
+            android:name="google_analytics_default_allow_ad_user_data"
+            android:value="false" />
+        <meta-data
+            android:name="google_analytics_default_allow_ad_personalization_signals"
+            android:value="false" />
     </application>
 
 </manifest>

@@ -78,8 +78,9 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          name: ${{ needs.package.outputs.artifact }}
+          pattern: ${{ needs.package.outputs.artifact-pattern }}
           path: dist
+          merge-multiple: true
 
       - uses: actions/download-artifact@v8
         with:

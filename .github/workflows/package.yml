@@ -8,9 +8,9 @@ on:
         type: string
         default: ""
     outputs:
-      artifact:
-        description: Name of the uploaded artifact that holds the APKs
-        value: ${{ jobs.package.outputs.artifact }}
+      artifact-pattern:
+        description: Glob pattern that matches the names of the uploaded APK artifacts, one per APK
+        value: ${{ jobs.package.outputs.artifact-pattern }}
       version:
         description: versionName of the packaged APKs
         value: ${{ jobs.package.outputs.version }}
@@ -26,7 +26,7 @@ jobs:
     environment: signing
 
     outputs:
-      artifact: TeishuCan-${{ steps.collect.outputs.version }}
+      artifact-pattern: TeishuCan-${{ steps.collect.outputs.version }}-*.apk
       version: ${{ steps.collect.outputs.version }}
 
     steps:
@@ -79,10 +79,34 @@ jobs:
         id: collect
         run: .github/scripts/collect-apks.sh dist
 
+      # 每个 APK 单独上传且不套 zip，用户只下载自己架构的那个，下载到的直接就是 APK。
+      # archive 为 false 时一次只能传一个文件，所以每个 ABI 一个步骤，列表要与 app/build.gradle.kts 的 splits.abi 保持一致。
       - uses: actions/upload-artifact@v7
         with:
-          name: TeishuCan-${{ steps.collect.outputs.version }}
-          path: dist/
+          path: dist/*-arm64-v8a.apk
+          archive: false
           if-no-files-found: error
-          # APK 本身已经压缩过。
-          compression-level: 0
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/*-armeabi-v7a.apk
+          archive: false
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/*-x86_64.apk
+          archive: false
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/*-x86.apk
+          archive: false
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/*-universal.apk
+          archive: false
+          if-no-files-found: error

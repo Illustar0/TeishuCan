@@ -101,6 +101,12 @@ android {
         includeInApk = false
         includeInBundle = false
     }
+    packaging {
+        jniLibs {
+            // JNA 自带 armeabi、mips 和 mips64 的库，但 minSdk 29 的设备不会是这些架构。
+            excludes += listOf("lib/armeabi/**", "lib/mips/**", "lib/mips64/**")
+        }
+    }
 }
 
 aboutLibraries {

@@ -4,6 +4,8 @@ complexity:
   # 布局树天然又长又多分支，参数则来自状态提升，这三条只约束非 Composable 函数。
   CyclomaticComplexMethod:
     ignoreAnnotated: ['Composable']
+    # 不带花括号的 when 分支多是枚举之间的一一映射，分支多并不代表逻辑复杂。
+    ignoreSimpleWhenEntries: true
   LongMethod:
     ignoreAnnotated: ['Composable']
   LongParameterList:

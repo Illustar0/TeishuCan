@@ -1,6 +1,9 @@
 package com.illustar0.teishucan.ui
 
+import android.app.ActivityManager
+import android.app.ApplicationExitInfo
 import android.content.Context
+import android.os.Build
 import android.os.Process
 import android.util.AtomicFile
 import android.util.Log
@@ -41,18 +44,26 @@ internal class NavigationRecovery @Inject constructor(
     private val file by lazy { AtomicFile(File(context.noBackupFilesDir, "navigation-recovery.json")) }
     private val lock = Mutex()
     private val pid = Process.myPid()
+    private var isKillRequested = false
 
     @Volatile
     private var latestNavigation: NavigationSnapshot? = null
 
-    fun record(navigation: NavigationSnapshot) {
+    suspend fun record(navigation: NavigationSnapshot) {
         latestNavigation = navigation
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+            withContext(ioDispatcher) {
+                lock.withLock { write(Record(pid, navigation, isKillRequested)) }
+            }
+        }
     }
 
     suspend fun saveBeforeKill(): Boolean = withContext(ioDispatcher) {
         lock.withLock {
             val navigation = latestNavigation ?: return@withLock true
-            write(Record(pid, navigation, isKillRequested = true))
+            write(Record(pid, navigation, isKillRequested = true)).also { saved ->
+                if (saved) isKillRequested = true
+            }
         }
     }
 
@@ -61,8 +72,16 @@ internal class NavigationRecovery @Inject constructor(
             val record = read() ?: return@withLock NavigationSnapshot()
             if (record.pid == pid) return@withLock NavigationSnapshot()
             file.delete()
-            if (record.isKillRequested) record.navigation else NavigationSnapshot()
+            if (record.isKillRequested || wasMemoryLimited(record.pid)) record.navigation else NavigationSnapshot()
         }
+    }
+
+    private fun wasMemoryLimited(previousPid: Int): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) return false
+        val manager = context.getSystemService(ActivityManager::class.java)
+        val exit = manager?.getHistoricalProcessExitReasons(context.packageName, previousPid, 1)?.firstOrNull()
+        return exit?.reason == ApplicationExitInfo.REASON_OTHER &&
+            exit.description.orEmpty().contains("MemoryLimiter:AnonSwap")
     }
 
     private fun read(): Record? = try {

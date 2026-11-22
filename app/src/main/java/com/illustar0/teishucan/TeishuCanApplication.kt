@@ -1,6 +1,7 @@
 package com.illustar0.teishucan
 
 import android.app.Application
+import android.content.ComponentCallbacks2
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.illustar0.teishucan.data.CampusRefresher
@@ -24,5 +25,10 @@ class TeishuCanApplication : Application() {
         refresher.refreshOnForeground(
             ProcessLifecycleOwner.get().lifecycle.currentStateFlow.map { it.isAtLeast(Lifecycle.State.STARTED) },
         )
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) fairMemory.trim()
     }
 }

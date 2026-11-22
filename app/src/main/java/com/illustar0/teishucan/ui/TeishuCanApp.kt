@@ -112,7 +112,7 @@ internal fun TeishuCanApp(
     themeSettings: ThemeSettings,
     onThemeSettingsUpdate: ((ThemeSettings) -> ThemeSettings) -> Unit,
     restoredNavigation: NavigationSnapshot,
-    onNavigationChange: (NavigationSnapshot) -> Unit,
+    onNavigationChange: suspend (NavigationSnapshot) -> Unit,
 ) {
     val navController = rememberNavController(*restoredNavigation.routes.toTypedArray())
     var destination by remember { mutableStateOf(restoredNavigation.destination) }

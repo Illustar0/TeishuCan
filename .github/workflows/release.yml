@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency: release
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      # versionCode 取 main 的提交数，从其他分支发版会让它失去可比性。
+      - name: Require main branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Releases must be dispatched from main."
+          exit 1
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: git-cliff
+
+      - name: Calculate next version
+        id: version
+        run: |
+          tag="$(git cliff --bumped-version)"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "::error::Tag $tag already exists; there are no releasable commits since it."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release notes
+        run: git cliff --unreleased --tag "${{ steps.version.outputs.tag }}" --output release-notes.md
+
+      # 只在本地打 tag，让 Gradle 算出正式版的 versionName；远端 tag 由 release job 创建 GitHub Release 时生成。
+      - name: Tag release commit locally
+        run: git tag "${{ steps.version.outputs.tag }}"
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Decode release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
+            echo "::error::Secret RELEASE_KEYSTORE_BASE64 is not set."
+            exit 1
+          fi
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+
+      - name: Build release APK
+        env:
+          RELEASE_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease
+
+      - name: Collect release files
+        run: |
+          mkdir dist
+          mv app/build/outputs/apk/release/app-release.apk "dist/TeishuCan-${{ steps.version.outputs.version }}.apk"
+          mv release-notes.md dist/
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+          path: dist
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ needs.build.outputs.tag }}
+          body_path: dist/release-notes.md
+          files: dist/*.apk
+          fail_on_unmatched_files: true

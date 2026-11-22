@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.illustar0.teishucan.R
@@ -54,10 +55,11 @@ fun FailureToasts(
     val failure by failures.collectAsStateWithLifecycle()
     val currentOnAcknowledge by rememberUpdatedState(onAcknowledge)
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     failure?.let { shownFailure ->
         LaunchedEffect(shownFailure) {
-            val message = shownFailure.campusReason ?: context.getString(shownFailure.messageRes ?: fallbackMessage)
+            val message = shownFailure.campusReason ?: resources.getString(shownFailure.messageRes ?: fallbackMessage)
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
             currentOnAcknowledge(shownFailure)
         }

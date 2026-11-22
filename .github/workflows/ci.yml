@@ -35,3 +35,9 @@ jobs:
 
       - name: Check
         run: ./gradlew --continue :app:detekt :app:lintDebug :app:testDebugUnitTest :app:assembleDebug
+
+  # 只给 main 的构建签名并上传，其他分支和 PR 拿不到签名用的 secrets。
+  package:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/package.yml

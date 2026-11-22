@@ -82,6 +82,7 @@ import com.illustar0.teishucan.ui.component.animation.DampedDragAnimation
 import com.illustar0.teishucan.ui.component.animation.InteractiveHighlight
 import com.illustar0.teishucan.ui.theme.LocalIsDarkTheme
 import com.illustar0.teishucan.ui.theme.floatingBarBlur
+import com.illustar0.teishucan.ui.theme.rememberReleasableBackdrop
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BadgedBox
 import top.yukonga.miuix.kmp.basic.Icon
@@ -95,7 +96,6 @@ import top.yukonga.miuix.kmp.blur.highlight.Highlight
 import top.yukonga.miuix.kmp.blur.highlight.LightPosition
 import top.yukonga.miuix.kmp.blur.highlight.LightSource
 import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.sensor.rememberDeviceTilt
 import top.yukonga.miuix.kmp.theme.LocalContentColor
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -274,7 +274,7 @@ internal fun LiquidGlassNavigationBar(
     val tabContentColor = MiuixTheme.colorScheme.onSurface
     val containerColor = glassContainerColor()
 
-    val tabsBackdrop = rememberLayerBackdrop()
+    val tabsBackdrop = rememberReleasableBackdrop()
     val density = LocalDensity.current
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
     val animationScope = rememberCoroutineScope()

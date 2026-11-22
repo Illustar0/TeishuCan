@@ -13,10 +13,15 @@ import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -70,7 +75,7 @@ import top.yukonga.miuix.kmp.utils.PagerNavigationSpringSpec
 import top.yukonga.miuix.kmp.utils.springAnimateToPage
 
 @Serializable
-private sealed interface Route : NavKey {
+internal sealed interface Route : NavKey {
     @Serializable
     data object Main : Route
 
@@ -90,7 +95,7 @@ private sealed interface Route : NavKey {
     data object OpenSourceLicenses : Route
 }
 
-private enum class AppDestination(
+internal enum class AppDestination(
     @param:StringRes val labelRes: Int,
     val icon: ImageVector,
 ) {
@@ -103,11 +108,19 @@ private enum class AppDestination(
 private val SignedOutDestinations = listOf(AppDestination.Home, AppDestination.Settings)
 
 @Composable
-fun TeishuCanApp(
+internal fun TeishuCanApp(
     themeSettings: ThemeSettings,
     onThemeSettingsUpdate: ((ThemeSettings) -> ThemeSettings) -> Unit,
+    restoredNavigation: NavigationSnapshot,
+    onNavigationChange: (NavigationSnapshot) -> Unit,
 ) {
-    val navController = rememberNavController<Route>(Route.Main)
+    val navController = rememberNavController(*restoredNavigation.routes.toTypedArray())
+    var destination by remember { mutableStateOf(restoredNavigation.destination) }
+    val recordNavigation by rememberUpdatedState(onNavigationChange)
+    LaunchedEffect(navController) {
+        snapshotFlow { NavigationSnapshot(navController.backStack.filterIsInstance<Route>(), destination) }
+            .collect { recordNavigation(it) }
+    }
     val navigate: (Route) -> Unit = { route ->
         // 转场期间入口仍可点击，而返回栈不接受重复的键。
         if (navController.backStack.last() != route) {
@@ -119,7 +132,9 @@ fun TeishuCanApp(
         entry<Route.Main> {
             MainScreen(
                 isFloatingNavigationBar = themeSettings.isFloatingNavigationBarEnabled,
+                initialDestination = restoredNavigation.destination,
                 onNavigate = navigate,
+                onDestinationChange = { destination = it },
             )
         }
         entry<Route.ThemeSettings> {
@@ -181,7 +196,9 @@ private fun CommitOnlyBackHandler(enabled: Boolean, onCommit: () -> Unit) {
 @Composable
 private fun MainScreen(
     isFloatingNavigationBar: Boolean,
+    initialDestination: AppDestination,
     onNavigate: (Route) -> Unit,
+    onDestinationChange: (AppDestination) -> Unit,
 ) {
     val appViewModel = hiltViewModel<AppViewModel>()
     val accountViewModel = hiltViewModel<AccountViewModel>()
@@ -195,7 +212,15 @@ private fun MainScreen(
     val destinations by rememberUpdatedState(
         if (student == null) SignedOutDestinations else AppDestination.entries,
     )
-    val pagerState = rememberPagerState(pageCount = { destinations.size })
+    val pagerState = rememberPagerState(
+        initialPage = destinations.indexOf(initialDestination).coerceAtLeast(0),
+        pageCount = { destinations.size },
+    )
+    val recordDestination by rememberUpdatedState(onDestinationChange)
+    LaunchedEffect(pagerState) {
+        snapshotFlow { destinations[pagerState.settledPage.coerceAtMost(destinations.lastIndex)] }
+            .collect { recordDestination(it) }
+    }
     val coroutineScope = rememberCoroutineScope()
     // 分页器要到本次组合之后的布局阶段才会落到变短列表中的页面。
     val selectedDestination = destinations[pagerState.targetPage.coerceAtMost(destinations.lastIndex)]

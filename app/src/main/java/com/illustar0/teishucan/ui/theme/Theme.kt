@@ -68,6 +68,7 @@ private fun ColorSpec.toMiuix(): ThemeColorSpec = when (this) {
 fun TeishuCanTheme(
     settings: ThemeSettings,
     isDark: Boolean,
+    areHeavyEffectsEnabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     // keyColor 为 null 时 Miuix 会忽略 paletteStyle 和 colorSpec，所以用强调色作种子。
@@ -87,8 +88,8 @@ fun TeishuCanTheme(
     }
     MiuixTheme(controller = controller) {
         CompositionLocalProvider(
-            LocalIsBlurEnabled provides settings.isBlurEnabled,
-            LocalIsLiquidGlassEnabled provides settings.isLiquidGlassEnabled,
+            LocalIsBlurEnabled provides (areHeavyEffectsEnabled && settings.isBlurEnabled),
+            LocalIsLiquidGlassEnabled provides (areHeavyEffectsEnabled && settings.isLiquidGlassEnabled),
             LocalIsDarkTheme provides isDark,
             content = content,
         )

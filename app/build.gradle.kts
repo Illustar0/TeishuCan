@@ -68,6 +68,17 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+
+            // 签名用的环境变量只由 Release workflow 提供；本地没有时 release 包保持未签名。
+            val keystoreFile = providers.environmentVariable("RELEASE_KEYSTORE_FILE")
+            if (keystoreFile.isPresent) {
+                signingConfig = signingConfigs.create("release") {
+                    storeFile = file(keystoreFile.get())
+                    storePassword = providers.environmentVariable("RELEASE_KEYSTORE_PASSWORD").get()
+                    keyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").get()
+                    keyPassword = providers.environmentVariable("RELEASE_KEY_PASSWORD").get()
+                }
+            }
         }
     }
     compileOptions {

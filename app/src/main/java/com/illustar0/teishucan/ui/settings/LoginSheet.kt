@@ -39,7 +39,6 @@ import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private const val MfaCodeLength = 4
 private const val MfaResendIntervalSeconds = 60
 private const val MillisPerSecond = 1000L
 
@@ -171,7 +170,7 @@ private fun MfaCodePage(
     Column {
         TextField(
             value = form.code,
-            onValueChange = { input -> form.code = input.filter(Char::isDigit).take(MfaCodeLength) },
+            onValueChange = { input -> form.code = input.filter(Char::isDigit) },
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester),
@@ -215,7 +214,7 @@ private fun MfaCodePage(
                     onVerifyCode()
                 },
                 modifier = Modifier.weight(1f),
-                enabled = canEnterCode && form.code.length == MfaCodeLength,
+                enabled = canEnterCode && form.code.isNotEmpty(),
                 colors = if (isCodeRequested) {
                     ButtonDefaults.buttonColorsPrimary()
                 } else {

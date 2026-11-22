@@ -9,12 +9,13 @@ permissions:
 concurrency: release
 
 jobs:
-  build:
+  prepare:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 10
 
     outputs:
       tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
 
     steps:
       # versionCode 取 main 的提交数，从其他分支发版会让它失去可比性。
@@ -47,67 +48,47 @@ jobs:
       - name: Generate release notes
         run: git cliff --unreleased --tag "${{ steps.version.outputs.tag }}" --output release-notes.md
 
-      # 只在本地打 tag，让 Gradle 算出正式版的 versionName；远端 tag 由 release job 创建 GitHub Release 时生成。
-      - name: Tag release commit locally
-        run: git tag "${{ steps.version.outputs.tag }}"
-
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: 25
-
-      - uses: gradle/actions/setup-gradle@v6
-        with:
-          cache-provider: basic
-
-      - name: Decode release keystore
-        env:
-          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
-        run: |
-          if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
-            echo "::error::Secret RELEASE_KEYSTORE_BASE64 is not set."
-            exit 1
-          fi
-          echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
-
-      - name: Build release APK
-        env:
-          RELEASE_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
-          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew :app:assembleRelease
-
-      - name: Collect release files
-        run: |
-          mkdir dist
-          mv app/build/outputs/apk/release/app-release.apk "dist/TeishuCan-${{ steps.version.outputs.version }}.apk"
-          mv release-notes.md dist/
-
       - uses: actions/upload-artifact@v7
         with:
-          name: release
-          path: dist/
+          name: release-notes
+          path: release-notes.md
           if-no-files-found: error
 
+  package:
+    needs: prepare
+    uses: ./.github/workflows/package.yml
+    with:
+      tag: ${{ needs.prepare.outputs.tag }}
+
   release:
-    needs: build
+    needs: [prepare, package]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
 
     steps:
+      # 工作区不干净或本地 tag 没生效时，versionName 会带上 -dev 或 +dirty，不能当正式版发布。
+      - name: Check packaged version
+        if: needs.package.outputs.version != needs.prepare.outputs.version
+        run: |
+          echo "::error::Packaged versionName ${{ needs.package.outputs.version }} does not match ${{ needs.prepare.outputs.version }}."
+          exit 1
+
       - uses: actions/download-artifact@v8
         with:
-          name: release
+          name: ${{ needs.package.outputs.artifact }}
           path: dist
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-notes
 
       - uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ needs.build.outputs.tag }}
+          tag_name: ${{ needs.prepare.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: ${{ needs.build.outputs.tag }}
-          body_path: dist/release-notes.md
+          name: ${{ needs.prepare.outputs.tag }}
+          body_path: release-notes.md
           files: dist/*.apk
           fail_on_unmatched_files: true

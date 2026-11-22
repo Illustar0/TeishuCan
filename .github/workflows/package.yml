@@ -1,0 +1,83 @@
+name: Package
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Tag to create locally before building so Gradle derives a release versionName; empty builds a development version
+        type: string
+        default: ""
+    outputs:
+      artifact:
+        description: Name of the uploaded artifact that holds the APKs
+        value: ${{ jobs.package.outputs.artifact }}
+      version:
+        description: versionName of the packaged APKs
+        value: ${{ jobs.package.outputs.version }}
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    # 签名用的 secrets 只放在这个 environment 里，并在仓库设置中限制为只有 main 分支能使用。
+    environment: signing
+
+    outputs:
+      artifact: TeishuCan-${{ steps.collect.outputs.version }}
+      version: ${{ steps.collect.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # versionCode 与 versionName 由 Gradle 根据完整的提交历史和 tag 计算。
+          fetch-depth: 0
+          persist-credentials: false
+
+      # 只在本地打 tag，让 Gradle 算出正式版的 versionName；远端 tag 由 Release workflow 创建 GitHub Release 时生成。
+      - name: Tag release commit locally
+        if: inputs.tag != ''
+        env:
+          TAG: ${{ inputs.tag }}
+        run: git tag "$TAG"
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Decode release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$RELEASE_KEYSTORE_BASE64" ]; then
+            echo "::error::Secret RELEASE_KEYSTORE_BASE64 is not set."
+            exit 1
+          fi
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+
+      - name: Build release APKs
+        env:
+          RELEASE_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease
+
+      - name: Collect APKs
+        id: collect
+        run: .github/scripts/collect-apks.sh dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: TeishuCan-${{ steps.collect.outputs.version }}
+          path: dist/
+          if-no-files-found: error
+          # APK 本身已经压缩过。
+          compression-level: 0

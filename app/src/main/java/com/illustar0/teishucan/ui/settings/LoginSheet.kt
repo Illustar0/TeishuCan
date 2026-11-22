@@ -16,9 +16,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.autofill.contentType
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalAutofillManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -51,6 +54,12 @@ fun LoginSheet(
     onVerifyMfa: () -> Unit,
     onDismissRequest: () -> Unit,
 ) {
+    val autofillManager = LocalAutofillManager.current
+    val dismissLogin: () -> Unit = {
+        autofillManager?.cancel()
+        onDismissRequest()
+    }
+
     OverlayBottomSheet(
         show = form.isVisible,
         title = stringResource(if (form.isAwaitingMfa) R.string.mfa_title else R.string.settings_login),
@@ -67,11 +76,11 @@ fun LoginSheet(
                     icon = MiuixIcons.Close,
                     contentDescription = stringResource(R.string.electricity_meter_close),
                     enabled = !form.isSubmitting,
-                    onClick = onDismissRequest,
+                    onClick = dismissLogin,
                 )
             }
         },
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = dismissLogin,
         onDismissFinished = {
             form.password = ""
             form.leaveMfa()
@@ -106,7 +115,9 @@ private fun CredentialsPage(
         TextField(
             value = form.account,
             onValueChange = { form.account = it },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .contentType(ContentType.Username),
             label = stringResource(R.string.login_account),
             enabled = !form.isSubmitting,
             singleLine = true,
@@ -116,7 +127,8 @@ private fun CredentialsPage(
             onValueChange = { form.password = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp),
+                .padding(top = 12.dp)
+                .contentType(ContentType.Password),
             label = stringResource(R.string.login_password),
             enabled = !form.isSubmitting,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -173,7 +185,8 @@ private fun MfaCodePage(
             onValueChange = { input -> form.code = input.filter(Char::isDigit) },
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRequester(focusRequester),
+                .focusRequester(focusRequester)
+                .contentType(ContentType.SmsOtpCode),
             label = stringResource(R.string.mfa_code),
             enabled = canEnterCode,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

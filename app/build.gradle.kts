@@ -107,6 +107,15 @@ android {
             excludes += listOf("lib/armeabi/**", "lib/mips/**", "lib/mips64/**")
         }
     }
+    // 原生库占了 APK 的大头，按 ABI 拆分后每个包只带一种架构，universal 包留给不清楚自己架构的用户。
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64", "x86")
+            isUniversalApk = true
+        }
+    }
 }
 
 aboutLibraries {

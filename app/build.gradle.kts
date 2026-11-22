@@ -1,5 +1,6 @@
 import com.mikepenz.aboutlibraries.plugin.DuplicateRule
 import dev.detekt.gradle.Detekt
+import java.io.File
 
 plugins {
     alias(libs.plugins.aboutlibraries.android)
@@ -17,12 +18,25 @@ plugins {
 fun git(vararg args: String): String =
     providers.exec { commandLine("git", *args) }.standardOutput.asText.get().trim()
 
-fun gitCliff(vararg args: String): String =
-    providers.exec {
-        commandLine("git-cliff", *args)
+fun gitCliff(vararg args: String): String {
+    val isWindows = providers.systemProperty("os.name").get().startsWith("Windows")
+    val executableName = if (isWindows) "git-cliff.exe" else "git-cliff"
+    val pathEntries = providers.environmentVariable("PATH")
+        .map { it.split(File.pathSeparatorChar) }
+        .getOrElse(emptyList())
+
+    // JVM 可能沿用旧的命令搜索路径，使用本次构建的 PATH 解析绝对路径。
+    val executable = pathEntries.asSequence()
+        .map { rootDir.resolve(it).resolve(executableName) }
+        .firstOrNull { it.isFile && it.canExecute() }
+        ?: throw GradleException("git-cliff was not found on Gradle's PATH. Install git-cliff and add it to PATH.")
+
+    return providers.exec {
+        commandLine(executable.absolutePath, *args)
         // 在子目录运行时 git-cliff 只统计改动过该目录的提交。
         workingDir = rootDir
     }.standardOutput.asText.get().trim()
+}
 
 val gitCommitCount = git("rev-list", "--count", "HEAD").toInt()
 

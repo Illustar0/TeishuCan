@@ -46,3 +46,4 @@ jobs:
     needs: check
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/package.yml
+    secrets: inherit

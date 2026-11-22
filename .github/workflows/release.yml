@@ -59,6 +59,7 @@ jobs:
     uses: ./.github/workflows/package.yml
     with:
       tag: ${{ needs.prepare.outputs.tag }}
+    secrets: inherit
 
   release:
     needs: [prepare, package]

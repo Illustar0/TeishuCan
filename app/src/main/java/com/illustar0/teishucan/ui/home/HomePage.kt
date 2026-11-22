@@ -303,9 +303,11 @@ private fun NextClassCard(upcomingClass: UpcomingClass) {
 
 @Composable
 private fun NoNextClass(description: String) {
-    LeadTitle(stringResource(R.string.home_next_class))
-    Spacer(modifier = Modifier.height(2.dp))
-    LeadDescription(description)
+    Column {
+        LeadTitle(stringResource(R.string.home_next_class))
+        Spacer(modifier = Modifier.height(2.dp))
+        LeadDescription(description)
+    }
 }
 
 /** 明天的课在课程名前用主色标出，以免误以为是今天的课。 */

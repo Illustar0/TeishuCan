@@ -1,6 +1,7 @@
 package com.illustar0.teishucan.ui.services
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -121,17 +122,19 @@ internal fun ServiceGroupSection(
     openingService: CampusService?,
     onOpenService: (CampusService) -> Unit,
 ) {
-    SmallTitle(
-        text = stringResource(group.titleRes),
-        modifier = Modifier.padding(top = 12.dp),
-    )
-    Card(modifier = Modifier.padding(horizontal = 12.dp)) {
-        group.services.forEach { service ->
-            ServiceRow(
-                service = service,
-                isOpening = service == openingService,
-                onClick = { onOpenService(service) },
-            )
+    Column {
+        SmallTitle(
+            text = stringResource(group.titleRes),
+            modifier = Modifier.padding(top = 12.dp),
+        )
+        Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+            group.services.forEach { service ->
+                ServiceRow(
+                    service = service,
+                    isOpening = service == openingService,
+                    onClick = { onOpenService(service) },
+                )
+            }
         }
     }
 }

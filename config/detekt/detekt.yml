@@ -47,7 +47,7 @@ Compose:
     active: true
   CompositionLocalAllowlist:
     active: true
-    allowedCompositionLocals: LocalIsBlurEnabled,LocalIsDarkTheme
+    allowedCompositionLocals: LocalIsBlurEnabled,LocalIsDarkTheme,LocalIsLiquidGlassEnabled
   CompositionLocalNaming:
     active: true
   ConditionHoist:

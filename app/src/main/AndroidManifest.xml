@@ -5,6 +5,20 @@
     <!-- Blur needs API 33; callers gate it behind isRuntimeShaderSupported(). -->
     <uses-sdk tools:overrideLibrary="top.yukonga.miuix.kmp.blur" />
 
+    <!-- Analytics 依赖合并进来的这些权限只用于广告和 Play 安装来源归因，App 都用不上。 -->
+    <uses-permission
+        android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_AD_ID"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION"
+        tools:node="remove" />
+    <uses-permission
+        android:name="com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE"
+        tools:node="remove" />
+
     <application
         android:name=".TeishuCanApplication"
         android:allowBackup="true"

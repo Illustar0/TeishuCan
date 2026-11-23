@@ -109,7 +109,6 @@ private data class HomeStat(
     val value: AnnotatedString,
     val isPlaceholder: Boolean = false,
     val onClick: (() -> Unit)? = null,
-    val onLongPress: (() -> Unit)? = null,
     val isHeldDown: Boolean = false,
 )
 
@@ -400,7 +399,7 @@ private fun homeStats(
             title = stringResource(R.string.home_campus_card_balance),
             value = balance ?: notFetched,
             isPlaceholder = balance == null,
-            onLongPress = actions.onOpenRecharge,
+            onClick = actions.onOpenRecharge,
             isHeldDown = isRechargeVisible,
         ),
         HomeStat(
@@ -468,7 +467,7 @@ private fun StatCard(
     stat: HomeStat,
     modifier: Modifier = Modifier,
 ) {
-    val isInteractive = stat.onClick != null || stat.onLongPress != null
+    val isInteractive = stat.onClick != null
 
     Card(
         modifier = modifier.semantics(mergeDescendants = true) {},
@@ -477,7 +476,6 @@ private fun StatCard(
         showIndication = isInteractive,
         holdDownState = stat.isHeldDown,
         onClick = stat.onClick,
-        onLongPress = stat.onLongPress,
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -493,7 +491,7 @@ private fun StatCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (stat.onClick != null) {
+                if (isInteractive) {
                     Icon(
                         imageVector = MiuixIcons.Basic.ArrowRight,
                         contentDescription = null,

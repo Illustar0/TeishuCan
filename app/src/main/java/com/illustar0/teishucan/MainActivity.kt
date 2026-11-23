@@ -3,6 +3,7 @@ package com.illustar0.teishucan
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.ReportDrawnWhen
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -10,18 +11,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.illustar0.teishucan.memory.FairMemory
-import com.illustar0.teishucan.ui.NavigationRecovery
-import com.illustar0.teishucan.ui.NavigationSnapshot
+import com.illustar0.teishucan.ui.MainViewModel
+import com.illustar0.teishucan.ui.StartupState
 import com.illustar0.teishucan.ui.TeishuCanApp
 import com.illustar0.teishucan.ui.component.CustomTabsUriHandler
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
-import com.illustar0.teishucan.ui.theme.ThemeViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -30,22 +29,19 @@ class MainActivity : AppCompatActivity() {
     @Inject
     internal lateinit var fairMemory: FairMemory
 
-    @Inject
-    internal lateinit var navigationRecovery: NavigationRecovery
-
-    private val themeViewModel: ThemeViewModel by viewModels()
+    private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+        val startupState = viewModel.state
+        // 启动屏保持到主题、导航和会话全部就绪，避免首帧闪白或闪成错误的主题与登录态。
+        splashScreen.setKeepOnScreenCondition { startupState.value is StartupState.Loading }
         setContent {
-            val settings by themeViewModel.settings.collectAsStateWithLifecycle()
-            val restoredNavigation by produceState<NavigationSnapshot?>(null) {
-                value = navigationRecovery.restore()
-            }
-            // 读出保存的主题之前什么也不画，第一帧才不会闪成错误的主题。
-            val themeSettings = settings ?: return@setContent
-            val navigation = restoredNavigation ?: return@setContent
-            val isDark = themeSettings.mode.isDark(isSystemInDarkTheme())
+            val state = startupState.collectAsStateWithLifecycle()
+            ReportDrawnWhen { state.value is StartupState.Ready }
+            val ready = state.value as? StartupState.Ready ?: return@setContent
+            val isDark = ready.themeSettings.mode.isDark(isSystemInDarkTheme())
             val defaultUriHandler = LocalUriHandler.current
             val uriHandler = remember(defaultUriHandler) {
                 CustomTabsUriHandler(this, defaultUriHandler)
@@ -58,16 +54,16 @@ class MainActivity : AppCompatActivity() {
             }
 
             TeishuCanTheme(
-                settings = themeSettings,
+                settings = ready.themeSettings,
                 isDark = isDark,
                 areHeavyEffectsEnabled = fairMemory.areHeavyEffectsEnabled,
             ) {
                 CompositionLocalProvider(LocalUriHandler provides uriHandler) {
                     TeishuCanApp(
-                        themeSettings = themeSettings,
-                        onThemeSettingsUpdate = themeViewModel::update,
-                        restoredNavigation = navigation,
-                        onNavigationChange = navigationRecovery::record,
+                        themeSettings = ready.themeSettings,
+                        onThemeSettingsUpdate = viewModel::updateTheme,
+                        restoredNavigation = ready.restoredNavigation,
+                        onNavigationChange = viewModel::recordNavigation,
                     )
                 }
             }

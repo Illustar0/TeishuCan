@@ -255,8 +255,7 @@ private fun MainScreen(
     // 读出保存的会话之前什么也不画，已登录用户才不会看到一闪而过的登录页。
     if (account == AccountState.Restoring) return
     val student = (account as? AccountState.SignedIn)?.profile
-    val loginForm = accountViewModel.loginForm
-    val onLoginClick = { loginForm.isVisible = true }
+    val onLoginClick = accountViewModel::startLogin
     // 用状态保存：页数会先于 Scaffold 子组合分页内容而变化，内容捕获的列表届时会比页数短。
     val destinations by rememberUpdatedState(
         if (student == null) SignedOutDestinations else AppDestination.entries,
@@ -360,13 +359,14 @@ private fun MainScreen(
         // 放在分页器之上，因为登录成功后打开它的页面会被替换。
         OutcomeHaptics(accountViewModel.loginOutcomes)
         LoginSheet(
-            form = loginForm,
+            attempt = accountViewModel.login,
             passwordSaves = accountViewModel.passwordSaves,
             onSubmitCredentials = accountViewModel::submitCredentials,
             onSubmitSavedPassword = accountViewModel::submitSavedPassword,
             onSendMfaCode = accountViewModel::sendMfaCode,
             onVerifyMfa = accountViewModel::verifyMfa,
-            onDismissRequest = { loginForm.isVisible = false },
+            onLeaveMfa = accountViewModel::leaveMfa,
+            onDismissRequest = accountViewModel::cancelLogin,
         )
     }
 }

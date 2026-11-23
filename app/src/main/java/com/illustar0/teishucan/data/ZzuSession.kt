@@ -165,6 +165,16 @@ class ZzuSession @Inject constructor(
         }
     }
 
+    /**
+     * 放弃尚未完成的登录并释放它的客户端，例如用户在等待短信验证时离开。
+     *
+     * 只结束调用这一刻的那次登录。结束在后台完成，调用方不必等待，之后发起的登录也不会被它误伤。
+     */
+    fun abandonLogin() {
+        val pending = mutableState.value as? SessionState.LoggingIn ?: return
+        scope.launch { end(pending.clients) }
+    }
+
     /** 结束当前登录。SDK 的退出也只清除本地状态，所以删除存档并释放客户端就够了。 */
     suspend fun logout() {
         val ended = awaitRestored() as? SignIn ?: return

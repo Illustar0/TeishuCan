@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.clearText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,15 +70,16 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 private const val MfaResendIntervalSeconds = 60
 private const val MillisPerSecond = 1000L
 
-/** 收集账号密码；登录要求验证码时切到验证码页。 */
+/** 为进行中的 [attempt] 收集账号密码，登录要求验证码时切到验证码页；[attempt] 为 null 时面板关闭。 */
 @Composable
 fun LoginSheet(
-    form: LoginFormState,
+    attempt: LoginAttempt?,
     passwordSaves: Flow<CreatePasswordRequest>,
     onSubmitCredentials: () -> Unit,
     onSubmitSavedPassword: (PasswordCredential) -> Unit,
     onSendMfaCode: () -> Unit,
     onVerifyMfa: () -> Unit,
+    onLeaveMfa: () -> Unit,
     onDismissRequest: () -> Unit,
 ) {
     val autofillManager = LocalAutofillManager.current
@@ -92,7 +93,6 @@ fun LoginSheet(
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     var isChoosingPassword by remember { mutableStateOf(false) }
-    val isBusy = form.isSubmitting || isChoosingPassword
     if (credentialContext != null && credentialManager != null) {
         val lifecycle = LocalLifecycleOwner.current.lifecycle
         LaunchedEffect(credentialManager, lifecycle, passwordSaves, autofillManager) {
@@ -109,11 +109,19 @@ fun LoginSheet(
         }
     }
 
+    // ViewModel 在尝试结束时立刻丢弃它，关闭动画却还要画它的最后一帧，所以这里只留到动画结束。
+    var lastAttempt by remember { mutableStateOf<LoginAttempt?>(null) }
+    SideEffect { if (attempt != null) lastAttempt = attempt }
+    val shown = attempt ?: lastAttempt ?: return
+    val isBusy = shown.isSubmitting || isChoosingPassword
+
     fun chooseSavedPassword() {
         if (credentialContext == null || credentialManager == null) return
-        if (isChoosingPassword || !form.canSubmitCredentials) return
+        // 关闭动画期间尝试已经结束，不再为它发起任何操作。
+        val target = attempt ?: return
+        if (isChoosingPassword || !target.canSubmitCredentials) return
         focusManager.clearFocus()
-        form.failure = null
+        target.failure = null
         isChoosingPassword = true
         scope.launch {
             try {
@@ -123,7 +131,7 @@ fun LoginSheet(
                     autofillManager?.cancel()
                     onSubmitSavedPassword(password)
                 } else {
-                    form.failure = LoginFailure(R.string.login_saved_password_unavailable, reason = null)
+                    target.failure = LoginFailure(R.string.login_saved_password_unavailable, reason = null)
                 }
             } catch (cause: GetCredentialException) {
                 val message = when (cause) {
@@ -131,7 +139,7 @@ fun LoginSheet(
                     is NoCredentialException -> R.string.login_no_saved_password
                     else -> R.string.login_saved_password_unavailable
                 }
-                form.failure = LoginFailure(message, reason = null)
+                target.failure = LoginFailure(message, reason = null)
             } finally {
                 isChoosingPassword = false
             }
@@ -144,15 +152,15 @@ fun LoginSheet(
     }
 
     OverlayBottomSheet(
-        show = form.isVisible,
-        title = stringResource(if (form.isAwaitingMfa) R.string.mfa_title else R.string.settings_login),
+        show = attempt != null,
+        title = stringResource(if (shown.mfa != null) R.string.mfa_title else R.string.settings_login),
         startAction = {
-            if (form.isAwaitingMfa) {
+            if (shown.mfa != null) {
                 SheetActionButton(
                     icon = MiuixIcons.Back,
                     contentDescription = stringResource(R.string.navigate_back),
                     enabled = !isBusy,
-                    onClick = form::leaveMfa,
+                    onClick = onLeaveMfa,
                 )
             } else {
                 SheetActionButton(
@@ -164,26 +172,23 @@ fun LoginSheet(
             }
         },
         onDismissRequest = dismissLogin,
-        onDismissFinished = {
-            form.password.clearText()
-            form.leaveMfa()
-        },
+        onDismissFinished = { lastAttempt = null },
         allowDismiss = !isBusy,
     ) {
         AnimatedContent(
-            targetState = form.isAwaitingMfa,
+            targetState = shown.mfa,
             modifier = Modifier
                 .fillMaxWidth()
                 .sensitiveContent()
                 .navigationBarsPadding()
                 .padding(bottom = 12.dp),
-            transitionSpec = { pageSlide(isForward = targetState) },
-        ) { isAwaitingMfa ->
-            if (isAwaitingMfa) {
-                MfaCodePage(form = form, onSendCode = onSendMfaCode, onVerifyCode = onVerifyMfa)
+            transitionSpec = { pageSlide(isForward = targetState != null) },
+        ) { mfa ->
+            if (mfa != null) {
+                MfaCodePage(attempt = shown, mfa = mfa, onSendCode = onSendMfaCode, onVerifyCode = onVerifyMfa)
             } else {
                 CredentialsPage(
-                    form = form,
+                    attempt = shown,
                     isBusy = isBusy,
                     onChooseSavedPassword = if (credentialManager != null) ::chooseSavedPassword else null,
                     onSubmit = { if (!isChoosingPassword) onSubmitCredentials() },
@@ -195,7 +200,7 @@ fun LoginSheet(
 
 @Composable
 private fun CredentialsPage(
-    form: LoginFormState,
+    attempt: LoginAttempt,
     isBusy: Boolean,
     onChooseSavedPassword: (() -> Unit)?,
     onSubmit: () -> Unit,
@@ -204,8 +209,8 @@ private fun CredentialsPage(
 
     Column {
         TextField(
-            value = form.account,
-            onValueChange = { form.account = it },
+            value = attempt.account,
+            onValueChange = { attempt.account = it },
             modifier = Modifier
                 .fillMaxWidth()
                 .contentType(ContentType.Username),
@@ -214,7 +219,7 @@ private fun CredentialsPage(
             singleLine = true,
         )
         TextField(
-            state = form.password,
+            state = attempt.password,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp)
@@ -226,7 +231,7 @@ private fun CredentialsPage(
             lineLimits = TextFieldLineLimits.SingleLine,
             outputTransformation = PasswordMask,
         )
-        LoginFailureText(form.failure)
+        LoginFailureText(attempt.failure)
         LoginHelperText(stringResource(R.string.login_credentials_notice))
         Row(
             modifier = Modifier
@@ -244,14 +249,14 @@ private fun CredentialsPage(
                 )
             }
             LoadingButton(
-                text = stringResource(if (form.isSubmitting) R.string.login_submitting else R.string.settings_login),
-                isLoading = form.isSubmitting,
+                text = stringResource(if (attempt.isSubmitting) R.string.login_submitting else R.string.settings_login),
+                isLoading = attempt.isSubmitting,
                 onClick = {
                     focusManager.clearFocus()
                     onSubmit()
                 },
                 modifier = Modifier.weight(1f),
-                enabled = form.account.isNotBlank() && form.password.text.isNotEmpty() && !isBusy,
+                enabled = attempt.account.isNotBlank() && attempt.password.text.isNotEmpty() && !isBusy,
                 colors = ButtonDefaults.buttonColorsPrimary(),
             )
         }
@@ -260,23 +265,24 @@ private fun CredentialsPage(
 
 @Composable
 private fun MfaCodePage(
-    form: LoginFormState,
+    attempt: LoginAttempt,
+    mfa: MfaVerification,
     onSendCode: () -> Unit,
     onVerifyCode: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
     var resendSecondsLeft by remember { mutableIntStateOf(0) }
-    val isCodeRequested = form.sentCodeCount > 0
-    val canEnterCode = isCodeRequested && !form.isSubmitting
+    val isCodeRequested = mfa.sentCodeCount > 0
+    val canEnterCode = isCodeRequested && !attempt.isSubmitting
 
     LaunchedEffect(canEnterCode) {
         if (canEnterCode) {
             focusRequester.requestFocus()
         }
     }
-    LaunchedEffect(form.sentCodeCount) {
-        if (form.sentCodeCount == 0) return@LaunchedEffect
+    LaunchedEffect(mfa.sentCodeCount) {
+        if (mfa.sentCodeCount == 0) return@LaunchedEffect
         resendSecondsLeft = MfaResendIntervalSeconds
         while (resendSecondsLeft > 0) {
             delay(MillisPerSecond)
@@ -286,8 +292,8 @@ private fun MfaCodePage(
 
     Column {
         TextField(
-            value = form.code,
-            onValueChange = { input -> form.code = input.filter(Char::isDigit) },
+            value = mfa.code,
+            onValueChange = { input -> mfa.code = input.filter(Char::isDigit) },
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
@@ -300,22 +306,22 @@ private fun MfaCodePage(
         LoginHelperText(
             stringResource(if (isCodeRequested) R.string.mfa_code_sent else R.string.mfa_code_destination),
         )
-        LoginFailureText(form.failure)
+        LoginFailureText(attempt.failure)
         Row(
             modifier = Modifier.padding(top = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             LoadingButton(
                 text = when {
-                    form.activeAction == LoginAction.SendCode -> stringResource(R.string.mfa_sending)
+                    attempt.activeAction == LoginAction.SendCode -> stringResource(R.string.mfa_sending)
                     !isCodeRequested -> stringResource(R.string.mfa_send)
                     resendSecondsLeft > 0 -> stringResource(R.string.mfa_resend_countdown, resendSecondsLeft)
                     else -> stringResource(R.string.mfa_resend)
                 },
-                isLoading = form.activeAction == LoginAction.SendCode,
+                isLoading = attempt.activeAction == LoginAction.SendCode,
                 onClick = onSendCode,
                 modifier = Modifier.weight(1f),
-                enabled = resendSecondsLeft == 0 && !form.isSubmitting,
+                enabled = resendSecondsLeft == 0 && !attempt.isSubmitting,
                 colors = if (isCodeRequested) {
                     ButtonDefaults.buttonColors()
                 } else {
@@ -324,15 +330,15 @@ private fun MfaCodePage(
             )
             LoadingButton(
                 text = stringResource(
-                    if (form.activeAction == LoginAction.VerifyCode) R.string.mfa_verifying else R.string.mfa_verify,
+                    if (attempt.activeAction == LoginAction.VerifyCode) R.string.mfa_verifying else R.string.mfa_verify,
                 ),
-                isLoading = form.activeAction == LoginAction.VerifyCode,
+                isLoading = attempt.activeAction == LoginAction.VerifyCode,
                 onClick = {
                     focusManager.clearFocus()
                     onVerifyCode()
                 },
                 modifier = Modifier.weight(1f),
-                enabled = canEnterCode && form.code.isNotEmpty(),
+                enabled = canEnterCode && mfa.code.isNotEmpty(),
                 colors = if (isCodeRequested) {
                     ButtonDefaults.buttonColorsPrimary()
                 } else {

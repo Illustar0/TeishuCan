@@ -38,31 +38,32 @@ import kotlinx.coroutines.launch
 
 enum class LoginAction { Login, SendCode, VerifyCode }
 
-/** 放在 ViewModel 里，转屏时验证码流程才不会丢。 */
-class LoginFormState {
-    var isVisible by mutableStateOf(false)
+/**
+ * 一次登录尝试，从打开登录面板到面板关闭。
+ *
+ * 每次打开都是新实例，结束后整体丢弃，因此不必逐项清理，下一次也看不到这一次的任何输入。
+ * 由 ViewModel 持有，转屏时验证码流程才不会丢。
+ */
+class LoginAttempt {
     var account by mutableStateOf("")
     val password = TextFieldState()
-    var code by mutableStateOf("")
-    var isAwaitingMfa by mutableStateOf(false)
-    var sentCodeCount by mutableIntStateOf(0)
     var activeAction by mutableStateOf<LoginAction?>(null)
     var failure by mutableStateOf<LoginFailure?>(null)
-    internal var passwordSaveAfterMfa: CreatePasswordRequest? = null
+
+    /** 等待短信验证时不为 null，回到账号密码页就丢弃。 */
+    var mfa by mutableStateOf<MfaVerification?>(null)
 
     val isSubmitting: Boolean
         get() = activeAction != null
 
     internal val canSubmitCredentials: Boolean
-        get() = isVisible && !isSubmitting && !isAwaitingMfa
+        get() = !isSubmitting && mfa == null
+}
 
-    fun leaveMfa() {
-        code = ""
-        sentCodeCount = 0
-        failure = null
-        passwordSaveAfterMfa = null
-        isAwaitingMfa = false
-    }
+/** 登录尝试里的短信验证一步。[passwordSave] 等验证通过后才交给系统密码管理器。 */
+class MfaVerification(internal val passwordSave: CreatePasswordRequest?) {
+    var code by mutableStateOf("")
+    var sentCodeCount by mutableIntStateOf(0)
 }
 
 data class LoginFailure(@param:StringRes val fallbackMessage: Int, val reason: String?)
@@ -80,53 +81,84 @@ class AccountViewModel @Inject constructor(
     private val pendingLogoutFailure = MutableStateFlow<Exception?>(null)
 
     val account: StateFlow<AccountState> = session.account
-    val loginForm = LoginFormState()
     val loginOutcomes: Flow<ActionOutcome> = outcomes.receiveAsFlow()
     val passwordSaves: Flow<CreatePasswordRequest> = passwordSaveRequests.receiveAsFlow()
     val logoutFailure = pendingLogoutFailure.asStateFlow()
 
+    /** 进行中的登录尝试，只在登录面板打开期间存在。 */
+    var login by mutableStateOf<LoginAttempt?>(null)
+        private set
+
+    fun startLogin() {
+        if (login == null) login = LoginAttempt()
+    }
+
+    /** 用户关闭登录面板，尝试就此结束，服务端那次未完成的登录也一并放弃。 */
+    fun cancelLogin() {
+        val attempt = login ?: return
+        if (attempt.isSubmitting) return
+        login = null
+        session.abandonLogin()
+    }
+
     fun submitCredentials() {
-        authenticate(loginForm.account.trim(), loginForm.password.text.toString(), supportsSystemPasswordManager)
+        val attempt = login ?: return
+        authenticate(attempt, attempt.account.trim(), attempt.password.text.toString(), supportsSystemPasswordManager)
     }
 
     fun submitSavedPassword(credential: PasswordCredential) {
-        if (!loginForm.canSubmitCredentials) return
-        loginForm.password.clearText()
-        authenticate(credential.id.trim(), credential.password, shouldOfferPasswordSave = false)
+        val attempt = login ?: return
+        if (!attempt.canSubmitCredentials) return
+        attempt.password.clearText()
+        authenticate(attempt, credential.id.trim(), credential.password, shouldOfferPasswordSave = false)
     }
 
-    private fun authenticate(account: String, password: String, shouldOfferPasswordSave: Boolean) {
-        if (!loginForm.canSubmitCredentials) return
+    private fun authenticate(
+        attempt: LoginAttempt,
+        account: String,
+        password: String,
+        shouldOfferPasswordSave: Boolean,
+    ) {
+        if (!attempt.canSubmitCredentials) return
         if (account.isEmpty() || password.isEmpty()) {
-            loginForm.failure = LoginFailure(R.string.login_failed, reason = null)
+            attempt.failure = LoginFailure(R.string.login_failed, reason = null)
             return
         }
-        loginForm.account = account
-        submit(LoginAction.Login, R.string.login_failed, onFailure = { loginForm.password.clearText() }) {
+        attempt.account = account
+        submit(attempt, LoginAction.Login, R.string.login_failed, onFailure = { attempt.password.clearText() }) {
             val passwordSave = if (shouldOfferPasswordSave) CreatePasswordRequest(account, password) else null
             when (session.login(account, password)) {
                 LoginResult.SignedIn -> finishLogin(passwordSave)
-                LoginResult.MfaRequired -> {
-                    loginForm.passwordSaveAfterMfa = passwordSave
-                    loginForm.isAwaitingMfa = true
-                }
+                LoginResult.MfaRequired -> attempt.mfa = MfaVerification(passwordSave)
             }
         }
     }
 
     fun sendMfaCode() {
-        submit(LoginAction.SendCode, R.string.mfa_send_failed) {
+        val attempt = login ?: return
+        val mfa = attempt.mfa ?: return
+        submit(attempt, LoginAction.SendCode, R.string.mfa_send_failed) {
             session.sendMfaCode()
-            loginForm.sentCodeCount++
+            mfa.sentCodeCount++
         }
     }
 
     fun verifyMfa() {
-        submit(LoginAction.VerifyCode, R.string.mfa_failed, onFailure = { loginForm.code = "" }) {
-            session.verifyMfa(loginForm.code)
-            finishLogin(loginForm.passwordSaveAfterMfa)
-            loginForm.passwordSaveAfterMfa = null
+        val attempt = login ?: return
+        val mfa = attempt.mfa ?: return
+        submit(attempt, LoginAction.VerifyCode, R.string.mfa_failed, onFailure = { mfa.code = "" }) {
+            session.verifyMfa(mfa.code)
+            finishLogin(mfa.passwordSave)
         }
+    }
+
+    /** 从验证码页回到账号密码页。等待验证的那次登录随之放弃，重新提交会开始新的一次。 */
+    fun leaveMfa() {
+        val attempt = login ?: return
+        if (attempt.mfa == null || attempt.isSubmitting) return
+        attempt.mfa = null
+        attempt.failure = null
+        session.abandonLogin()
     }
 
     fun logout() {
@@ -149,23 +181,29 @@ class AccountViewModel @Inject constructor(
         pendingLogoutFailure.compareAndSet(failure, null)
     }
 
+    override fun onCleared() {
+        // 尝试活不过持有它的界面，界面销毁时服务端那次未完成的登录也不该留下。
+        session.abandonLogin()
+    }
+
     private fun finishLogin(passwordSave: CreatePasswordRequest?) {
         outcomes.trySend(ActionOutcome.Succeeded)
-        loginForm.isVisible = false
+        login = null
         if (passwordSave != null) {
             passwordSaveRequests.trySend(passwordSave)
         }
     }
 
     private fun submit(
+        attempt: LoginAttempt,
         action: LoginAction,
         @StringRes failureMessage: Int,
         onFailure: () -> Unit = {},
         step: suspend () -> Unit,
     ) {
-        if (!loginForm.isVisible || loginForm.isSubmitting) return
-        loginForm.failure = null
-        loginForm.activeAction = action
+        if (attempt.isSubmitting) return
+        attempt.failure = null
+        attempt.activeAction = action
         viewModelScope.launch {
             try {
                 step()
@@ -174,10 +212,10 @@ class AccountViewModel @Inject constructor(
             } catch (cause: Exception) {
                 Log.w("TeishuCan.Account", "$action failed", cause)
                 onFailure()
-                loginForm.failure = LoginFailure(failureMessage, cause.campusReason)
+                attempt.failure = LoginFailure(failureMessage, cause.campusReason)
                 outcomes.trySend(ActionOutcome.Failed)
             } finally {
-                loginForm.activeAction = null
+                attempt.activeAction = null
             }
         }
     }

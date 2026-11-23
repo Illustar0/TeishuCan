@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.password
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.sensitiveContent
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
@@ -94,6 +95,7 @@ fun LoginSheet(
             targetState = form.isAwaitingMfa,
             modifier = Modifier
                 .fillMaxWidth()
+                .sensitiveContent()
                 .navigationBarsPadding()
                 .padding(bottom = 12.dp),
             transitionSpec = { pageSlide(isForward = targetState) },

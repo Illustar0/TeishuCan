@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.password
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.sensitiveContent
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
@@ -282,7 +283,7 @@ private fun MeterRechargeForm(
     val focusManager = LocalFocusManager.current
     val isSubmitting = state.rechargeStatus == RechargeStatus.Submitting
 
-    Column {
+    Column(modifier = Modifier.sensitiveContent()) {
         TextField(
             value = state.rechargeAmount,
             onValueChange = { input ->

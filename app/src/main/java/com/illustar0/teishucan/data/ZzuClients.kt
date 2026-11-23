@@ -82,10 +82,11 @@ internal class ZzuClients private constructor(
     }
 
     companion object {
-        suspend fun create(account: String, password: String): ZzuClients {
+        /** [deviceId] 由 [casDeviceId] 生成。 */
+        suspend fun create(account: String, password: String, deviceId: String): ZzuClients {
             val clients = ZzuClients(account, password)
             try {
-                clients.cas.setDevice("TeishuCan")
+                clients.cas.setDevice(deviceId)
             } catch (cause: Throwable) {
                 clients.close()
                 throw cause
@@ -94,3 +95,5 @@ internal class ZzuClients private constructor(
         }
     }
 }
+
+internal fun casDeviceId(androidId: String): String = "TeishuCan($androidId)"

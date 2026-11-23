@@ -1,5 +1,8 @@
 package com.illustar0.teishucan.data
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.provider.Settings
 import android.util.Log
 import com.illustar0.teishucan.di.ApplicationScope
 import com.illustar0.teishucan.domain.AccountState
@@ -9,6 +12,7 @@ import com.illustar0.teishucan.domain.LoginResult
 import com.illustar0.teishucan.domain.StudentProfile
 import com.illustar0.zzu.AuthenticationErrorKind
 import com.illustar0.zzu.ZzuException
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -72,11 +76,18 @@ internal class SignIn(override val clients: ZzuClients, val session: StoredSessi
  */
 @Singleton
 class ZzuSession @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val store: EncryptedSessionStore,
     private val snapshots: SignInSnapshotStore,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     private val mutableState = MutableStateFlow<SessionState>(SessionState.Restoring)
+
+    private val deviceId: String by lazy {
+        @SuppressLint("HardwareIds") // 只用来派生登录设备标识，见 casDeviceId。
+        val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+        casDeviceId(checkNotNull(androidId) { "Missing ANDROID_ID" })
+    }
 
     /** 串行化状态切换与存档读写，两者才能保持一致。持有期间只做本地操作，不等待网络。 */
     private val transitionLock = Mutex()
@@ -109,7 +120,7 @@ class ZzuSession @Inject constructor(
 
     private suspend fun restoredState(): SessionState {
         val saved = store.read() ?: return SessionState.SignedOut
-        val clients = ZzuClients.create(saved.account, saved.password)
+        val clients = ZzuClients.create(saved.account, saved.password, deviceId)
         try {
             clients.presetTokens(saved.tokens)
         } catch (cause: Throwable) {
@@ -126,7 +137,7 @@ class ZzuSession @Inject constructor(
         require(account.isNotBlank() && password.isNotEmpty())
         awaitRestored()
         return accountStep {
-            val clients = ZzuClients.create(account, password)
+            val clients = ZzuClients.create(account, password, deviceId)
             replaceState(SessionState.LoggingIn(clients))
             try {
                 authenticate(clients)

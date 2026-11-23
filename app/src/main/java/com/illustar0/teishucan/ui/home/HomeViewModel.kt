@@ -115,20 +115,19 @@ fun HomeRoute(
         state = state,
         isRefreshing = isRefreshing,
         onRefresh = viewModel::refresh,
-        isRechargeVisible = recharge.state.isVisible,
+        isRechargeVisible = recharge.draft != null,
         onOpenRecharge = recharge::open,
         onOpenMail = viewModel::openMail,
         onOpenElectricitySettings = onOpenElectricitySettings,
         bottomPadding = bottomPadding,
         rechargeSheet = {
             CampusCardRechargeSheet(
-                state = recharge.state,
+                draft = recharge.draft,
                 campusCardBalanceYuan = state.campusCardBalanceYuan,
                 onSubmitAmount = recharge::submitAmount,
                 onCheckoutOpen = recharge::finishCheckout,
                 onCheckoutFail = recharge::failCheckout,
                 onDismissRequest = recharge::dismiss,
-                onDismissFinished = recharge::reset,
             )
         },
     )

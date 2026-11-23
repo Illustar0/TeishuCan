@@ -6,6 +6,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.illustar0.teishucan.data.StudentRepository
+import com.illustar0.teishucan.data.ZzuSession
+import com.illustar0.teishucan.domain.AccountState
 import com.illustar0.teishucan.domain.RechargeOrder
 import com.illustar0.teishucan.domain.campusReason
 import com.illustar0.teishucan.ui.component.ActionOutcome
@@ -14,11 +16,12 @@ import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-class CampusCardRechargeState {
-    var isVisible by mutableStateOf(false)
+/** 一次校园卡充值，从打开充值面板到关闭。每次打开都是新实例，结束后整体丢弃，下一次看不到这一次的金额与订单。 */
+class CampusCardRechargeDraft {
     var amount by mutableStateOf("")
     var order by mutableStateOf<RechargeOrder?>(null)
     var isSubmitting by mutableStateOf(false)
@@ -31,42 +34,48 @@ class CampusCardRechargeState {
 
 @HiltViewModel
 class CampusCardRechargeViewModel @Inject constructor(
+    session: ZzuSession,
     private val student: StudentRepository,
 ) : ViewModel() {
     private val outcomeChannel = Channel<ActionOutcome>(Channel.CONFLATED)
 
-    var state by mutableStateOf(CampusCardRechargeState())
+    /** 进行中的充值，只在充值面板打开期间存在。 */
+    var draft by mutableStateOf<CampusCardRechargeDraft?>(null)
         private set
     val outcomes: Flow<ActionOutcome> = outcomeChannel.receiveAsFlow()
 
+    init {
+        // 订单属于这次登录。登录因请求失败而结束时首页会直接换掉，面板来不及关闭，要在这里作废。
+        viewModelScope.launch {
+            session.account
+                .filter { it == AccountState.SignedOut }
+                .collect { draft = null }
+        }
+    }
+
     fun open() {
-        state.isVisible = true
+        if (draft == null) draft = CampusCardRechargeDraft()
     }
 
     fun dismiss() {
-        state.isVisible = false
-    }
-
-    /** 弹层完全收起后丢弃草稿。 */
-    fun reset() {
-        state = CampusCardRechargeState()
+        draft = null
     }
 
     fun submitAmount() {
-        val draft = state
-        val amountYuan = draft.amountYuan ?: return
-        draft.isSubmitting = true
-        draft.hasFailed = false
+        val recharge = draft ?: return
+        val amountYuan = recharge.amountYuan ?: return
+        recharge.isSubmitting = true
+        recharge.hasFailed = false
         viewModelScope.launch {
             try {
-                draft.order = student.createRechargeOrder(amountYuan)
+                recharge.order = student.createRechargeOrder(amountYuan)
             } catch (cause: CancellationException) {
                 throw cause
             } catch (cause: Exception) {
-                draft.failureReason = cause.campusReason
-                failCheckout()
+                recharge.failureReason = cause.campusReason
+                fail(recharge)
             } finally {
-                draft.isSubmitting = false
+                recharge.isSubmitting = false
             }
         }
     }
@@ -79,7 +88,11 @@ class CampusCardRechargeViewModel @Inject constructor(
     }
 
     fun failCheckout() {
-        state.hasFailed = true
+        draft?.let(::fail)
+    }
+
+    private fun fail(recharge: CampusCardRechargeDraft) {
+        recharge.hasFailed = true
         outcomeChannel.trySend(ActionOutcome.Failed)
     }
 }

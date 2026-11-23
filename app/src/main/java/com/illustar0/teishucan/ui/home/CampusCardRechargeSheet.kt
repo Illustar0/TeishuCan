@@ -22,6 +22,7 @@ import com.illustar0.teishucan.ui.component.SheetActionButton
 import com.illustar0.teishucan.ui.component.formatYuan
 import com.illustar0.teishucan.ui.component.pageSlide
 import com.illustar0.teishucan.ui.component.rechargeAmountInput
+import com.illustar0.teishucan.ui.component.rememberShownContent
 import com.illustar0.teishucan.ui.component.tryOpenUri
 import java.math.BigDecimal
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -37,29 +38,31 @@ import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+/** 为进行中的 [draft] 选择金额并创建订单，再选择付款渠道；[draft] 为 null 时面板关闭。 */
 @Composable
 fun CampusCardRechargeSheet(
-    state: CampusCardRechargeState,
+    draft: CampusCardRechargeDraft?,
     campusCardBalanceYuan: BigDecimal?,
     onSubmitAmount: () -> Unit,
     onCheckoutOpen: () -> Unit,
     onCheckoutFail: () -> Unit,
     onDismissRequest: () -> Unit,
-    onDismissFinished: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
+    val sheet = rememberShownContent(draft)
+    val shown = sheet.value ?: return
 
     OverlayBottomSheet(
-        show = state.isVisible,
+        show = draft != null,
         title = stringResource(
-            if (state.order == null) R.string.electricity_recharge else R.string.campus_card_recharge_channel_title,
+            if (shown.order == null) R.string.electricity_recharge else R.string.campus_card_recharge_channel_title,
         ),
         startAction = {
-            if (state.order == null) {
+            if (shown.order == null) {
                 SheetActionButton(
                     icon = MiuixIcons.Close,
                     contentDescription = stringResource(R.string.electricity_meter_close),
-                    enabled = !state.isSubmitting,
+                    enabled = !shown.isSubmitting,
                     onClick = onDismissRequest,
                 )
             } else {
@@ -67,18 +70,18 @@ fun CampusCardRechargeSheet(
                     icon = MiuixIcons.Back,
                     contentDescription = stringResource(R.string.navigate_back),
                     onClick = {
-                        state.hasFailed = false
-                        state.order = null
+                        shown.hasFailed = false
+                        shown.order = null
                     },
                 )
             }
         },
         onDismissRequest = onDismissRequest,
-        onDismissFinished = onDismissFinished,
-        allowDismiss = !state.isSubmitting,
+        onDismissFinished = sheet.release,
+        allowDismiss = !shown.isSubmitting,
     ) {
         AnimatedContent(
-            targetState = state.order,
+            targetState = shown.order,
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
@@ -87,14 +90,14 @@ fun CampusCardRechargeSheet(
         ) { order ->
             if (order == null) {
                 RechargeAmountPage(
-                    state = state,
+                    state = shown,
                     campusCardBalanceYuan = campusCardBalanceYuan,
                     onSubmit = onSubmitAmount,
                 )
             } else {
                 PaymentChannelPage(
                     order = order,
-                    hasFailed = state.hasFailed,
+                    hasFailed = shown.hasFailed,
                     onChannelSelect = { channel ->
                         if (uriHandler.tryOpenUri(channel.checkoutUrl)) onCheckoutOpen() else onCheckoutFail()
                     },
@@ -106,7 +109,7 @@ fun CampusCardRechargeSheet(
 
 @Composable
 private fun RechargeAmountPage(
-    state: CampusCardRechargeState,
+    state: CampusCardRechargeDraft,
     campusCardBalanceYuan: BigDecimal?,
     onSubmit: () -> Unit,
 ) {

@@ -1,6 +1,7 @@
 // Copyright 2026, compose-miuix-ui contributors
 // SPDX-License-Identifier: Apache-2.0
-// Modified for TeishuCan from the Miuix example app (example/shared/.../component/effect): package renamed.
+// Modified for TeishuCan from the Miuix example app (example/shared/.../component/effect): package renamed,
+// one painter per effect shared by the whole process.
 
 package com.illustar0.teishucan.ui.component.effect
 
@@ -10,8 +11,15 @@ import top.yukonga.miuix.kmp.blur.asBrush
 import kotlin.math.cos
 import kotlin.math.sin
 
-internal class BgEffectPainter(
-    private val isOs3: Boolean = true,
+/**
+ * 动态背景的着色器与它当前的 uniform。用 [shared] 获取，每种特效在进程里只有一个实例。
+ *
+ * 每创建一个 [RuntimeShader] 都要在主线程重新编译一遍 SkSL，画笔若随页面创建，每次进入页面都会重新编译。
+ * 共用是安全的：各个 update 方法缓存的是着色器此刻的 uniform，每次绘制前都会重新设置，
+ * 而绘制时写入的是那一刻的 uniform，多处轮流使用也不会互相串值。
+ */
+internal class BgEffectPainter private constructor(
+    private val isOs3: Boolean,
 ) {
 
     val runtimeShader by lazy {
@@ -50,6 +58,11 @@ internal class BgEffectPainter(
         private const val U_ALPHA_MULTI = 1f
         private const val U_NOISE_SCALE = 1.5f
         private const val U_POINT_RADIUS_MULTI = 1f
+
+        private val os3Painter by lazy { BgEffectPainter(isOs3 = true) }
+        private val os2Painter by lazy { BgEffectPainter(isOs3 = false) }
+
+        fun shared(isOs3: Boolean): BgEffectPainter = if (isOs3) os3Painter else os2Painter
     }
 
     private fun initStaticUniforms(shader: RuntimeShader) {

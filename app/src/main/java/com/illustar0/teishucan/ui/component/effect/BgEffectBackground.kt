@@ -1,6 +1,7 @@
 // Copyright 2026, compose-miuix-ui contributors
 // SPDX-License-Identifier: Apache-2.0
-// Modified for TeishuCan from the Miuix example app (example/shared/.../component/effect): package renamed, dark theme and split pane read from TeishuCan.
+// Modified for TeishuCan from the Miuix example app (example/shared/.../component/effect): package renamed, dark theme and split pane read from TeishuCan,
+// painter shared by the whole process.
 
 package com.illustar0.teishucan.ui.component.effect
 
@@ -44,7 +45,7 @@ fun BgEffectBackground(
         val surface = MiuixTheme.colorScheme.surface
         val deviceType = if (isWideWindow()) DeviceType.PAD else DeviceType.PHONE
         val isDarkTheme = LocalIsDarkTheme.current
-        val painter = remember(isOs3Effect) { BgEffectPainter(isOs3Effect) }
+        val painter = BgEffectPainter.shared(isOs3Effect)
 
         val preset = remember(deviceType, isDarkTheme, isOs3Effect) {
             BgEffectConfig.get(deviceType, isDarkTheme, isOs3Effect)

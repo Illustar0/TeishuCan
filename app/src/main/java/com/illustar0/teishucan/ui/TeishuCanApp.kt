@@ -361,7 +361,9 @@ private fun MainScreen(
         OutcomeHaptics(accountViewModel.loginOutcomes)
         LoginSheet(
             form = loginForm,
+            passwordSaves = accountViewModel.passwordSaves,
             onSubmitCredentials = accountViewModel::submitCredentials,
+            onSubmitSavedPassword = accountViewModel::submitSavedPassword,
             onSendMfaCode = accountViewModel::sendMfaCode,
             onVerifyMfa = accountViewModel::verifyMfa,
             onDismissRequest = { loginForm.isVisible = false },

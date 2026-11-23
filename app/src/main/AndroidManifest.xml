@@ -31,6 +31,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TeishuCan"
         android:usesCleartextTraffic="false"
+        tools:ignore="CredManMissingDal,CredentialDependency"
         tools:targetApi="33">
         <activity
             android:name=".MainActivity"

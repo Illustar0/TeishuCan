@@ -109,7 +109,7 @@ class ZzuSession @Inject constructor(
 
     private suspend fun restoredState(): SessionState {
         val saved = store.read() ?: return SessionState.SignedOut
-        val clients = ZzuClients(saved.account, saved.password)
+        val clients = ZzuClients.create(saved.account, saved.password)
         try {
             clients.presetTokens(saved.tokens)
         } catch (cause: Throwable) {
@@ -126,7 +126,7 @@ class ZzuSession @Inject constructor(
         require(account.isNotBlank() && password.isNotEmpty())
         awaitRestored()
         return accountStep {
-            val clients = ZzuClients(account, password)
+            val clients = ZzuClients.create(account, password)
             replaceState(SessionState.LoggingIn(clients))
             try {
                 authenticate(clients)

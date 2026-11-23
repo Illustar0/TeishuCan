@@ -17,7 +17,10 @@ import kotlinx.coroutines.sync.withLock
  * SDK 自己保证调用的并发安全，这里的锁只用来避免并发调用方重复登录或重复换新令牌，
  * 都不会跨越业务请求持有。
  */
-internal class ZzuClients(private val account: String, private val password: String) : AutoCloseable {
+internal class ZzuClients private constructor(
+    private val account: String,
+    private val password: String,
+) : AutoCloseable {
     val cas = CasClient(account, password)
     private val easClient = EasClient(cas)
     private val ecardClient = EcardClient(cas)
@@ -76,5 +79,18 @@ internal class ZzuClients(private val account: String, private val password: Str
         easClient.close()
         ecardClient.close()
         cas.close()
+    }
+
+    companion object {
+        suspend fun create(account: String, password: String): ZzuClients {
+            val clients = ZzuClients(account, password)
+            try {
+                clients.cas.setDevice("TeishuCan")
+            } catch (cause: Throwable) {
+                clients.close()
+                throw cause
+            }
+            return clients
+        }
     }
 }

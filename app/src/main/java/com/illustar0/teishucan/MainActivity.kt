@@ -8,14 +8,18 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.illustar0.teishucan.memory.FairMemory
 import com.illustar0.teishucan.ui.NavigationRecovery
 import com.illustar0.teishucan.ui.NavigationSnapshot
 import com.illustar0.teishucan.ui.TeishuCanApp
+import com.illustar0.teishucan.ui.component.CustomTabsUriHandler
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import com.illustar0.teishucan.ui.theme.ThemeViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -42,6 +46,10 @@ class MainActivity : AppCompatActivity() {
             val themeSettings = settings ?: return@setContent
             val navigation = restoredNavigation ?: return@setContent
             val isDark = themeSettings.mode.isDark(isSystemInDarkTheme())
+            val defaultUriHandler = LocalUriHandler.current
+            val uriHandler = remember(defaultUriHandler) {
+                CustomTabsUriHandler(this, defaultUriHandler)
+            }
 
             LaunchedEffect(isDark) {
                 val barStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { isDark }
@@ -54,12 +62,14 @@ class MainActivity : AppCompatActivity() {
                 isDark = isDark,
                 areHeavyEffectsEnabled = fairMemory.areHeavyEffectsEnabled,
             ) {
-                TeishuCanApp(
-                    themeSettings = themeSettings,
-                    onThemeSettingsUpdate = themeViewModel::update,
-                    restoredNavigation = navigation,
-                    onNavigationChange = navigationRecovery::record,
-                )
+                CompositionLocalProvider(LocalUriHandler provides uriHandler) {
+                    TeishuCanApp(
+                        themeSettings = themeSettings,
+                        onThemeSettingsUpdate = themeViewModel::update,
+                        restoredNavigation = navigation,
+                        onNavigationChange = navigationRecovery::record,
+                    )
+                }
             }
         }
     }

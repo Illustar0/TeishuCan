@@ -36,7 +36,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-enum class LoginAction { Login, SendCode, VerifyCode }
+enum class LoginAction { Login, SavedPasswordLogin, SendCode, VerifyCode }
 
 /**
  * 一次登录尝试，从打开登录面板到面板关闭。
@@ -49,6 +49,7 @@ class LoginAttempt {
     val password = TextFieldState()
     var activeAction by mutableStateOf<LoginAction?>(null)
     var failure by mutableStateOf<LoginFailure?>(null)
+    var passwordManagerFeedback by mutableStateOf<PasswordManagerFeedback?>(null)
 
     /** 等待短信验证时不为 null，回到账号密码页就丢弃。 */
     var mfa by mutableStateOf<MfaVerification?>(null)
@@ -67,6 +68,8 @@ class MfaVerification(internal val passwordSave: CreatePasswordRequest?) {
 }
 
 data class LoginFailure(@param:StringRes val fallbackMessage: Int, val reason: String?)
+
+data class PasswordManagerFeedback(@param:StringRes val messageRes: Int, val isError: Boolean)
 
 internal val supportsSystemPasswordManager: Boolean
     get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
@@ -103,21 +106,21 @@ class AccountViewModel @Inject constructor(
 
     fun submitCredentials() {
         val attempt = login ?: return
-        authenticate(attempt, attempt.account.trim(), attempt.password.text.toString(), supportsSystemPasswordManager)
+        authenticate(attempt, attempt.account.trim(), attempt.password.text.toString(), LoginAction.Login)
     }
 
     fun submitSavedPassword(credential: PasswordCredential) {
         val attempt = login ?: return
         if (!attempt.canSubmitCredentials) return
         attempt.password.clearText()
-        authenticate(attempt, credential.id.trim(), credential.password, shouldOfferPasswordSave = false)
+        authenticate(attempt, credential.id.trim(), credential.password, LoginAction.SavedPasswordLogin)
     }
 
     private fun authenticate(
         attempt: LoginAttempt,
         account: String,
         password: String,
-        shouldOfferPasswordSave: Boolean,
+        action: LoginAction,
     ) {
         if (!attempt.canSubmitCredentials) return
         if (account.isEmpty() || password.isEmpty()) {
@@ -125,7 +128,8 @@ class AccountViewModel @Inject constructor(
             return
         }
         attempt.account = account
-        submit(attempt, LoginAction.Login, R.string.login_failed, onFailure = { attempt.password.clearText() }) {
+        val shouldOfferPasswordSave = action == LoginAction.Login && supportsSystemPasswordManager
+        submit(attempt, action, R.string.login_failed, onFailure = { attempt.password.clearText() }) {
             val passwordSave = if (shouldOfferPasswordSave) CreatePasswordRequest(account, password) else null
             when (session.login(account, password)) {
                 LoginResult.SignedIn -> finishLogin(passwordSave)
@@ -203,6 +207,7 @@ class AccountViewModel @Inject constructor(
     ) {
         if (attempt.isSubmitting) return
         attempt.failure = null
+        attempt.passwordManagerFeedback = null
         attempt.activeAction = action
         viewModelScope.launch {
             try {

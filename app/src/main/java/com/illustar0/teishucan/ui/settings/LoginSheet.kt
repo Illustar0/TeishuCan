@@ -21,7 +21,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.autofill.contentType
@@ -58,7 +57,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TextFieldDefaults
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -120,6 +118,7 @@ fun LoginSheet(
         if (isChoosingPassword || !target.canSubmitCredentials) return
         focusManager.clearFocus()
         target.failure = null
+        target.passwordManagerFeedback = null
         isChoosingPassword = true
         scope.launch {
             try {
@@ -129,15 +128,24 @@ fun LoginSheet(
                     autofillManager?.cancel()
                     onSubmitSavedPassword(password)
                 } else {
-                    target.failure = LoginFailure(R.string.login_saved_password_unavailable, reason = null)
+                    target.passwordManagerFeedback = PasswordManagerFeedback(
+                        messageRes = R.string.login_saved_password_unavailable,
+                        isError = true,
+                    )
                 }
             } catch (cause: GetCredentialException) {
-                val message = when (cause) {
+                target.passwordManagerFeedback = when (cause) {
                     is GetCredentialCancellationException -> return@launch
-                    is NoCredentialException -> R.string.login_no_saved_password
-                    else -> R.string.login_saved_password_unavailable
+                    is NoCredentialException -> PasswordManagerFeedback(
+                        messageRes = R.string.login_no_saved_password,
+                        isError = false,
+                    )
+
+                    else -> PasswordManagerFeedback(
+                        messageRes = R.string.login_saved_password_unavailable,
+                        isError = true,
+                    )
                 }
-                target.failure = LoginFailure(message, reason = null)
             } finally {
                 isChoosingPassword = false
             }
@@ -187,7 +195,7 @@ fun LoginSheet(
             } else {
                 CredentialsPage(
                     attempt = shown,
-                    isBusy = isBusy,
+                    isChoosingPassword = isChoosingPassword,
                     onChooseSavedPassword = if (credentialManager != null) ::chooseSavedPassword else null,
                     onSubmit = { if (!isChoosingPassword) onSubmitCredentials() },
                 )
@@ -199,11 +207,14 @@ fun LoginSheet(
 @Composable
 private fun CredentialsPage(
     attempt: LoginAttempt,
-    isBusy: Boolean,
+    isChoosingPassword: Boolean,
     onChooseSavedPassword: (() -> Unit)?,
     onSubmit: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
+    val isBusy = attempt.isSubmitting || isChoosingPassword
+    val isManualLogin = attempt.activeAction == LoginAction.Login
+    val isSavedPasswordLogin = attempt.activeAction == LoginAction.SavedPasswordLogin
 
     Column {
         TextField(
@@ -231,32 +242,33 @@ private fun CredentialsPage(
         )
         LoginFailureText(attempt.failure)
         LoginHelperText(stringResource(R.string.login_credentials_notice))
-        Row(
+        LoadingButton(
+            text = stringResource(if (isManualLogin) R.string.login_submitting else R.string.settings_login),
+            isLoading = isManualLogin,
+            onClick = {
+                focusManager.clearFocus()
+                onSubmit()
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (onChooseSavedPassword != null) {
-                TextButton(
-                    text = stringResource(R.string.login_use_saved_password),
-                    onClick = onChooseSavedPassword,
-                    modifier = Modifier.weight(1f),
-                    enabled = !isBusy,
-                )
-            }
+            enabled = attempt.account.isNotBlank() && attempt.password.text.isNotEmpty() && !isBusy,
+            colors = ButtonDefaults.buttonColorsPrimary(),
+        )
+        if (onChooseSavedPassword != null) {
             LoadingButton(
-                text = stringResource(if (attempt.isSubmitting) R.string.login_submitting else R.string.settings_login),
-                isLoading = attempt.isSubmitting,
-                onClick = {
-                    focusManager.clearFocus()
-                    onSubmit()
-                },
-                modifier = Modifier.weight(1f),
-                enabled = attempt.account.isNotBlank() && attempt.password.text.isNotEmpty() && !isBusy,
-                colors = ButtonDefaults.buttonColorsPrimary(),
+                text = stringResource(
+                    if (isSavedPasswordLogin) R.string.login_submitting else R.string.login_use_saved_password,
+                ),
+                isLoading = isChoosingPassword || isSavedPasswordLogin,
+                onClick = onChooseSavedPassword,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+                enabled = !isBusy,
+                colors = ButtonDefaults.buttonColors(),
             )
+            PasswordManagerFeedbackText(attempt.passwordManagerFeedback)
         }
     }
 }
@@ -353,6 +365,20 @@ private fun LoginFailureText(failure: LoginFailure?) {
         LoginHelperText(
             text = failure.reason ?: stringResource(failure.fallbackMessage),
             color = MiuixTheme.colorScheme.error,
+        )
+    }
+}
+
+@Composable
+private fun PasswordManagerFeedbackText(feedback: PasswordManagerFeedback?) {
+    if (feedback != null) {
+        LoginHelperText(
+            text = stringResource(feedback.messageRes),
+            color = if (feedback.isError) {
+                MiuixTheme.colorScheme.error
+            } else {
+                MiuixTheme.colorScheme.onSurfaceVariantSummary
+            },
         )
     }
 }

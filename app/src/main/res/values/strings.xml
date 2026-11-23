@@ -166,9 +166,9 @@
     <string name="login_password">パスワード</string>
     <string name="login_submitting">ログイン中…</string>
     <string name="login_failed">ログインに失敗しました。アカウントとパスワードを確認してください</string>
-    <string name="login_use_saved_password">保存済みパスワード</string>
-    <string name="login_no_saved_password">保存済みのパスワードがありません。アカウントとパスワードを入力してください。</string>
-    <string name="login_saved_password_unavailable">保存済みのパスワードを取得できませんでした。アカウントとパスワードを入力してください。</string>
+    <string name="login_use_saved_password">パスワードマネージャーでログイン</string>
+    <string name="login_no_saved_password">保存済みのパスワードが見つかりません</string>
+    <string name="login_saved_password_unavailable">保存済みのパスワードを読み込めませんでした。手動でログインしてください</string>
     <string name="login_credentials_notice">アカウントとパスワードは、トークンを更新するために端末内に保存されます。これらは Android システムの KeyStore によって保護されます。</string>
     <string name="mfa_title">SMS 認証</string>
     <string name="mfa_code">確認コード</string>

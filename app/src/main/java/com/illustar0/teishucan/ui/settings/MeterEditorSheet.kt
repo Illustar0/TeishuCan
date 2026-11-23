@@ -14,6 +14,11 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.byValue
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,8 +32,9 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.password
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.ElectricityMeter
@@ -63,6 +69,10 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 private const val MeterListHeightFraction = 0.5f
 private const val PaymentPasswordLength = 6
+
+private val PaymentPasswordInput = InputTransformation.byValue { _, proposed ->
+    proposed.filter(Char::isDigit).take(PaymentPasswordLength)
+}
 
 private val MeterLevelTitles = listOf(
     R.string.meter_level_campus,
@@ -102,7 +112,7 @@ class MeterEditorState(val meter: ElectricityMeter?) {
     /** 以已选路径为键的下一级选项，回到上一级时不用重新加载。 */
     val levelOptions = mutableStateMapOf<List<MeterOption>, MeterOptionsState>()
     var rechargeAmount by mutableStateOf("")
-    var paymentPassword by mutableStateOf("")
+    val paymentPassword = TextFieldState()
     var rechargeStatus by mutableStateOf<RechargeStatus>(RechargeStatus.Idle)
 
     val canSave: Boolean
@@ -113,7 +123,7 @@ class MeterEditorState(val meter: ElectricityMeter?) {
 
     val canSubmitRecharge: Boolean
         get() = rechargeAmountYuan != null &&
-            paymentPassword.length == PaymentPasswordLength &&
+            paymentPassword.text.length == PaymentPasswordLength &&
             rechargeStatus != RechargeStatus.Submitting
 }
 
@@ -171,7 +181,7 @@ fun MeterEditorSheet(
             }
         },
         onDismissRequest = onDismissRequest,
-        onDismissFinished = { state.paymentPassword = "" },
+        onDismissFinished = { state.paymentPassword.clearText() },
         allowDismiss = !isSubmitting,
     ) {
         AnimatedContent(
@@ -294,18 +304,17 @@ private fun MeterRechargeForm(
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )
         TextField(
-            value = state.paymentPassword,
-            onValueChange = { input ->
-                state.paymentPassword = input.filter(Char::isDigit).take(PaymentPasswordLength)
-            },
+            state = state.paymentPassword,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp),
+                .padding(top = 12.dp)
+                .semantics { password() },
             label = stringResource(R.string.electricity_recharge_password),
             enabled = !isSubmitting,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
+            lineLimits = TextFieldLineLimits.SingleLine,
+            inputTransformation = PaymentPasswordInput,
+            outputTransformation = PasswordMask,
         )
         rechargeFailureText(state.rechargeStatus)?.let { failure ->
             Text(

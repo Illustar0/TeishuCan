@@ -2,6 +2,8 @@ package com.illustar0.teishucan.ui.settings
 
 import android.util.Log
 import androidx.annotation.StringRes
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -32,7 +34,7 @@ enum class LoginAction { Login, SendCode, VerifyCode }
 class LoginFormState {
     var isVisible by mutableStateOf(false)
     var account by mutableStateOf("")
-    var password by mutableStateOf("")
+    val password = TextFieldState()
     var code by mutableStateOf("")
     var isAwaitingMfa by mutableStateOf(false)
     var sentCodeCount by mutableIntStateOf(0)
@@ -63,8 +65,8 @@ class AccountViewModel @Inject constructor(private val session: ZzuSession) : Vi
     val logoutFailure = pendingLogoutFailure.asStateFlow()
 
     fun submitCredentials() {
-        submit(LoginAction.Login, R.string.login_failed, onFailure = { loginForm.password = "" }) {
-            when (session.login(loginForm.account.trim(), loginForm.password)) {
+        submit(LoginAction.Login, R.string.login_failed, onFailure = { loginForm.password.clearText() }) {
+            when (session.login(loginForm.account.trim(), loginForm.password.text.toString())) {
                 LoginResult.SignedIn -> finishLogin()
                 LoginResult.MfaRequired -> loginForm.isAwaitingMfa = true
             }

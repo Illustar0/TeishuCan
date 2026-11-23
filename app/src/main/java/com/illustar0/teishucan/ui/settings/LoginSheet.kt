@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,8 +26,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalAutofillManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.password
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.ui.component.LoadingButton
@@ -82,7 +85,7 @@ fun LoginSheet(
         },
         onDismissRequest = dismissLogin,
         onDismissFinished = {
-            form.password = ""
+            form.password.clearText()
             form.leaveMfa()
         },
         allowDismiss = !form.isSubmitting,
@@ -123,17 +126,17 @@ private fun CredentialsPage(
             singleLine = true,
         )
         TextField(
-            value = form.password,
-            onValueChange = { form.password = it },
+            state = form.password,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp)
-                .contentType(ContentType.Password),
+                .contentType(ContentType.Password)
+                .semantics { password() },
             label = stringResource(R.string.login_password),
             enabled = !form.isSubmitting,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            singleLine = true,
-            visualTransformation = PasswordVisualTransformation(),
+            lineLimits = TextFieldLineLimits.SingleLine,
+            outputTransformation = PasswordMask,
         )
         LoginFailureText(form.failure)
         LoginHelperText(stringResource(R.string.login_credentials_notice))
@@ -147,7 +150,7 @@ private fun CredentialsPage(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp),
-            enabled = form.account.isNotBlank() && form.password.isNotEmpty() && !form.isSubmitting,
+            enabled = form.account.isNotBlank() && form.password.text.isNotEmpty() && !form.isSubmitting,
             colors = ButtonDefaults.buttonColorsPrimary(),
         )
     }

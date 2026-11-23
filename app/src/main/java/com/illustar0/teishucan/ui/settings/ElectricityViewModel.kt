@@ -1,5 +1,6 @@
 package com.illustar0.teishucan.ui.settings
 
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -143,8 +144,8 @@ class ElectricityViewModel @Inject constructor(
         val amountYuan = draft.rechargeAmountYuan ?: return
         draft.rechargeStatus = RechargeStatus.Submitting
         viewModelScope.launch {
-            val result = electricity.recharge(meter, amountYuan, draft.paymentPassword)
-            draft.paymentPassword = ""
+            val result = electricity.recharge(meter, amountYuan, draft.paymentPassword.text.toString())
+            draft.paymentPassword.clearText()
             when (result) {
                 MeterRechargeResult.Succeeded -> {
                     draft.rechargeStatus = RechargeStatus.Idle

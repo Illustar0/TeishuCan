@@ -83,6 +83,10 @@ import top.yukonga.miuix.kmp.utils.springAnimateToPage
 
 @Serializable
 internal sealed interface Route : NavKey {
+    /** 只在登录期间有意义的页面，不能比登录活得久。 */
+    val requiresSignIn: Boolean
+        get() = false
+
     @Serializable
     data object Main : Route
 
@@ -90,10 +94,16 @@ internal sealed interface Route : NavKey {
     data object ThemeSettings : Route
 
     @Serializable
-    data object ElectricitySettings : Route
+    data object ElectricitySettings : Route {
+        override val requiresSignIn: Boolean
+            get() = true
+    }
 
     @Serializable
-    data object UndergradEas : Route
+    data object UndergradEas : Route {
+        override val requiresSignIn: Boolean
+            get() = true
+    }
 
     @Serializable
     data object About : Route
@@ -122,8 +132,15 @@ internal fun TeishuCanApp(
     onThemeSettingsUpdate: ((ThemeSettings) -> ThemeSettings) -> Unit,
     restoredNavigation: NavigationSnapshot,
     onNavigationChange: suspend (NavigationSnapshot) -> Unit,
+    isSignedOut: Boolean,
 ) {
-    val navController = rememberNavController(*restoredNavigation.routes.toTypedArray())
+    // 需要登录的页面在恢复导航时不再打开；会话因请求失败而结束时，用户可能正停在这些页面上，要让它们离开。
+    val navController = rememberNavController(
+        *restoredNavigation.routes.filterNot { isSignedOut && it.requiresSignIn }.toTypedArray(),
+    )
+    LaunchedEffect(navController, isSignedOut) {
+        if (isSignedOut) navController.backStack.removeAll { it is Route && it.requiresSignIn }
+    }
     var destination by remember { mutableStateOf(restoredNavigation.destination) }
     val recordNavigation by rememberUpdatedState(onNavigationChange)
     LaunchedEffect(navController) {

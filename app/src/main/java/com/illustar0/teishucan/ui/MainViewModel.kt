@@ -50,6 +50,8 @@ internal class MainViewModel @Inject constructor(
     private val navigationRecovery: NavigationRecovery,
     session: ZzuSession,
 ) : ViewModel() {
+    val account: StateFlow<AccountState> = session.account
+
     val state: StateFlow<StartupState> = startupStateFlow(
         themeSettings = themeRepository.settings,
         restoredNavigation = flow { emit(navigationRecovery.restore()) },

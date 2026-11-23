@@ -77,19 +77,16 @@ class ElectricityViewModel @Inject constructor(
         ElectricityUiState(electricity.meters.value, student.student.value.campusCardBalanceYuan),
     )
 
-    /** 每次打开时替换；关闭后保留，让弹层滑走时内容不变。 */
-    var editor by mutableStateOf(MeterEditorState(meter = null))
-        private set
-    var isEditorVisible by mutableStateOf(false)
+    /** 进行中的电表草稿，只在弹层打开期间存在。 */
+    var editor by mutableStateOf<MeterEditorState?>(null)
         private set
 
     fun openEditor(meter: ElectricityMeter?) {
         editor = MeterEditorState(meter)
-        isEditorVisible = true
     }
 
     fun dismissEditor() {
-        isEditorVisible = false
+        editor = null
     }
 
     fun refresh() = refreshQueue.request()
@@ -99,10 +96,11 @@ class ElectricityViewModel @Inject constructor(
     }
 
     fun saveMeter() {
-        val location = editor.location ?: return
+        val draft = editor ?: return
+        val location = draft.location ?: return
         val meter = ElectricityMeter(
-            id = editor.meter?.id ?: UUID.randomUUID().toString(),
-            name = editor.name.trim(),
+            id = draft.meter?.id ?: UUID.randomUUID().toString(),
+            name = draft.name.trim(),
             location = location,
         )
         dismissEditor()
@@ -115,14 +113,14 @@ class ElectricityViewModel @Inject constructor(
     }
 
     fun deleteMeter() {
-        val meter = editor.meter ?: return
+        val meter = editor?.meter ?: return
         dismissEditor()
         viewModelScope.launch { pendingFailure.captureFailure { electricity.deleteMeter(meter) } }
     }
 
     /** 把 [path] 下一级的选项加载进当前草稿。已加载或正在加载时不做事，失败后再调用即重试。 */
     fun loadMeterOptions(path: List<MeterOption>) {
-        val levelOptions = editor.levelOptions
+        val levelOptions = editor?.levelOptions ?: return
         val current = levelOptions[path]
         if (current != null && current !is MeterOptionsState.Failed) return
         levelOptions[path] = MeterOptionsState.Loading
@@ -139,28 +137,28 @@ class ElectricityViewModel @Inject constructor(
 
     /** 提交充值。在 ViewModel 作用域内运行，页面重建也能拿到结果；只要可能已扣款就刷新余额。 */
     fun submitRecharge() {
-        val draft = editor
-        val meter = draft.meter ?: return
-        val amountYuan = draft.rechargeAmountYuan ?: return
-        draft.rechargeStatus = RechargeStatus.Submitting
+        val meter = editor?.meter ?: return
+        val recharge = editor?.recharge ?: return
+        val amountYuan = recharge.amountYuan ?: return
+        recharge.status = RechargeStatus.Submitting
         viewModelScope.launch {
-            val result = electricity.recharge(meter, amountYuan, draft.paymentPassword.text.toString())
-            draft.paymentPassword.clearText()
+            val result = electricity.recharge(meter, amountYuan, recharge.paymentPassword.text.toString())
+            recharge.paymentPassword.clearText()
             when (result) {
                 MeterRechargeResult.Succeeded -> {
-                    draft.rechargeStatus = RechargeStatus.Idle
+                    recharge.status = RechargeStatus.Idle
                     rechargeOutcomeChannel.trySend(ActionOutcome.Succeeded)
                     dismissEditor()
                     refresh()
                 }
 
                 is MeterRechargeResult.Rejected -> {
-                    draft.rechargeStatus = RechargeStatus.Rejected(result.reason)
+                    recharge.status = RechargeStatus.Rejected(result.reason)
                     rechargeOutcomeChannel.trySend(ActionOutcome.Failed)
                 }
 
                 MeterRechargeResult.Unconfirmed -> {
-                    draft.rechargeStatus = RechargeStatus.Unconfirmed
+                    recharge.status = RechargeStatus.Unconfirmed
                     rechargeOutcomeChannel.trySend(ActionOutcome.Failed)
                     refresh()
                 }
@@ -189,7 +187,6 @@ fun ElectricitySettingsRoute(onBack: () -> Unit) {
         isRefreshing = isRefreshing,
         onRefresh = viewModel::refresh,
         editor = viewModel.editor,
-        isEditorVisible = viewModel.isEditorVisible,
         onOpenEditor = viewModel::openEditor,
         onDismissEditor = viewModel::dismissEditor,
         onSaveMeter = viewModel::saveMeter,

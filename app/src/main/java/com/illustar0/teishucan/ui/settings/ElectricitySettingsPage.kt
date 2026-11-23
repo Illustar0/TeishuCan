@@ -49,8 +49,7 @@ fun ElectricitySettingsPage(
     campusCardBalanceYuan: BigDecimal?,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
-    editor: MeterEditorState,
-    isEditorVisible: Boolean,
+    editor: MeterEditorState?,
     onOpenEditor: (ElectricityMeter?) -> Unit,
     onDismissEditor: () -> Unit,
     onSaveMeter: () -> Unit,
@@ -128,9 +127,8 @@ fun ElectricitySettingsPage(
             }
         }
         MeterEditorSheet(
-            show = isEditorVisible,
-            state = editor,
-            reading = meters?.find { it.meter.id == editor.meter?.id }?.kilowattHours,
+            editor = editor,
+            meters = meters,
             campusCardBalanceYuan = campusCardBalanceYuan,
             onLoadOptions = onLoadMeterOptions,
             onSave = onSaveMeter,
@@ -196,8 +194,7 @@ private fun ElectricitySettingsPagePreview() {
             campusCardBalanceYuan = "56.78".toBigDecimal(),
             isRefreshing = false,
             onRefresh = {},
-            editor = MeterEditorState(meter = null),
-            isEditorVisible = false,
+            editor = null,
             onOpenEditor = {},
             onDismissEditor = {},
             onSaveMeter = {},

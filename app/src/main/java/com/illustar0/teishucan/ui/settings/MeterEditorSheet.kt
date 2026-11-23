@@ -18,7 +18,6 @@ import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.byValue
-import androidx.compose.foundation.text.input.clearText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,11 +40,13 @@ import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.ElectricityMeter
 import com.illustar0.teishucan.domain.MeterLocation
 import com.illustar0.teishucan.domain.MeterOption
+import com.illustar0.teishucan.domain.MeterReading
 import com.illustar0.teishucan.ui.component.LoadingButton
 import com.illustar0.teishucan.ui.component.SheetActionButton
 import com.illustar0.teishucan.ui.component.formatYuan
 import com.illustar0.teishucan.ui.component.pageSlide
 import com.illustar0.teishucan.ui.component.rechargeAmountInput
+import com.illustar0.teishucan.ui.component.rememberShownContent
 import java.math.BigDecimal
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.BreadcrumbBar
@@ -103,36 +104,52 @@ sealed interface RechargeStatus {
     data object Unconfirmed : RechargeStatus
 }
 
-/** 一次打开 [MeterEditorSheet] 时的草稿；[meter] 为 null 表示新增。 */
+/** 一次打开 [MeterEditorSheet] 时的草稿；[meter] 为 null 表示新增。关闭弹层后整体丢弃。 */
 class MeterEditorState(val meter: ElectricityMeter?) {
-    var page by mutableStateOf(if (meter == null) MeterSheetPage.Form else MeterSheetPage.Detail)
+    private var currentPage by mutableStateOf(if (meter == null) MeterSheetPage.Form else MeterSheetPage.Detail)
+
+    /** 当前页。进入充值页时开始新的一次充值，离开就丢弃它，支付密码不会留到别的页面。 */
+    var page: MeterSheetPage
+        get() = currentPage
+        set(value) {
+            recharge = if (value == MeterSheetPage.Recharge) recharge ?: MeterRecharge() else null
+            currentPage = value
+        }
+
+    /** 只在充值页上存在。 */
+    var recharge by mutableStateOf<MeterRecharge?>(null)
+        private set
     var name by mutableStateOf(meter?.name.orEmpty())
     var location by mutableStateOf(meter?.location)
     var levelPath by mutableStateOf(emptyList<MeterOption>())
 
     /** 以已选路径为键的下一级选项，回到上一级时不用重新加载。 */
     val levelOptions = mutableStateMapOf<List<MeterOption>, MeterOptionsState>()
-    var rechargeAmount by mutableStateOf("")
-    val paymentPassword = TextFieldState()
-    var rechargeStatus by mutableStateOf<RechargeStatus>(RechargeStatus.Idle)
 
     val canSave: Boolean
         get() = name.isNotBlank() && location != null
-
-    val rechargeAmountYuan: Int?
-        get() = rechargeAmount.toIntOrNull()?.takeIf { it > 0 }
-
-    val canSubmitRecharge: Boolean
-        get() = rechargeAmountYuan != null &&
-            paymentPassword.text.length == PaymentPasswordLength &&
-            rechargeStatus != RechargeStatus.Submitting
 }
 
+/** 草稿里的一次充值。 */
+class MeterRecharge {
+    var amount by mutableStateOf("")
+    val paymentPassword = TextFieldState()
+    var status by mutableStateOf<RechargeStatus>(RechargeStatus.Idle)
+
+    val amountYuan: Int?
+        get() = amount.toIntOrNull()?.takeIf { it > 0 }
+
+    val canSubmit: Boolean
+        get() = amountYuan != null &&
+            paymentPassword.text.length == PaymentPasswordLength &&
+            status != RechargeStatus.Submitting
+}
+
+/** 查看、编辑或充值 [editor] 里的电表；[editor] 为 null 时弹层关闭。 */
 @Composable
 fun MeterEditorSheet(
-    show: Boolean,
-    state: MeterEditorState,
-    reading: Double?,
+    editor: MeterEditorState?,
+    meters: List<MeterReading>?,
     campusCardBalanceYuan: BigDecimal?,
     onLoadOptions: (List<MeterOption>) -> Unit,
     onSave: () -> Unit,
@@ -141,7 +158,9 @@ fun MeterEditorSheet(
     onDismissRequest: () -> Unit,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
-    val isSubmitting = state.rechargeStatus == RechargeStatus.Submitting
+    val sheet = rememberShownContent(editor)
+    val state = sheet.value ?: return
+    val isSubmitting = state.recharge?.status == RechargeStatus.Submitting
     val previousPage = when (state.page) {
         MeterSheetPage.Detail -> null
         MeterSheetPage.Recharge -> MeterSheetPage.Detail
@@ -150,7 +169,7 @@ fun MeterEditorSheet(
     }
 
     OverlayBottomSheet(
-        show = show,
+        show = editor != null,
         title = sheetTitle(state),
         startAction = {
             if (previousPage == null) {
@@ -182,7 +201,7 @@ fun MeterEditorSheet(
             }
         },
         onDismissRequest = onDismissRequest,
-        onDismissFinished = { state.paymentPassword.clearText() },
+        onDismissFinished = sheet.release,
         allowDismiss = !isSubmitting,
     ) {
         AnimatedContent(
@@ -197,20 +216,20 @@ fun MeterEditorSheet(
                 MeterSheetPage.Detail -> state.meter?.let { meter ->
                     MeterDetail(
                         meter = meter,
-                        reading = reading,
+                        reading = meters?.find { it.meter.id == meter.id }?.kilowattHours,
                         onEdit = { state.page = MeterSheetPage.Form },
-                        onRecharge = {
-                            state.rechargeStatus = RechargeStatus.Idle
-                            state.page = MeterSheetPage.Recharge
-                        },
+                        onRecharge = { state.page = MeterSheetPage.Recharge },
                     )
                 }
 
-                MeterSheetPage.Recharge -> MeterRechargeForm(
-                    state = state,
-                    campusCardBalanceYuan = campusCardBalanceYuan,
-                    onSubmit = onSubmitRecharge,
-                )
+                // 离开充值页时这次充值立刻丢弃，滑出动画期间还要画它。
+                MeterSheetPage.Recharge -> rememberShownContent(state.recharge).value?.let { recharge ->
+                    MeterRechargeForm(
+                        recharge = recharge,
+                        campusCardBalanceYuan = campusCardBalanceYuan,
+                        onSubmit = onSubmitRecharge,
+                    )
+                }
 
                 MeterSheetPage.Form -> MeterForm(
                     state = state,
@@ -276,18 +295,18 @@ private fun MeterDetail(
 
 @Composable
 private fun MeterRechargeForm(
-    state: MeterEditorState,
+    recharge: MeterRecharge,
     campusCardBalanceYuan: BigDecimal?,
     onSubmit: () -> Unit,
 ) {
     val focusManager = LocalFocusManager.current
-    val isSubmitting = state.rechargeStatus == RechargeStatus.Submitting
+    val isSubmitting = recharge.status == RechargeStatus.Submitting
 
     Column(modifier = Modifier.sensitiveContent()) {
         TextField(
-            value = state.rechargeAmount,
+            value = recharge.amount,
             onValueChange = { input ->
-                state.rechargeAmount = rechargeAmountInput(input)
+                recharge.amount = rechargeAmountInput(input)
             },
             modifier = Modifier.fillMaxWidth(),
             label = stringResource(R.string.electricity_recharge_amount),
@@ -305,7 +324,7 @@ private fun MeterRechargeForm(
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )
         TextField(
-            state = state.paymentPassword,
+            state = recharge.paymentPassword,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp)
@@ -317,7 +336,7 @@ private fun MeterRechargeForm(
             inputTransformation = PaymentPasswordInput,
             outputTransformation = PasswordMask,
         )
-        rechargeFailureText(state.rechargeStatus)?.let { failure ->
+        rechargeFailureText(recharge.status)?.let { failure ->
             Text(
                 text = failure,
                 modifier = Modifier.padding(top = 8.dp),
@@ -337,7 +356,7 @@ private fun MeterRechargeForm(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp),
-            enabled = state.canSubmitRecharge,
+            enabled = recharge.canSubmit,
         )
     }
 }

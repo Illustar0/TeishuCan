@@ -22,6 +22,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,6 +36,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 
 private const val SelectedTermIdKey = "selectedTermId"
@@ -53,7 +57,12 @@ class TimetableViewModel @Inject constructor(
     private val termLoads = MutableStateFlow<Map<String, TermLoad>>(emptyMap())
 
     private val pendingFailure = MutableStateFlow<Exception?>(null)
-    private val refreshQueue = RefreshQueue(viewModelScope) { pendingFailure.captureFailure { refreshPage() } }
+
+    /** 这次登录发起的加载与刷新都在这里运行。登录结束时整个取消，迟到的结果不会落到下一个账号上。 */
+    private var signInScope = newSignInScope()
+    private val refreshQueue = RefreshQueue(viewModelScope) {
+        signInScope.launch { pendingFailure.captureFailure { refreshPage() } }.join()
+    }
 
     val failure = pendingFailure.asStateFlow()
 
@@ -81,14 +90,20 @@ class TimetableViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .filterNotNull()
                 .collect { termId ->
-                    launch { pendingFailure.captureFailure { load(termId) } }
+                    signInScope.launch { pendingFailure.captureFailure { load(termId) } }
                 }
         }
-        // 选中的学期属于这次登录，下一个账号应该打开默认学期。
+        // 选中的学期、各学期的加载情况和待提示的失败都属于这次登录，下一个账号应该从头开始。
         viewModelScope.launch {
             session.account
                 .filter { it == AccountState.SignedOut }
-                .collect { selectedTermId.value = null }
+                .collect {
+                    signInScope.cancel()
+                    signInScope = newSignInScope()
+                    selectedTermId.value = null
+                    termLoads.value = emptyMap()
+                    pendingFailure.value = null
+                }
         }
     }
 
@@ -119,6 +134,11 @@ class TimetableViewModel @Inject constructor(
             termLoads.update { it + (termId to TermLoad.Failed) }
             throw cause
         }
+    }
+
+    private fun newSignInScope(): CoroutineScope {
+        val parent = viewModelScope.coroutineContext
+        return CoroutineScope(parent + SupervisorJob(parent.job))
     }
 
     private fun statusOf(term: TimetableTerm?, load: TermLoad?, isRefreshing: Boolean): TimetableStatus = when {

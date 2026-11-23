@@ -26,15 +26,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.AccountState
+import com.illustar0.teishucan.domain.PredictiveBackAnimation
 import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.ui.component.FailureToasts
 import com.illustar0.teishucan.ui.component.OutcomeHaptics
 import com.illustar0.teishucan.ui.component.isWideWindow
 import com.illustar0.teishucan.ui.component.liquid.LiquidGlassNavigationBar
+import com.illustar0.teishucan.ui.component.predictiveback.predictiveBackNavTransition
 import com.illustar0.teishucan.ui.home.HomeRoute
 import com.illustar0.teishucan.ui.home.SignedOutHomePage
 import com.illustar0.teishucan.ui.services.ServicesRoute
@@ -67,10 +70,14 @@ import top.yukonga.miuix.kmp.icon.extended.GridView
 import top.yukonga.miuix.kmp.icon.extended.Home
 import top.yukonga.miuix.kmp.icon.extended.Months
 import top.yukonga.miuix.kmp.icon.extended.Settings
+import top.yukonga.miuix.kmp.nav.core.NavCornerClipMode
 import top.yukonga.miuix.kmp.nav.core.NavDisplay
+import top.yukonga.miuix.kmp.nav.core.NavDisplayEffects
 import top.yukonga.miuix.kmp.nav.core.NavKey
 import top.yukonga.miuix.kmp.nav.core.rememberNavController
+import top.yukonga.miuix.kmp.nav.core.rememberNavSystemCornerRadius
 import top.yukonga.miuix.kmp.nav.gesture.PredictiveBackHandler
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PagerNavigationSpringSpec
 import top.yukonga.miuix.kmp.utils.springAnimateToPage
 
@@ -106,6 +113,8 @@ internal enum class AppDestination(
 }
 
 private val SignedOutDestinations = listOf(AppDestination.Home, AppDestination.Settings)
+private val FallbackCardCornerRadius = 32.dp
+private const val TransitionDimAmount = 0.5f
 
 @Composable
 internal fun TeishuCanApp(
@@ -127,8 +136,48 @@ internal fun TeishuCanApp(
             navController.push(route)
         }
     }
+    val transition = remember(
+        themeSettings.predictiveBackAnimation,
+        themeSettings.predictiveBackExitDirection,
+    ) {
+        predictiveBackNavTransition(
+            animation = themeSettings.predictiveBackAnimation,
+            exitDirection = themeSettings.predictiveBackExitDirection,
+        )
+    }
+    val navCornerRadius = rememberNavSystemCornerRadius()
+    val roundsAllCorners = when (themeSettings.predictiveBackAnimation) {
+        PredictiveBackAnimation.Aosp,
+        PredictiveBackAnimation.Scale,
+        PredictiveBackAnimation.Classic,
+        -> true
 
-    NavDisplay(navController = navController) {
+        PredictiveBackAnimation.None,
+        PredictiveBackAnimation.Miuix,
+        -> false
+    }
+    val backdropColor = MiuixTheme.colorScheme.surface
+    val effects = remember(navCornerRadius, roundsAllCorners, backdropColor) {
+        NavDisplayEffects(
+            enableCornerClip = true,
+            cornerClipRadius = if (roundsAllCorners && navCornerRadius <= 0.dp) {
+                FallbackCardCornerRadius
+            } else {
+                navCornerRadius
+            },
+            cornerClipMode = if (roundsAllCorners) NavCornerClipMode.All else NavCornerClipMode.Leading,
+            dimAmount = TransitionDimAmount,
+            backdropColor = backdropColor,
+            blockInputDuringTransition = false,
+        )
+    }
+    val isPredictiveBackDisabled = themeSettings.predictiveBackAnimation == PredictiveBackAnimation.None
+
+    NavDisplay(
+        navController = navController,
+        transition = transition,
+        effects = effects,
+    ) {
         entry<Route.Main> {
             MainScreen(
                 isFloatingNavigationBar = themeSettings.isFloatingNavigationBarEnabled,
@@ -139,7 +188,7 @@ internal fun TeishuCanApp(
         }
         entry<Route.ThemeSettings> {
             CommitOnlyBackHandler(
-                enabled = !themeSettings.isPredictiveBackEnabled,
+                enabled = isPredictiveBackDisabled,
                 onCommit = { navController.pop() },
             )
             ThemeSettingsPage(
@@ -150,21 +199,21 @@ internal fun TeishuCanApp(
         }
         entry<Route.ElectricitySettings> {
             CommitOnlyBackHandler(
-                enabled = !themeSettings.isPredictiveBackEnabled,
+                enabled = isPredictiveBackDisabled,
                 onCommit = { navController.pop() },
             )
             ElectricitySettingsRoute(onBack = { navController.pop() })
         }
         entry<Route.UndergradEas> {
             CommitOnlyBackHandler(
-                enabled = !themeSettings.isPredictiveBackEnabled,
+                enabled = isPredictiveBackDisabled,
                 onCommit = { navController.pop() },
             )
             UndergradEasRoute(onBack = { navController.pop() })
         }
         entry<Route.About> {
             CommitOnlyBackHandler(
-                enabled = !themeSettings.isPredictiveBackEnabled,
+                enabled = isPredictiveBackDisabled,
                 onCommit = { navController.pop() },
             )
             AboutPage(
@@ -174,7 +223,7 @@ internal fun TeishuCanApp(
         }
         entry<Route.OpenSourceLicenses> {
             CommitOnlyBackHandler(
-                enabled = !themeSettings.isPredictiveBackEnabled,
+                enabled = isPredictiveBackDisabled,
                 onCommit = { navController.pop() },
             )
             OpenSourceLicensesPage(onBack = { navController.pop() })

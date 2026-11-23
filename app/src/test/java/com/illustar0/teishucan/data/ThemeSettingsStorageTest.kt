@@ -2,6 +2,8 @@ package com.illustar0.teishucan.data
 
 import com.illustar0.teishucan.domain.ColorSpec
 import com.illustar0.teishucan.domain.PaletteStyle
+import com.illustar0.teishucan.domain.PredictiveBackAnimation
+import com.illustar0.teishucan.domain.PredictiveBackExitDirection
 import com.illustar0.teishucan.domain.SeedColor
 import com.illustar0.teishucan.domain.ThemeMode
 import com.illustar0.teishucan.domain.ThemeSettings
@@ -24,6 +26,8 @@ class ThemeSettingsStorageTest {
             seedColor = SeedColor.Teal,
             paletteStyle = PaletteStyle.Expressive,
             colorSpec = ColorSpec.Spec2021,
+            predictiveBackAnimation = PredictiveBackAnimation.Scale,
+            predictiveBackExitDirection = PredictiveBackExitDirection.FollowGesture,
         )
         val output = ByteArrayOutputStream()
 

@@ -198,7 +198,7 @@
     <string name="settings_theme_liquid_glass">リキッドグラス</string>
     <string name="settings_theme_liquid_glass_summary">フローティングバーにガラスの屈折効果を適用します</string>
     <string name="settings_theme_predictive_back">予測型「戻る」</string>
-    <string name="settings_theme_predictive_back_summary">戻るジェスチャーに合わせてページを動かします</string>
+    <string name="settings_theme_predictive_back_exit_direction">閉じる方向</string>
     <string name="settings_theme_seed_color">テーマカラー</string>
 
     <string name="theme_mode_system">システム</string>
@@ -226,4 +226,14 @@
 
     <string name="color_spec_2021" translatable="false">Material 3 (2021)</string>
     <string name="color_spec_2025" translatable="false">Expressive (2025)</string>
+
+    <string name="predictive_back_animation_none">なし</string>
+    <string name="predictive_back_animation_aosp" translatable="false">AOSP</string>
+    <string name="predictive_back_animation_miuix" translatable="false">Miuix</string>
+    <string name="predictive_back_animation_scale">スケール</string>
+    <string name="predictive_back_animation_classic">クラシック</string>
+
+    <string name="predictive_back_exit_direction_follow_gesture">ジェスチャーに従う</string>
+    <string name="predictive_back_exit_direction_always_right">常に右</string>
+    <string name="predictive_back_exit_direction_always_left">常に左</string>
 </resources>

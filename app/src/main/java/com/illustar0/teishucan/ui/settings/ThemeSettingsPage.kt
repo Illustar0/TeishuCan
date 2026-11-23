@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.ColorSpec
 import com.illustar0.teishucan.domain.PaletteStyle
+import com.illustar0.teishucan.domain.PredictiveBackAnimation
+import com.illustar0.teishucan.domain.PredictiveBackExitDirection
 import com.illustar0.teishucan.domain.SeedColor
 import com.illustar0.teishucan.domain.ThemeMode
 import com.illustar0.teishucan.domain.ThemeSettings
@@ -161,14 +163,34 @@ private fun ThemeSettingsContent(
                 )
             }
             if (isPredictiveBackSupported) {
-                SwitchPreference(
-                    title = stringResource(R.string.settings_theme_predictive_back),
-                    summary = stringResource(R.string.settings_theme_predictive_back_summary),
-                    checked = settings.isPredictiveBackEnabled,
-                    onCheckedChange = { isEnabled -> onUpdate { it.copy(isPredictiveBackEnabled = isEnabled) } },
-                )
+                PredictiveBackPreferences(settings = settings, onUpdate = onUpdate)
             }
         }
+    }
+}
+
+@Composable
+private fun ColumnScope.PredictiveBackPreferences(
+    settings: ThemeSettings,
+    onUpdate: ((ThemeSettings) -> ThemeSettings) -> Unit,
+) {
+    OverlayDropdownPreference(
+        title = stringResource(R.string.settings_theme_predictive_back),
+        items = PredictiveBackAnimation.entries.map { stringResource(it.labelRes) },
+        selectedIndex = settings.predictiveBackAnimation.ordinal,
+        onSelectedIndexChange = { index ->
+            onUpdate { it.copy(predictiveBackAnimation = PredictiveBackAnimation.entries[index]) }
+        },
+    )
+    AnimatedVisibility(visible = settings.predictiveBackAnimation == PredictiveBackAnimation.Scale) {
+        OverlayDropdownPreference(
+            title = stringResource(R.string.settings_theme_predictive_back_exit_direction),
+            items = PredictiveBackExitDirection.entries.map { stringResource(it.labelRes) },
+            selectedIndex = settings.predictiveBackExitDirection.ordinal,
+            onSelectedIndexChange = { index ->
+                onUpdate { it.copy(predictiveBackExitDirection = PredictiveBackExitDirection.entries[index]) }
+            },
+        )
     }
 }
 
@@ -319,6 +341,24 @@ private val ColorSpec.labelRes: Int
     get() = when (this) {
         ColorSpec.Spec2021 -> R.string.color_spec_2021
         ColorSpec.Spec2025 -> R.string.color_spec_2025
+    }
+
+@get:StringRes
+private val PredictiveBackAnimation.labelRes: Int
+    get() = when (this) {
+        PredictiveBackAnimation.None -> R.string.predictive_back_animation_none
+        PredictiveBackAnimation.Aosp -> R.string.predictive_back_animation_aosp
+        PredictiveBackAnimation.Miuix -> R.string.predictive_back_animation_miuix
+        PredictiveBackAnimation.Scale -> R.string.predictive_back_animation_scale
+        PredictiveBackAnimation.Classic -> R.string.predictive_back_animation_classic
+    }
+
+@get:StringRes
+private val PredictiveBackExitDirection.labelRes: Int
+    get() = when (this) {
+        PredictiveBackExitDirection.FollowGesture -> R.string.predictive_back_exit_direction_follow_gesture
+        PredictiveBackExitDirection.AlwaysRight -> R.string.predictive_back_exit_direction_always_right
+        PredictiveBackExitDirection.AlwaysLeft -> R.string.predictive_back_exit_direction_always_left
     }
 
 @Preview(showBackground = true)

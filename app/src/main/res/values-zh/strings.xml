@@ -189,7 +189,7 @@
     <string name="settings_theme_liquid_glass">液态玻璃</string>
     <string name="settings_theme_liquid_glass_summary">为悬浮栏启用玻璃折射效果</string>
     <string name="settings_theme_predictive_back">预测性返回</string>
-    <string name="settings_theme_predictive_back_summary">返回手势时页面跟随手指移动</string>
+    <string name="settings_theme_predictive_back_exit_direction">退出方向</string>
     <string name="settings_theme_seed_color">主题色</string>
 
     <string name="theme_mode_system">跟随系统</string>
@@ -214,4 +214,12 @@
     <string name="palette_style_monochrome">单色</string>
     <string name="palette_style_fidelity">高保真</string>
     <string name="palette_style_content">内容</string>
+
+    <string name="predictive_back_animation_none">无</string>
+    <string name="predictive_back_animation_scale">缩放</string>
+    <string name="predictive_back_animation_classic">经典</string>
+
+    <string name="predictive_back_exit_direction_follow_gesture">跟随手势</string>
+    <string name="predictive_back_exit_direction_always_right">始终向右</string>
+    <string name="predictive_back_exit_direction_always_left">始终向左</string>
 </resources>

@@ -164,8 +164,13 @@ detekt {
 }
 
 tasks.withType<Detekt>().configureEach {
-    // 改编自 Miuix 示例，保持与上游接近以便同步，不按本项目的规则检查。
-    exclude("**/ui/component/animation/**", "**/ui/component/effect/**", "**/ui/component/liquid/**")
+    // 改编自 Miuix 示例与 InstallerX-Revived，保持与上游接近以便同步，不按本项目的规则检查。
+    exclude(
+        "**/ui/component/animation/**",
+        "**/ui/component/effect/**",
+        "**/ui/component/liquid/**",
+        "**/ui/component/predictiveback/**",
+    )
 }
 
 dependencies {

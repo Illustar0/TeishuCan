@@ -36,6 +36,20 @@ enum class PaletteStyle {
 
 enum class ColorSpec { Spec2021, Spec2025 }
 
+enum class PredictiveBackAnimation {
+    None,
+    Aosp,
+    Miuix,
+    Scale,
+    Classic,
+}
+
+enum class PredictiveBackExitDirection {
+    FollowGesture,
+    AlwaysRight,
+    AlwaysLeft,
+}
+
 @Serializable
 data class ThemeSettings(
     val mode: ThemeMode = ThemeMode.System,
@@ -47,7 +61,8 @@ data class ThemeSettings(
     val isBlurEnabled: Boolean = true,
     val isFloatingNavigationBarEnabled: Boolean = false,
     val isLiquidGlassEnabled: Boolean = false,
-    val isPredictiveBackEnabled: Boolean = true,
+    val predictiveBackAnimation: PredictiveBackAnimation = PredictiveBackAnimation.Miuix,
+    val predictiveBackExitDirection: PredictiveBackExitDirection = PredictiveBackExitDirection.AlwaysRight,
 ) {
     /** 实际采用的规格；切到只支持 2021 的风格再切回来时，保存的选择不会丢。 */
     val effectiveColorSpec: ColorSpec

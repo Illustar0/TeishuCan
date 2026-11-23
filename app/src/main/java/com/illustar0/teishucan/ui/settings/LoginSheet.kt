@@ -15,7 +15,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +52,7 @@ import com.illustar0.teishucan.R
 import com.illustar0.teishucan.ui.component.LoadingButton
 import com.illustar0.teishucan.ui.component.SheetActionButton
 import com.illustar0.teishucan.ui.component.pageSlide
+import com.illustar0.teishucan.ui.component.rememberShownContent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -109,10 +109,8 @@ fun LoginSheet(
         }
     }
 
-    // ViewModel 在尝试结束时立刻丢弃它，关闭动画却还要画它的最后一帧，所以这里只留到动画结束。
-    var lastAttempt by remember { mutableStateOf<LoginAttempt?>(null) }
-    SideEffect { if (attempt != null) lastAttempt = attempt }
-    val shown = attempt ?: lastAttempt ?: return
+    val sheet = rememberShownContent(attempt)
+    val shown = sheet.value ?: return
     val isBusy = shown.isSubmitting || isChoosingPassword
 
     fun chooseSavedPassword() {
@@ -172,7 +170,7 @@ fun LoginSheet(
             }
         },
         onDismissRequest = dismissLogin,
-        onDismissFinished = { lastAttempt = null },
+        onDismissFinished = sheet.release,
         allowDismiss = !isBusy,
     ) {
         AnimatedContent(

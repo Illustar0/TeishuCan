@@ -29,7 +29,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
-private val UndergradEasGroups = listOf(
+internal val UndergradEasGroups = listOf(
     ServiceGroup(
         titleRes = R.string.services_eas_records,
         services = listOf(

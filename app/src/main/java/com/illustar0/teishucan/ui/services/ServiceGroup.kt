@@ -52,7 +52,7 @@ internal fun ServiceGroupSection(
 }
 
 @Composable
-private fun ServiceRow(
+internal fun ServiceRow(
     service: CampusService,
     isOpening: Boolean,
     onClick: () -> Unit,
@@ -77,7 +77,7 @@ internal fun ServiceIcon(imageVector: ImageVector) {
 }
 
 @get:StringRes
-private val CampusService.titleRes: Int
+internal val CampusService.titleRes: Int
     get() = when (this) {
         CampusService.Library -> R.string.service_library
         CampusService.LibraryReservation -> R.string.service_library_reservation
@@ -98,7 +98,7 @@ private val CampusService.titleRes: Int
     }
 
 @get:StringRes
-private val CampusService.summaryRes: Int
+internal val CampusService.summaryRes: Int
     get() = when (this) {
         CampusService.Library -> R.string.service_library_summary
         CampusService.LibraryReservation -> R.string.service_library_reservation_summary
@@ -137,3 +137,12 @@ private val CampusService.icon: ImageVector
         CampusService.AvailableClassrooms -> ImageVector.vectorResource(R.drawable.ic_lucide_door_open)
         CampusService.ClassroomTimetable -> ImageVector.vectorResource(R.drawable.ic_lucide_calendar_clock)
     }
+
+private val QueryWhitespace = Regex("\\s+")
+
+/** 判断 [query] 按空白拆出的每个关键词是否都能在任意一个 [fields] 中忽略大小写命中。 */
+internal fun matchesServiceQuery(query: String, vararg fields: String): Boolean {
+    val tokens = query.trim().split(QueryWhitespace).filter(String::isNotEmpty)
+    if (tokens.isEmpty()) return true
+    return tokens.all { token -> fields.any { field -> field.contains(token, ignoreCase = true) } }
+}

@@ -4,6 +4,10 @@
     <string name="destination_services">服务</string>
     <string name="destination_settings">设置</string>
     <string name="navigate_back">返回</string>
+    <string name="services_search_placeholder">搜索服务</string>
+    <string name="services_search_cancel">取消</string>
+    <string name="services_search_clear">清除</string>
+    <string name="services_search_empty">未找到相关服务</string>
     <string name="services_library">图书馆</string>
     <string name="services_student_affairs">学生事务</string>
     <string name="service_library">图书馆门户</string>

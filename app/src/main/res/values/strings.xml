@@ -6,6 +6,10 @@
     <string name="destination_services">サービス</string>
     <string name="destination_settings">設定</string>
     <string name="navigate_back">戻る</string>
+    <string name="services_search_placeholder">サービスを検索</string>
+    <string name="services_search_cancel">キャンセル</string>
+    <string name="services_search_clear">クリア</string>
+    <string name="services_search_empty">該当するサービスが見つかりません</string>
     <string name="services_library">図書館</string>
     <string name="services_student_affairs">学生サービス</string>
     <string name="service_library">図書館ポータル</string>

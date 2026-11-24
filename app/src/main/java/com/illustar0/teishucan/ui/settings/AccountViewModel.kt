@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.annotation.StringRes
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,7 +46,7 @@ enum class LoginAction { Login, SavedPasswordLogin, SendCode, VerifyCode }
  * 由 ViewModel 持有，转屏时验证码流程才不会丢。
  */
 class LoginAttempt {
-    var account by mutableStateOf("")
+    val account = TextFieldState()
     val password = TextFieldState()
     var activeAction by mutableStateOf<LoginAction?>(null)
     var failure by mutableStateOf<LoginFailure?>(null)
@@ -68,7 +69,7 @@ class MfaVerification(
 ) {
     var securePhone by mutableStateOf(securePhone)
         internal set
-    var code by mutableStateOf("")
+    val code = TextFieldState()
     var sentCodeCount by mutableIntStateOf(0)
     var shouldTrustDevice by mutableStateOf(true)
 }
@@ -112,7 +113,12 @@ class AccountViewModel @Inject constructor(
 
     fun submitCredentials() {
         val attempt = login ?: return
-        authenticate(attempt, attempt.account.trim(), attempt.password.text.toString(), LoginAction.Login)
+        authenticate(
+            attempt,
+            attempt.account.text.toString().trim(),
+            attempt.password.text.toString(),
+            LoginAction.Login,
+        )
     }
 
     fun submitSavedPassword(credential: PasswordCredential) {
@@ -133,7 +139,7 @@ class AccountViewModel @Inject constructor(
             attempt.failure = LoginFailure(R.string.login_failed, reason = null)
             return
         }
-        attempt.account = account
+        attempt.account.setTextAndPlaceCursorAtEnd(account)
         val shouldOfferPasswordSave = action == LoginAction.Login && supportsSystemPasswordManager
         submit(attempt, action, R.string.login_failed, onFailure = { attempt.password.clearText() }) {
             val passwordSave = if (shouldOfferPasswordSave) CreatePasswordRequest(account, password) else null
@@ -156,8 +162,8 @@ class AccountViewModel @Inject constructor(
     fun verifyMfa() {
         val attempt = login ?: return
         val mfa = attempt.mfa ?: return
-        submit(attempt, LoginAction.VerifyCode, R.string.mfa_failed, onFailure = { mfa.code = "" }) {
-            session.verifyMfa(mfa.code, shouldTrustDevice = mfa.shouldTrustDevice)
+        submit(attempt, LoginAction.VerifyCode, R.string.mfa_failed, onFailure = { mfa.code.clearText() }) {
+            session.verifyMfa(mfa.code.text.toString(), shouldTrustDevice = mfa.shouldTrustDevice)
             finishLogin(mfa.passwordSave)
         }
     }

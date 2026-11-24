@@ -42,10 +42,10 @@ import com.illustar0.teishucan.domain.MeterLocation
 import com.illustar0.teishucan.domain.MeterOption
 import com.illustar0.teishucan.domain.MeterReading
 import com.illustar0.teishucan.ui.component.LoadingButton
+import com.illustar0.teishucan.ui.component.RechargeAmountInput
 import com.illustar0.teishucan.ui.component.SheetActionButton
 import com.illustar0.teishucan.ui.component.formatYuan
 import com.illustar0.teishucan.ui.component.pageSlide
-import com.illustar0.teishucan.ui.component.rechargeAmountInput
 import com.illustar0.teishucan.ui.component.rememberShownContent
 import java.math.BigDecimal
 import top.yukonga.miuix.kmp.basic.BasicComponent
@@ -119,7 +119,7 @@ class MeterEditorState(val meter: ElectricityMeter?) {
     /** 只在充值页上存在。 */
     var recharge by mutableStateOf<MeterRecharge?>(null)
         private set
-    var name by mutableStateOf(meter?.name.orEmpty())
+    val name = TextFieldState(meter?.name.orEmpty())
     var location by mutableStateOf(meter?.location)
     var levelPath by mutableStateOf(emptyList<MeterOption>())
 
@@ -127,17 +127,17 @@ class MeterEditorState(val meter: ElectricityMeter?) {
     val levelOptions = mutableStateMapOf<List<MeterOption>, MeterOptionsState>()
 
     val canSave: Boolean
-        get() = name.isNotBlank() && location != null
+        get() = name.text.isNotBlank() && location != null
 }
 
 /** 草稿里的一次充值。 */
 class MeterRecharge {
-    var amount by mutableStateOf("")
+    val amount = TextFieldState()
     val paymentPassword = TextFieldState()
     var status by mutableStateOf<RechargeStatus>(RechargeStatus.Idle)
 
     val amountYuan: Int?
-        get() = amount.toIntOrNull()?.takeIf { it > 0 }
+        get() = amount.text.toString().toIntOrNull()?.takeIf { it > 0 }
 
     val canSubmit: Boolean
         get() = amountYuan != null &&
@@ -304,15 +304,13 @@ private fun MeterRechargeForm(
 
     Column(modifier = Modifier.sensitiveContent()) {
         TextField(
-            value = recharge.amount,
-            onValueChange = { input ->
-                recharge.amount = rechargeAmountInput(input)
-            },
+            state = recharge.amount,
             modifier = Modifier.fillMaxWidth(),
             label = stringResource(R.string.electricity_recharge_amount),
             enabled = !isSubmitting,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
+            lineLimits = TextFieldLineLimits.SingleLine,
+            inputTransformation = RechargeAmountInput,
         )
         Text(
             text = stringResource(
@@ -377,11 +375,10 @@ private fun MeterForm(
 
     Column {
         TextField(
-            value = state.name,
-            onValueChange = { state.name = it },
+            state = state.name,
             modifier = Modifier.fillMaxWidth(),
             label = stringResource(R.string.electricity_meter_name),
-            singleLine = true,
+            lineLimits = TextFieldLineLimits.SingleLine,
         )
         Card(
             modifier = Modifier.padding(top = 12.dp),

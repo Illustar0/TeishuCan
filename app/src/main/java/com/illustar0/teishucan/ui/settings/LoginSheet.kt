@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
 import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.byValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,6 +72,10 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private const val MfaResendIntervalSeconds = 60
 private const val MillisPerSecond = 1000L
+
+private val MfaCodeInput = InputTransformation.byValue { _, proposed ->
+    proposed.filter(Char::isDigit)
+}
 
 /** 为进行中的 [attempt] 收集账号密码，登录要求验证码时切到验证码页；[attempt] 为 null 时面板关闭。 */
 @Composable
@@ -221,14 +227,13 @@ private fun CredentialsPage(
 
     Column {
         TextField(
-            value = attempt.account,
-            onValueChange = { attempt.account = it },
+            state = attempt.account,
             modifier = Modifier
                 .fillMaxWidth()
                 .contentType(ContentType.Username),
             label = stringResource(R.string.login_account),
             enabled = !isBusy,
-            singleLine = true,
+            lineLimits = TextFieldLineLimits.SingleLine,
         )
         TextField(
             state = attempt.password,
@@ -255,7 +260,7 @@ private fun CredentialsPage(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 12.dp),
-            enabled = attempt.account.isNotBlank() && attempt.password.text.isNotEmpty() && !isBusy,
+            enabled = attempt.account.text.isNotBlank() && attempt.password.text.isNotEmpty() && !isBusy,
             colors = ButtonDefaults.buttonColorsPrimary(),
         )
         if (onChooseSavedPassword != null) {
@@ -305,8 +310,7 @@ private fun MfaCodePage(
 
     Column {
         TextField(
-            value = mfa.code,
-            onValueChange = { input -> mfa.code = input.filter(Char::isDigit) },
+            state = mfa.code,
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
@@ -314,7 +318,8 @@ private fun MfaCodePage(
             label = stringResource(R.string.mfa_code),
             enabled = canEnterCode,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
+            lineLimits = TextFieldLineLimits.SingleLine,
+            inputTransformation = MfaCodeInput,
         )
         LoginHelperText(
             mfaHelperText(isCodeRequested = isCodeRequested, securePhone = mfa.securePhone),
@@ -363,7 +368,7 @@ private fun MfaCodePage(
                     onVerifyCode()
                 },
                 modifier = Modifier.weight(1f),
-                enabled = canEnterCode && mfa.code.isNotEmpty(),
+                enabled = canEnterCode && mfa.code.text.isNotEmpty(),
                 colors = if (isCodeRequested) {
                     ButtonDefaults.buttonColorsPrimary()
                 } else {

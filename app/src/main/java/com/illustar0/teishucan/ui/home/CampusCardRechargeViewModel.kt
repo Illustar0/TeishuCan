@@ -1,5 +1,6 @@
 package com.illustar0.teishucan.ui.home
 
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -22,14 +23,14 @@ import kotlinx.coroutines.launch
 
 /** 一次校园卡充值，从打开充值面板到关闭。每次打开都是新实例，结束后整体丢弃，下一次看不到这一次的金额与订单。 */
 class CampusCardRechargeDraft {
-    var amount by mutableStateOf("")
+    val amount = TextFieldState()
     var order by mutableStateOf<RechargeOrder?>(null)
     var isSubmitting by mutableStateOf(false)
     var hasFailed by mutableStateOf(false)
     var failureReason by mutableStateOf<String?>(null)
 
     val amountYuan: Int?
-        get() = amount.toIntOrNull()?.takeIf { it > 0 }
+        get() = amount.text.toString().toIntOrNull()?.takeIf { it > 0 }
 }
 
 @HiltViewModel

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -18,10 +19,10 @@ import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.PaymentChannel
 import com.illustar0.teishucan.domain.RechargeOrder
 import com.illustar0.teishucan.ui.component.LoadingButton
+import com.illustar0.teishucan.ui.component.RechargeAmountInput
 import com.illustar0.teishucan.ui.component.SheetActionButton
 import com.illustar0.teishucan.ui.component.formatYuan
 import com.illustar0.teishucan.ui.component.pageSlide
-import com.illustar0.teishucan.ui.component.rechargeAmountInput
 import com.illustar0.teishucan.ui.component.rememberShownContent
 import com.illustar0.teishucan.ui.component.tryOpenUri
 import java.math.BigDecimal
@@ -117,13 +118,13 @@ private fun RechargeAmountPage(
 
     Column {
         TextField(
-            value = state.amount,
-            onValueChange = { input -> state.amount = rechargeAmountInput(input) },
+            state = state.amount,
             modifier = Modifier.fillMaxWidth(),
             label = stringResource(R.string.electricity_recharge_amount),
             enabled = !state.isSubmitting,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
+            lineLimits = TextFieldLineLimits.SingleLine,
+            inputTransformation = RechargeAmountInput,
         )
         RechargeHelperText(
             stringResource(

@@ -110,7 +110,7 @@ class ElectricityViewModel @Inject constructor(
         val location = draft.location ?: return
         val meter = ElectricityMeter(
             id = draft.meter?.id ?: UUID.randomUUID().toString(),
-            name = draft.name.trim(),
+            name = draft.name.text.toString().trim(),
             location = location,
         )
         dismissEditor()

@@ -61,7 +61,7 @@
     <string name="home_profile_identity">身份类型</string>
 
     <string name="home_support_title">支持开发</string>
-    <string name="home_support_summary">TeishuCan 是一款自由、开源且免费的软件。向开发者捐助以表示支持。</string>
+    <string name="home_support_summary">TeishuCan 是一款开源且免费的软件。向开发者捐助以表示支持。</string>
     <string name="home_learn_title">了解 TeishuCan</string>
     <string name="home_learn_summary">了解功能和使用方法</string>
     <string name="home_campus_card_balance">校园卡余额</string>

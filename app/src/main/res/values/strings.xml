@@ -64,7 +64,7 @@
     <string name="home_profile_identity">身分</string>
 
     <string name="home_support_title">開発を支援</string>
-    <string name="home_support_summary">TeishuCan は自由でオープンソースの無料ソフトウェアです。開発者への寄付で支援できます。</string>
+    <string name="home_support_summary">TeishuCan はオープンソースの無料ソフトウェアです。開発者への寄付で支援できます。</string>
     <string name="home_support_url" translatable="false">https://afdian.com/a/Illustar0</string>
     <string name="home_learn_title">TeishuCan について知る</string>
     <string name="home_learn_summary">機能や使い方を確認します</string>

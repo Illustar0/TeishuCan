@@ -119,7 +119,9 @@
     <string name="service_open_failed">无法打开服务，请稍后再试</string>
     <string name="electricity_meter_reselect_location">部分电表位置已失效，请编辑电表并重新选择位置</string>
     <string name="mfa_code_destination">验证码将发送至绑定的安全手机</string>
+    <string name="mfa_code_destination_phone">验证码将发送至 %1$s</string>
     <string name="mfa_code_sent">验证码已发送至绑定的安全手机</string>
+    <string name="mfa_code_sent_phone">验证码已发送至 %1$s</string>
     <string name="electricity_recharge_balance">校园卡余额：%1$s</string>
     <string name="electricity_recharge_password">支付密码（6 位数字）</string>
     <string name="electricity_recharge_confirm">确认充值</string>

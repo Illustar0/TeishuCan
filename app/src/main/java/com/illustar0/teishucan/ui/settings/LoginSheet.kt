@@ -314,7 +314,7 @@ private fun MfaCodePage(
             singleLine = true,
         )
         LoginHelperText(
-            stringResource(if (isCodeRequested) R.string.mfa_code_sent else R.string.mfa_code_destination),
+            mfaHelperText(isCodeRequested = isCodeRequested, securePhone = mfa.securePhone),
         )
         LoginFailureText(attempt.failure)
         Row(
@@ -357,6 +357,14 @@ private fun MfaCodePage(
             )
         }
     }
+}
+
+@Composable
+private fun mfaHelperText(isCodeRequested: Boolean, securePhone: String?): String = when {
+    isCodeRequested && securePhone != null -> stringResource(R.string.mfa_code_sent_phone, securePhone)
+    isCodeRequested -> stringResource(R.string.mfa_code_sent)
+    securePhone != null -> stringResource(R.string.mfa_code_destination_phone, securePhone)
+    else -> stringResource(R.string.mfa_code_destination)
 }
 
 @Composable

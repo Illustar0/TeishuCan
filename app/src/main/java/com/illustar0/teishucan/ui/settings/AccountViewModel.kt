@@ -62,7 +62,12 @@ class LoginAttempt {
 }
 
 /** 登录尝试里的短信验证一步。[passwordSave] 等验证通过后才交给系统密码管理器。 */
-class MfaVerification(internal val passwordSave: CreatePasswordRequest?) {
+class MfaVerification(
+    internal val passwordSave: CreatePasswordRequest?,
+    securePhone: String? = null,
+) {
+    var securePhone by mutableStateOf(securePhone)
+        internal set
     var code by mutableStateOf("")
     var sentCodeCount by mutableIntStateOf(0)
 }
@@ -131,9 +136,9 @@ class AccountViewModel @Inject constructor(
         val shouldOfferPasswordSave = action == LoginAction.Login && supportsSystemPasswordManager
         submit(attempt, action, R.string.login_failed, onFailure = { attempt.password.clearText() }) {
             val passwordSave = if (shouldOfferPasswordSave) CreatePasswordRequest(account, password) else null
-            when (session.login(account, password)) {
+            when (val result = session.login(account, password)) {
                 LoginResult.SignedIn -> finishLogin(passwordSave)
-                LoginResult.MfaRequired -> attempt.mfa = MfaVerification(passwordSave)
+                is LoginResult.MfaRequired -> attempt.mfa = MfaVerification(passwordSave, result.securePhone)
             }
         }
     }
@@ -142,7 +147,7 @@ class AccountViewModel @Inject constructor(
         val attempt = login ?: return
         val mfa = attempt.mfa ?: return
         submit(attempt, LoginAction.SendCode, R.string.mfa_send_failed) {
-            session.sendMfaCode()
+            session.sendMfaCode()?.let { mfa.securePhone = it }
             mfa.sentCodeCount++
         }
     }

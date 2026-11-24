@@ -166,14 +166,16 @@ class ZzuSession @Inject constructor(
         LoginResult.SignedIn
     } catch (cause: ZzuException.Authentication) {
         if (cause.kind != AuthenticationErrorKind.MFA_REQUIRED) throw cause
-        check(clients.cas.detectMfa().canUseSms) { "SMS verification is unavailable" }
-        LoginResult.MfaRequired
+        val challenge = logged("MFA SMS preparation") { clients.cas.prepareSms() }
+        LoginResult.MfaRequired(challenge.securePhone.normalizedPhone())
     }
 
-    /** 为返回 [LoginResult.MfaRequired] 的登录发送验证码。 */
-    suspend fun sendMfaCode() {
+    /** 为返回 [LoginResult.MfaRequired] 的登录发送验证码，返回脱敏安全手机号（未提供时为 null）。 */
+    suspend fun sendMfaCode(): String? {
         val clients = awaitingMfa()
-        accountStep { logged("MFA code delivery") { clients.cas.sendSms() } }
+        return accountStep {
+            logged("MFA code delivery") { clients.cas.sendSms() }.securePhone.normalizedPhone()
+        }
     }
 
     /** 用 [code] 完成返回 [LoginResult.MfaRequired] 的登录。 */
@@ -329,3 +331,5 @@ class ZzuSession @Inject constructor(
 }
 
 private fun PersonalInfo.toStudentProfile() = StudentProfile(name, organizationName, identityTypeName)
+
+private fun String?.normalizedPhone(): String? = this?.trim()?.takeIf(String::isNotEmpty)

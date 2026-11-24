@@ -14,8 +14,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -26,7 +24,7 @@ import kotlin.time.Instant
  * 恢复同一次登录时读回快照，冷启动后刷新完成之前也有内容可显示。
  * 登录结束后读回 [initial]，上一次登录迟到的响应也绝不会落到下一次登录上。
  */
-internal class SignInCache<T : Any>(
+internal class SignInCache<T>(
     private val session: StateFlow<SessionState>,
     scope: CoroutineScope,
     private val initial: T,
@@ -42,7 +40,6 @@ internal class SignInCache<T : Any>(
 
     private val entry = MutableStateFlow<Entry<T>?>(null)
     private val versions = AtomicLong()
-    private val publishLock = Mutex()
 
     val value: StateFlow<T> = combine(session, entry) { state, latest -> valueFor(state.clients, latest) }
         .stateIn(scope, SharingStarted.Eagerly, initial)
@@ -69,24 +66,18 @@ internal class SignInCache<T : Any>(
     fun nextRefreshVersion(): Long = versions.incrementAndGet()
 
     /** 请求在锁外并行，写入时以请求开始的顺序为准。 */
-    suspend fun update(
+    fun update(
         owner: ZzuClients,
         refreshVersion: Long = nextRefreshVersion(),
-        saveRelatedData: suspend () -> Unit = {},
         transform: (T) -> T,
-    ): Unit = publishLock.withLock {
-        if (session.value.clients !== owner) return@withLock
-        val previous = entry.value
-        if (previous?.owner === owner && previous.version > refreshVersion) return@withLock
-
-        saveRelatedData()
+    ) {
         val fetchedAt = Clock.System.now()
         modify(owner) { latest ->
             if (latest.version > refreshVersion) {
                 latest
             } else {
-                val value = transform(latest.snapshot?.value ?: initial)
-                latest.copy(snapshot = Snapshot(latest.signInId, fetchedAt, value), version = refreshVersion)
+                val current = if (latest.snapshot != null) latest.snapshot.value else initial
+                latest.copy(snapshot = Snapshot(latest.signInId, fetchedAt, transform(current)), version = refreshVersion)
             }
         }
     }
@@ -94,8 +85,8 @@ internal class SignInCache<T : Any>(
     /** 补充一部分数据而不算作整体核对过，例如加载另一个学期。其余同 [update]。 */
     fun amend(owner: ZzuClients, transform: (T) -> T) {
         modify(owner) { latest ->
-            val value = transform(latest.snapshot?.value ?: initial)
-            latest.copy(snapshot = Snapshot(latest.signInId, latest.snapshot?.fetchedAt, value))
+            val current = if (latest.snapshot != null) latest.snapshot.value else initial
+            latest.copy(snapshot = Snapshot(latest.signInId, latest.snapshot?.fetchedAt, transform(current)))
         }
     }
 
@@ -121,10 +112,8 @@ internal class SignInCache<T : Any>(
             state.clients !== owner || (current?.owner === owner && current.isRestored)
         }.first { it }
         val snapshot = entry.value?.takeIf { it.owner === owner }?.snapshot
-        val fetchedAt = snapshot?.fetchedAt
         return session.value.clients === owner &&
-            (snapshot == null || fetchedAt == null || now - fetchedAt !in Duration.ZERO..maxAge ||
-                !isComplete(snapshot.value))
+            (snapshot == null || isStaleTimestamp(snapshot.fetchedAt, now, maxAge) || !isComplete(snapshot.value))
     }
 
     private fun modify(owner: ZzuClients, transform: (Entry<T>) -> Entry<T>) {
@@ -146,6 +135,12 @@ internal class SignInCache<T : Any>(
         }
     }
 
-    private fun valueFor(owner: ZzuClients?, latest: Entry<T>?): T =
-        latest?.takeIf { it.owner === owner }?.snapshot?.value ?: initial
+    private fun valueFor(owner: ZzuClients?, latest: Entry<T>?): T {
+        val snapshot = latest?.takeIf { it.owner === owner }?.snapshot
+        return if (snapshot != null) snapshot.value else initial
+    }
 }
+
+/** [fetchedAt] 在 [now] 是否已经过期：从未核对、超过 [maxAge]，或系统时钟被往回调过。 */
+internal fun isStaleTimestamp(fetchedAt: Instant?, now: Instant, maxAge: Duration): Boolean =
+    fetchedAt == null || now - fetchedAt !in Duration.ZERO..maxAge

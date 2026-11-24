@@ -11,6 +11,7 @@ import com.illustar0.zzu.mail.MailClient
 import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.time.Instant
 
 /**
  * 一个账号的全部 SDK 客户端，同生共死。每次登录都是新实例，引用相等即代表同一次登录。
@@ -90,12 +91,13 @@ internal class ZzuClients(
         }
     }
 
-    suspend fun storedSession(profile: StudentProfile) = StoredSession(
+    suspend fun storedSession(profile: StudentProfile, profileFetchedAt: Instant) = StoredSession(
         signInId = UUID.randomUUID().toString(),
         account = account,
         password = password,
         tokens = currentTokens(),
         profile = profile,
+        profileFetchedAt = profileFetchedAt,
     )
 
     private suspend fun currentTokens(): Tokens = checkNotNull(cas.tokens()) { "Missing session tokens" }

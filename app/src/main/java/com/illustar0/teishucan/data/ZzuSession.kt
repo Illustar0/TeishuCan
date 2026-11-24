@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.provider.Settings
 import android.util.Log
+import com.illustar0.teishucan.concurrency.RefreshTracker
 import com.illustar0.teishucan.di.ApplicationScope
 import com.illustar0.teishucan.domain.AccountState
 import com.illustar0.teishucan.domain.CampusFeature
@@ -12,7 +13,9 @@ import com.illustar0.teishucan.domain.LoginResult
 import com.illustar0.teishucan.domain.StudentProfile
 import com.illustar0.zzu.AuthenticationErrorKind
 import com.illustar0.zzu.ZzuException
+import com.illustar0.zzu.cas.PersonalInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
@@ -29,6 +32,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Instant
 import kotlin.time.TimeSource
 
 private const val Tag = "TeishuCan.Zzu"
@@ -91,6 +97,12 @@ class ZzuSession @Inject constructor(
 
     /** 串行化状态切换与存档读写，两者才能保持一致。持有期间只做本地操作，不等待网络。 */
     private val transitionLock = Mutex()
+    private val profileRefresh = RefreshTracker()
+    private val profileRefreshVersions = AtomicLong()
+    private var lastProfileOwner: ZzuClients? = null
+    private var lastProfileVersion: Long = 0
+
+    val isProfileRefreshing: StateFlow<Boolean> = profileRefresh.isRefreshing
 
     val account: StateFlow<AccountState> = mutableState
         .map { state ->
@@ -130,7 +142,7 @@ class ZzuSession @Inject constructor(
         return SignIn(clients, saved)
     }
 
-    internal fun <T : Any> createSnapshotCache(name: String, initial: T, serializer: KSerializer<T>) =
+    internal fun <T> createSnapshotCache(name: String, initial: T, serializer: KSerializer<T>) =
         SignInCache(mutableState, scope, initial, snapshots.file(name, serializer))
 
     suspend fun login(account: String, password: String): LoginResult {
@@ -213,8 +225,36 @@ class ZzuSession @Inject constructor(
         }
     }
 
-    internal suspend fun saveProfile(owner: ZzuClients, profile: StudentProfile) {
-        updateSession(owner) { it.copy(profile = profile) }
+    /** 当前登录的学生资料在 [now] 是否超过 [maxAge] 未核对。未登录时不算过期。 */
+    suspend fun isProfileStaleAt(now: Instant, maxAge: Duration): Boolean {
+        val signIn = awaitRestored() as? SignIn ?: return false
+        return isStaleTimestamp(signIn.session.profileFetchedAt, now, maxAge)
+    }
+
+    /** 独立刷新统一身份认证里的个人资料，并推进它自身的核对时间。 */
+    suspend fun refreshProfile() = profileRefresh.track {
+        val refreshVersion = profileRefreshVersions.incrementAndGet()
+        request(CampusFeature.Profile) {
+            val profile = cas.userInfo().toStudentProfile()
+            saveProfile(this, refreshVersion, profile, Clock.System.now())
+        }
+    }
+
+    private suspend fun saveProfile(
+        owner: ZzuClients,
+        refreshVersion: Long,
+        profile: StudentProfile,
+        fetchedAt: Instant,
+    ) {
+        updateSession(owner) { session ->
+            if (lastProfileOwner === owner && lastProfileVersion > refreshVersion) {
+                session
+            } else {
+                lastProfileOwner = owner
+                lastProfileVersion = refreshVersion
+                session.copy(profile = profile, profileFetchedAt = fetchedAt)
+            }
+        }
     }
 
     /** 让登录各步骤的失败带上校园服务给出的原因。 */
@@ -225,11 +265,14 @@ class ZzuSession @Inject constructor(
     }
 
     private suspend fun finishLogin(clients: ZzuClients) {
+        val refreshVersion = profileRefreshVersions.incrementAndGet()
         val profile = logged("Profile query") { clients.cas.userInfo().toStudentProfile() }
-        val saved = clients.storedSession(profile)
+        val saved = clients.storedSession(profile, Clock.System.now())
         transition {
             check(mutableState.value.clients === clients) { "The login was abandoned" }
             store.write(saved)
+            lastProfileOwner = clients
+            lastProfileVersion = refreshVersion
             mutableState.value = SignIn(clients, saved)
         }
     }
@@ -284,3 +327,5 @@ class ZzuSession @Inject constructor(
     private suspend fun <T> transition(block: suspend () -> T): T =
         withContext(NonCancellable) { transitionLock.withLock { block() } }
 }
+
+private fun PersonalInfo.toStudentProfile() = StudentProfile(name, organizationName, identityTypeName)

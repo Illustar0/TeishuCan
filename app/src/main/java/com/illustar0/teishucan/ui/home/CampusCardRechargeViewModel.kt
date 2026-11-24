@@ -5,7 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.illustar0.teishucan.data.StudentRepository
+import com.illustar0.teishucan.data.CampusCardRepository
 import com.illustar0.teishucan.data.ZzuSession
 import com.illustar0.teishucan.domain.AccountState
 import com.illustar0.teishucan.domain.RechargeOrder
@@ -35,7 +35,7 @@ class CampusCardRechargeDraft {
 @HiltViewModel
 class CampusCardRechargeViewModel @Inject constructor(
     session: ZzuSession,
-    private val student: StudentRepository,
+    private val campusCard: CampusCardRepository,
 ) : ViewModel() {
     private val outcomeChannel = Channel<ActionOutcome>(Channel.CONFLATED)
 
@@ -68,7 +68,7 @@ class CampusCardRechargeViewModel @Inject constructor(
         recharge.hasFailed = false
         viewModelScope.launch {
             try {
-                recharge.order = student.createRechargeOrder(amountYuan)
+                recharge.order = campusCard.createRechargeOrder(amountYuan)
             } catch (cause: CancellationException) {
                 throw cause
             } catch (cause: Exception) {
@@ -82,7 +82,7 @@ class CampusCardRechargeViewModel @Inject constructor(
 
     /** 收银台已在浏览器中打开。支付结果要等回到应用时靠刷新得知，所以让余额届时必定刷新。 */
     fun finishCheckout() {
-        student.expire()
+        campusCard.expire()
         outcomeChannel.trySend(ActionOutcome.Succeeded)
         dismiss()
     }

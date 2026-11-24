@@ -8,7 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.illustar0.teishucan.R
-import com.illustar0.teishucan.data.StudentRepository
+import com.illustar0.teishucan.data.CampusServiceRepository
 import com.illustar0.teishucan.domain.CampusService
 import com.illustar0.teishucan.ui.component.OpenPendingUrl
 import com.illustar0.teishucan.ui.component.PendingUrl
@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 @HiltViewModel
 class ServicesViewModel @Inject constructor(
-    private val student: StudentRepository,
+    private val services: CampusServiceRepository,
 ) : ViewModel() {
     private val openingServiceFlow = MutableStateFlow<CampusService?>(null)
 
@@ -33,7 +33,7 @@ class ServicesViewModel @Inject constructor(
         serviceUrl.fetch {
             openingServiceFlow.value = service
             try {
-                student.serviceLoginUrl(service)
+                services.loginUrl(service)
             } finally {
                 openingServiceFlow.value = null
             }

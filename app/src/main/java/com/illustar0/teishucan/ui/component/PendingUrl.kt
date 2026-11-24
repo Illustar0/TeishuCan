@@ -7,9 +7,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.illustar0.teishucan.concurrency.captureFailure
+import com.illustar0.teishucan.domain.campusReason
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,10 +58,18 @@ class PendingUrl(private val scope: CoroutineScope) {
 @Composable
 fun OpenPendingUrl(pendingUrl: PendingUrl, @StringRes failureMessage: Int) {
     val url by pendingUrl.url.collectAsStateWithLifecycle()
+    val failure by pendingUrl.failure.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val resources = LocalResources.current
     val uriHandler = LocalUriHandler.current
 
-    FailureToasts(pendingUrl.failure, fallbackMessage = failureMessage, onAcknowledge = pendingUrl::onFailureShown)
+    failure?.let { shownFailure ->
+        LaunchedEffect(shownFailure) {
+            val message = shownFailure.campusReason ?: resources.getString(failureMessage)
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            pendingUrl.onFailureShown(shownFailure)
+        }
+    }
 
     url?.let { readyUrl ->
         LaunchedEffect(readyUrl) {

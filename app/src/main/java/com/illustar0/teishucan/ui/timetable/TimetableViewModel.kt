@@ -10,7 +10,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.illustar0.teishucan.concurrency.RefreshQueue
 import com.illustar0.teishucan.concurrency.captureFailure
-import com.illustar0.teishucan.data.CampusRefresher
 import com.illustar0.teishucan.data.TimetableRepository
 import com.illustar0.teishucan.data.ZzuSession
 import com.illustar0.teishucan.domain.AccountState
@@ -48,7 +47,6 @@ class TimetableViewModel @Inject constructor(
     savedState: SavedStateHandle,
     session: ZzuSession,
     private val timetable: TimetableRepository,
-    refresher: CampusRefresher,
 ) : ViewModel() {
     /** 用户选中的学期，null 时打开默认学期。这里只存 id，内容在进程重建后从数据层重新加载。 */
     private val selectedTermId = savedState.getMutableStateFlow<String?>(SelectedTermIdKey, null)
@@ -71,10 +69,10 @@ class TimetableViewModel @Inject constructor(
         selectedTermId,
         termLoads,
         refreshQueue.isRefreshing,
-        refresher.isRefreshing,
-    ) { terms, selectedId, loads, isPageRefreshing, isAppRefreshing ->
+        timetable.isRefreshing,
+    ) { terms, selectedId, loads, isPageRefreshing, isTimetableRefreshing ->
         val term = terms.find { it.id == selectedId } ?: terms.defaultTerm(LocalDate.now(CampusZone))
-        val isRefreshing = isPageRefreshing || isAppRefreshing
+        val isRefreshing = isPageRefreshing || isTimetableRefreshing
         TimetableState(
             terms = terms,
             term = term,

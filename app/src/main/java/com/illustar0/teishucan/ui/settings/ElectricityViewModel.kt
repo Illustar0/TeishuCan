@@ -15,8 +15,8 @@ import com.illustar0.teishucan.R
 import com.illustar0.teishucan.concurrency.RefreshQueue
 import com.illustar0.teishucan.concurrency.captureFailure
 import com.illustar0.teishucan.concurrency.refreshAll
+import com.illustar0.teishucan.data.CampusCardRepository
 import com.illustar0.teishucan.data.ElectricityRepository
-import com.illustar0.teishucan.data.StudentRepository
 import com.illustar0.teishucan.domain.ElectricityMeter
 import com.illustar0.teishucan.domain.MeterOption
 import com.illustar0.teishucan.domain.MeterReading
@@ -52,7 +52,7 @@ data class ElectricityUiState(
 @HiltViewModel
 class ElectricityViewModel @Inject constructor(
     private val electricity: ElectricityRepository,
-    student: StudentRepository,
+    campusCard: CampusCardRepository,
 ) : ViewModel() {
     private val rechargeOutcomeChannel = Channel<ActionOutcome>(Channel.CONFLATED)
     private val pendingFailure = MutableStateFlow<Exception?>(null)
@@ -61,20 +61,30 @@ class ElectricityViewModel @Inject constructor(
         pendingFailure.captureFailure {
             // 这里的余额只服务于电表充值，没有电表就没有要更新的内容。
             if (electricity.meters.filterNotNull().first().isNotEmpty()) {
-                refreshAll(electricity::refresh, student::refresh)
+                refreshAll(electricity::refresh, campusCard::refresh)
             }
         }
     }
-    val isRefreshing = refreshQueue.isRefreshing
-    val failure = pendingFailure.asStateFlow()
-    val rechargeOutcomes: Flow<ActionOutcome> = rechargeOutcomeChannel.receiveAsFlow()
-
-    val state: StateFlow<ElectricityUiState> = combine(electricity.meters, student.student) { meters, data ->
-        ElectricityUiState(meters, data.campusCardBalanceYuan)
+    val isRefreshing: StateFlow<Boolean> = combine(
+        refreshQueue.isRefreshing,
+        electricity.isRefreshing,
+        campusCard.isRefreshing,
+    ) { isPageRefreshing, isElectricityRefreshing, isCardRefreshing ->
+        isPageRefreshing || isElectricityRefreshing || isCardRefreshing
     }.stateIn(
         viewModelScope,
         SharingStarted.Eagerly,
-        ElectricityUiState(electricity.meters.value, student.student.value.campusCardBalanceYuan),
+        refreshQueue.isRefreshing.value || electricity.isRefreshing.value || campusCard.isRefreshing.value,
+    )
+    val failure = pendingFailure.asStateFlow()
+    val rechargeOutcomes: Flow<ActionOutcome> = rechargeOutcomeChannel.receiveAsFlow()
+
+    val state: StateFlow<ElectricityUiState> = combine(electricity.meters, campusCard.balanceYuan) { meters, balance ->
+        ElectricityUiState(meters, balance)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        ElectricityUiState(electricity.meters.value, campusCard.balanceYuan.value),
     )
 
     /** 进行中的电表草稿，只在弹层打开期间存在。 */

@@ -1,5 +1,6 @@
 package com.illustar0.teishucan.data
 
+import com.illustar0.teishucan.concurrency.RefreshTracker
 import com.illustar0.teishucan.di.ApplicationScope
 import com.illustar0.teishucan.domain.CampusFeature
 import com.illustar0.teishucan.domain.TimetableEntry
@@ -41,8 +42,10 @@ class TimetableRepository @Inject constructor(
         emptyList(),
         serializer<List<TimetableTerm>>(),
     )
+    private val refreshTracker = RefreshTracker()
 
     val terms: StateFlow<List<TimetableTerm>> = cache.value
+    val isRefreshing: StateFlow<Boolean> = refreshTracker.isRefreshing
 
     suspend fun isStaleAt(now: Instant, maxAge: Duration): Boolean = cache.isStaleAt(now, maxAge)
 
@@ -54,18 +57,20 @@ class TimetableRepository @Inject constructor(
      * 更新学期列表与当前学期的课程。几个页面会同时刷新，后到的调用方并入同一次登录进行中的那一次。
      * 旧登录的刷新不能合并：它的结果写不进缓存，新登录也就等不到数据。
      */
-    suspend fun refresh() = session.request(CampusFeature.Timetable) {
-        val clients = this
-        val candidate = SharedRefresh(clients, scope.async(start = CoroutineStart.LAZY) { fetchCurrentTerm(clients) })
-        val running = latestRefresh.updateAndGet { latest ->
-            if (latest != null && latest.owner === clients && !latest.result.isCompleted) latest else candidate
+    suspend fun refresh() = refreshTracker.track {
+        session.request(CampusFeature.Timetable) {
+            val clients = this
+            val candidate = SharedRefresh(clients, scope.async(start = CoroutineStart.LAZY) { fetchCurrentTerm(clients) })
+            val running = latestRefresh.updateAndGet { latest ->
+                if (latest != null && latest.owner === clients && !latest.result.isCompleted) latest else candidate
+            }
+            if (running === candidate) {
+                candidate.result.invokeOnCompletion { latestRefresh.compareAndSet(candidate, null) }
+            } else {
+                candidate.result.cancel()
+            }
+            checkNotNull(running).result.await()
         }
-        if (running === candidate) {
-            candidate.result.invokeOnCompletion { latestRefresh.compareAndSet(candidate, null) }
-        } else {
-            candidate.result.cancel()
-        }
-        checkNotNull(running).result.await()
     }
 
     private suspend fun fetchCurrentTerm(clients: ZzuClients) {

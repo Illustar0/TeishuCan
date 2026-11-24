@@ -72,10 +72,11 @@ private val Exception.messageRes: Int?
         is InvalidMeterLocationException -> R.string.electricity_meter_reselect_location
         is CampusRequestException -> when (feature) {
             CampusFeature.Account -> R.string.login_failed
+            CampusFeature.Profile -> R.string.profile_refresh_failed
             CampusFeature.Timetable -> R.string.timetable_refresh_failed
             CampusFeature.CampusCard -> R.string.campus_card_refresh_failed
             CampusFeature.Electricity -> R.string.electricity_refresh_failed
-            CampusFeature.Mail -> R.string.mail_open_failed
+            CampusFeature.Mail -> R.string.mail_refresh_failed
             CampusFeature.Services -> R.string.service_open_failed
         }
 

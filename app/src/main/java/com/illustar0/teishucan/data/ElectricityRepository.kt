@@ -3,6 +3,7 @@ package com.illustar0.teishucan.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.dataStore
+import com.illustar0.teishucan.concurrency.RefreshTracker
 import com.illustar0.teishucan.di.ApplicationScope
 import com.illustar0.teishucan.domain.CampusFeature
 import com.illustar0.teishucan.domain.CampusRequestException
@@ -53,11 +54,14 @@ class ElectricityRepository @Inject constructor(
         emptyMap(),
         serializer<Map<String, Double>>(),
     )
+    private val refreshTracker = RefreshTracker()
 
     /** 已添加的电表及其读数；保存的列表读出之前为 null。 */
     val meters: StateFlow<List<MeterReading>?> = combine(savedMeters, remainingEnergy.value) { meters, energy ->
         meters.map { MeterReading(it, energy[it.location.meterId]) }
     }.stateIn(scope, SharingStarted.Eagerly, null)
+
+    val isRefreshing: StateFlow<Boolean> = refreshTracker.isRefreshing
 
     /**
      * 已保存电表的读数在 [now] 是否需要更新：超过 [maxAge] 未更新，或有电表还没有读数。
@@ -111,7 +115,7 @@ class ElectricityRepository @Inject constructor(
     }
 
     /** 查询已保存电表的剩余电量。有无效位置时，其余电表照常更新后抛出 [InvalidMeterLocationException]。 */
-    suspend fun refresh() {
+    suspend fun refresh() = refreshTracker.track {
         val refreshVersion = remainingEnergy.nextRefreshVersion()
         val roomIds = savedMeters.first().map { it.location.meterId }.distinct()
         val rooms = roomIds.mapNotNull { id -> parseRoom(id)?.let { room -> id to room } }.toMap()

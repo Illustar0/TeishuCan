@@ -9,22 +9,23 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.illustar0.teishucan.R
+import com.illustar0.teishucan.data.CampusCardRepository
 import com.illustar0.teishucan.data.CampusRefresher
 import com.illustar0.teishucan.data.ElectricityRepository
-import com.illustar0.teishucan.data.StudentRepository
+import com.illustar0.teishucan.data.MailRepository
 import com.illustar0.teishucan.data.TimetableRepository
 import com.illustar0.teishucan.data.ZzuSession
 import com.illustar0.teishucan.domain.AccountState
 import com.illustar0.teishucan.domain.CampusZone
 import com.illustar0.teishucan.domain.MeterReading
-import com.illustar0.teishucan.domain.StudentData
-import com.illustar0.teishucan.domain.TimetableTerm
+import com.illustar0.teishucan.domain.UpcomingClass
 import com.illustar0.teishucan.domain.totalKilowattHours
 import com.illustar0.teishucan.domain.upcomingClassAfter
 import com.illustar0.teishucan.ui.component.OpenPendingUrl
 import com.illustar0.teishucan.ui.component.OutcomeHaptics
 import com.illustar0.teishucan.ui.component.PendingUrl
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.math.BigDecimal
 import java.time.LocalDateTime
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,26 +38,32 @@ import kotlinx.coroutines.flow.stateIn
 class HomeViewModel @Inject constructor(
     session: ZzuSession,
     timetable: TimetableRepository,
-    private val student: StudentRepository,
+    campusCard: CampusCardRepository,
+    private val mail: MailRepository,
     electricity: ElectricityRepository,
     private val refresher: CampusRefresher,
 ) : ViewModel() {
     private val now = MutableStateFlow(LocalDateTime.now(CampusZone))
+    private val upcomingClass = combine(timetable.terms, now) { terms, time -> terms.upcomingClassAfter(time) }
 
     val isRefreshing: StateFlow<Boolean> = refresher.isRefreshing
     val mailUrl = PendingUrl(viewModelScope)
 
     val state: StateFlow<HomeState> = combine(
-        timetable.terms, now, student.student, electricity.meters, session.account,
-    ) { terms, time, data, meters, account ->
-        homeState(terms, time, data, meters, account)
+        upcomingClass,
+        campusCard.balanceYuan,
+        mail.unreadCount,
+        electricity.meters,
+        session.account,
+    ) { upcoming, balance, unreadMail, meters, account ->
+        homeState(upcoming, balance, unreadMail, meters, account)
     }.stateIn(
         viewModelScope,
         SharingStarted.Eagerly,
         homeState(
-            timetable.terms.value,
-            now.value,
-            student.student.value,
+            timetable.terms.value.upcomingClassAfter(now.value),
+            campusCard.balanceYuan.value,
+            mail.unreadCount.value,
             electricity.meters.value,
             session.account.value,
         ),
@@ -73,20 +80,19 @@ class HomeViewModel @Inject constructor(
     }
 
     fun openMail() {
-        mailUrl.fetch(student::mailLoginUrl)
+        mailUrl.fetch(mail::loginUrl)
     }
 
     private fun homeState(
-        terms: List<TimetableTerm>,
-        time: LocalDateTime,
-        student: StudentData,
+        upcomingClass: UpcomingClass,
+        campusCardBalanceYuan: BigDecimal?,
+        mailCount: Int?,
         meters: List<MeterReading>?,
         account: AccountState,
     ) = HomeState(
-        upcomingClass = terms.upcomingClassAfter(time),
-        campusCardBalanceYuan = student.campusCardBalanceYuan,
-        mailCount = student.mailCount,
-        researchProjectCount = student.researchProjectCount,
+        upcomingClass = upcomingClass,
+        campusCardBalanceYuan = campusCardBalanceYuan,
+        mailCount = mailCount,
         electricityKilowattHours = meters?.totalKilowattHours(),
         hasMeters = !meters.isNullOrEmpty(),
         profile = (account as? AccountState.SignedIn)?.profile,

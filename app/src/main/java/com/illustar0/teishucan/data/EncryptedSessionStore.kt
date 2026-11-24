@@ -25,6 +25,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import kotlin.time.Instant
 
 @Serializable
 internal data class StoredSession(
@@ -33,6 +34,7 @@ internal data class StoredSession(
     val password: String,
     val tokens: Tokens,
     val profile: StudentProfile,
+    val profileFetchedAt: Instant? = null,
 ) {
     override fun toString(): String = "StoredSession(<redacted>)"
 }

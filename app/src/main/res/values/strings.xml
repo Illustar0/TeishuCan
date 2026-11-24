@@ -116,9 +116,11 @@
     <string name="electricity_recharge">チャージ</string>
     <string name="electricity_recharge_amount">金額（人民元）</string>
     <string name="refresh_failed">更新に失敗しました。もう一度お試しください</string>
+    <string name="profile_refresh_failed">個人情報の更新に失敗しました</string>
     <string name="timetable_refresh_failed">時間割の更新に失敗しました</string>
     <string name="campus_card_refresh_failed">学生カード情報の更新に失敗しました</string>
     <string name="electricity_refresh_failed">電気料金情報の更新に失敗しました</string>
+    <string name="mail_refresh_failed">メール情報の更新に失敗しました</string>
     <string name="mail_open_failed">メールを開けませんでした。しばらくしてからもう一度お試しください</string>
     <string name="service_open_failed">サービスを開けませんでした。しばらくしてからもう一度お試しください</string>
     <string name="electricity_meter_reselect_location">一部のメーターの場所が無効です。編集して場所を選び直してください</string>

@@ -42,7 +42,7 @@ import com.illustar0.teishucan.domain.StudentProfile
 import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.domain.UpcomingClass
 import com.illustar0.teishucan.ui.component.RefreshContainer
-import com.illustar0.teishucan.ui.component.TimetableDefaults
+import com.illustar0.teishucan.ui.component.PeriodStrip
 import com.illustar0.teishucan.ui.component.formatKilowattHours
 import com.illustar0.teishucan.ui.component.formatYuan
 import com.illustar0.teishucan.ui.theme.BlurredBar
@@ -68,7 +68,6 @@ import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.icon.extended.Months
 import top.yukonga.miuix.kmp.preference.ArrowPreference
-import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -87,8 +86,6 @@ private val LeadIconClearance = LeadIconSize - LeadIconEndOverhang - 8.dp
 /** 足够高，让图标上沿留在卡片内。 */
 private val LeadCardMinHeight = LeadIconSize - LeadIconBottomOverhang
 
-private val PeriodStripHeight = 6.dp
-private val PeriodStripGap = 3.dp
 private const val UpcomingClassAlpha = 0.35f
 private const val FinishedClassAlpha = 0.15f
 
@@ -352,26 +349,18 @@ private fun DayPeriodStrip(
     modifier: Modifier = Modifier,
 ) {
     val colors = MiuixTheme.colorScheme
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(PeriodStripGap),
-    ) {
-        for (period in 1..TimetableDefaults.PeriodCount) {
+    PeriodStrip(
+        periodColor = { period ->
             val dayClass = nextClass.dayClasses.find { period in it }
-            val color = when {
+            when {
                 dayClass == null -> colors.dividerLine
                 dayClass == nextClass.periods -> colors.primary
                 dayClass.startPeriod < nextClass.periods.startPeriod -> colors.primary.copy(alpha = FinishedClassAlpha)
                 else -> colors.primary.copy(alpha = UpcomingClassAlpha)
             }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(PeriodStripHeight)
-                    .squircleSurface(color = color, cornerRadius = PeriodStripHeight / 2),
-            )
-        }
-    }
+        },
+        modifier = modifier,
+    )
 }
 
 @Composable

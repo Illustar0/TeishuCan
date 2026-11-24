@@ -52,10 +52,6 @@
     <string name="home_next_class">下一节课</string>
     <string name="home_remaining_electricity">剩余电量</string>
     <string name="home_electricity_empty">点击添加电表</string>
-    <string name="home_mail">邮箱</string>
-    <string name="home_mail_unit">封</string>
-    <string name="home_research_projects">科研项目</string>
-    <string name="home_research_project_unit">个</string>
     <string name="home_profile_name">姓名</string>
     <string name="home_profile_faculty">学院</string>
     <string name="home_profile_identity">身份类型</string>
@@ -116,8 +112,6 @@
     <string name="timetable_refresh_failed">课表刷新失败，请重试</string>
     <string name="campus_card_refresh_failed">校园卡信息刷新失败，请重试</string>
     <string name="electricity_refresh_failed">电费信息刷新失败，请重试</string>
-    <string name="mail_refresh_failed">邮箱信息刷新失败，请重试</string>
-    <string name="mail_open_failed">无法打开邮箱，请稍后再试</string>
     <string name="service_open_failed">无法打开服务，请稍后再试</string>
     <string name="electricity_meter_reselect_location">部分电表位置已失效，请编辑电表并重新选择位置</string>
     <string name="mfa_code_destination">验证码将发送至绑定的安全手机</string>

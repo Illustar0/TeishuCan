@@ -97,8 +97,6 @@ private const val StatColumnCount = 2
 data class HomeState(
     val upcomingClass: UpcomingClass = UpcomingClass.NotFetched,
     val campusCardBalanceYuan: BigDecimal? = null,
-    val mailCount: Int? = null,
-    val researchProjectCount: Int? = null,
     val electricityKilowattHours: Double? = null,
     val hasMeters: Boolean = false,
     val profile: StudentProfile? = null,
@@ -108,13 +106,12 @@ private data class HomeStat(
     val title: String,
     val value: AnnotatedString,
     val isPlaceholder: Boolean = false,
-    val onClick: (() -> Unit)? = null,
-    val hasArrow: Boolean = onClick != null,
+    val onClick: () -> Unit,
+    val hasArrow: Boolean = true,
     val isHeldDown: Boolean = false,
 )
 
 private class HomeStatActions(
-    val onOpenMail: () -> Unit,
     val onOpenElectricitySettings: () -> Unit,
     val onOpenRecharge: () -> Unit,
 )
@@ -126,13 +123,11 @@ fun HomePage(
     onRefresh: () -> Unit,
     isRechargeVisible: Boolean,
     onOpenRecharge: () -> Unit,
-    onOpenMail: () -> Unit,
     onOpenElectricitySettings: () -> Unit,
     bottomPadding: Dp,
     rechargeSheet: @Composable () -> Unit = {},
 ) {
     val statActions = HomeStatActions(
-        onOpenMail = onOpenMail,
         onOpenElectricitySettings = onOpenElectricitySettings,
         onOpenRecharge = onOpenRecharge,
     )
@@ -388,10 +383,6 @@ private fun homeStats(
     val notFetched = AnnotatedString(stringResource(R.string.home_not_fetched))
     val addMeterPrompt = AnnotatedString(stringResource(R.string.home_electricity_empty))
     val balance = state.campusCardBalanceYuan?.let { AnnotatedString(formatYuan(it)) }
-    val mail = state.mailCount?.let { valueWithUnit(it.toString(), stringResource(R.string.home_mail_unit)) }
-    val projects = state.researchProjectCount?.let {
-        valueWithUnit(it.toString(), stringResource(R.string.home_research_project_unit))
-    }
     val electricity = state.electricityKilowattHours?.let {
         valueWithUnit(formatKilowattHours(it), stringResource(R.string.home_kilowatt_hour_unit))
     }
@@ -403,17 +394,6 @@ private fun homeStats(
             onClick = actions.onOpenRecharge,
             hasArrow = false,
             isHeldDown = isRechargeVisible,
-        ),
-        HomeStat(
-            title = stringResource(R.string.home_mail),
-            value = mail ?: notFetched,
-            isPlaceholder = mail == null,
-            onClick = actions.onOpenMail,
-        ),
-        HomeStat(
-            title = stringResource(R.string.home_research_projects),
-            value = projects ?: notFetched,
-            isPlaceholder = projects == null,
         ),
         HomeStat(
             title = stringResource(R.string.home_remaining_electricity),
@@ -469,13 +449,11 @@ private fun StatCard(
     stat: HomeStat,
     modifier: Modifier = Modifier,
 ) {
-    val isInteractive = stat.onClick != null
-
     Card(
         modifier = modifier.semantics(mergeDescendants = true) {},
         insideMargin = PaddingValues(16.dp),
-        pressFeedbackType = if (isInteractive) PressFeedbackType.Sink else PressFeedbackType.None,
-        showIndication = isInteractive,
+        pressFeedbackType = PressFeedbackType.Sink,
+        showIndication = true,
         holdDownState = stat.isHeldDown,
         onClick = stat.onClick,
     ) {
@@ -659,8 +637,6 @@ private fun HomePagePreview() {
                     isTomorrow = false,
                 ),
                 campusCardBalanceYuan = "56.78".toBigDecimal(),
-                mailCount = 12,
-                researchProjectCount = 3,
                 electricityKilowattHours = 165.95,
                 profile = StudentProfile(
                     name = "Sample Name",
@@ -672,7 +648,6 @@ private fun HomePagePreview() {
             onRefresh = {},
             isRechargeVisible = false,
             onOpenRecharge = {},
-            onOpenMail = {},
             onOpenElectricitySettings = {},
             bottomPadding = 0.dp,
         )

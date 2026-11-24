@@ -37,7 +37,6 @@ class CampusRefresher @Inject constructor(
     private val session: ZzuSession,
     timetable: TimetableRepository,
     campusCard: CampusCardRepository,
-    mail: MailRepository,
     electricity: ElectricityRepository,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
@@ -48,16 +47,14 @@ class CampusRefresher @Inject constructor(
                 timetable::refresh,
                 session::refreshProfile,
                 campusCard::refresh,
-                mail::refresh,
                 electricity::refresh,
             )
         }
     }
 
-    /** 余额与未读邮件常变，电量下降缓慢，课表与个人资料很少变动。 */
+    /** 余额常变，电量下降缓慢，课表与个人资料很少变动。 */
     private val autoRefreshed = listOf(
         AutoRefreshSource(maxAge = 5.minutes, campusCard.isRefreshing, campusCard::isStaleAt, campusCard::refresh),
-        AutoRefreshSource(maxAge = 5.minutes, mail.isRefreshing, mail::isStaleAt, mail::refresh),
         AutoRefreshSource(maxAge = 30.minutes, electricity.isRefreshing, electricity::isStaleAt, electricity::refresh),
         AutoRefreshSource(maxAge = 12.hours, timetable.isRefreshing, timetable::isStaleAt, timetable::refresh),
         AutoRefreshSource(maxAge = 12.hours, session.isProfileRefreshing, session::isProfileStaleAt, session::refreshProfile),
@@ -70,7 +67,6 @@ class CampusRefresher @Inject constructor(
             timetable.isRefreshing,
             session.isProfileRefreshing,
             campusCard.isRefreshing,
-            mail.isRefreshing,
             electricity.isRefreshing,
         ),
     ) { states -> states.any { it } }

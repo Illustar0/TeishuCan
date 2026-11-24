@@ -55,10 +55,6 @@
     <string name="home_remaining_electricity">残り電力量</string>
     <string name="home_electricity_empty">タップしてメーターを追加</string>
     <string name="home_kilowatt_hour_unit" translatable="false">kWh</string>
-    <string name="home_mail">メール</string>
-    <string name="home_mail_unit">通</string>
-    <string name="home_research_projects">研究プロジェクト</string>
-    <string name="home_research_project_unit">件</string>
     <string name="home_profile_name">氏名</string>
     <string name="home_profile_faculty">学部</string>
     <string name="home_profile_identity">身分</string>
@@ -122,8 +118,6 @@
     <string name="timetable_refresh_failed">時間割の更新に失敗しました</string>
     <string name="campus_card_refresh_failed">学生カード情報の更新に失敗しました</string>
     <string name="electricity_refresh_failed">電気料金情報の更新に失敗しました</string>
-    <string name="mail_refresh_failed">メール情報の更新に失敗しました</string>
-    <string name="mail_open_failed">メールを開けませんでした。しばらくしてからもう一度お試しください</string>
     <string name="service_open_failed">サービスを開けませんでした。しばらくしてからもう一度お試しください</string>
     <string name="electricity_meter_reselect_location">一部のメーターの場所が無効です。編集して場所を選び直してください</string>
     <string name="mfa_code_destination">登録済みの認証用携帯電話に確認コードを送信します</string>

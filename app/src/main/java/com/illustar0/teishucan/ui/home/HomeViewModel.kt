@@ -8,11 +8,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import com.illustar0.teishucan.R
 import com.illustar0.teishucan.data.CampusCardRepository
 import com.illustar0.teishucan.data.CampusRefresher
 import com.illustar0.teishucan.data.ElectricityRepository
-import com.illustar0.teishucan.data.MailRepository
 import com.illustar0.teishucan.data.TimetableRepository
 import com.illustar0.teishucan.data.ZzuSession
 import com.illustar0.teishucan.domain.AccountState
@@ -21,9 +19,7 @@ import com.illustar0.teishucan.domain.MeterReading
 import com.illustar0.teishucan.domain.UpcomingClass
 import com.illustar0.teishucan.domain.totalKilowattHours
 import com.illustar0.teishucan.domain.upcomingClassAfter
-import com.illustar0.teishucan.ui.component.OpenPendingUrl
 import com.illustar0.teishucan.ui.component.OutcomeHaptics
-import com.illustar0.teishucan.ui.component.PendingUrl
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
 import java.time.LocalDateTime
@@ -39,7 +35,6 @@ class HomeViewModel @Inject constructor(
     session: ZzuSession,
     timetable: TimetableRepository,
     campusCard: CampusCardRepository,
-    private val mail: MailRepository,
     electricity: ElectricityRepository,
     private val refresher: CampusRefresher,
 ) : ViewModel() {
@@ -47,23 +42,20 @@ class HomeViewModel @Inject constructor(
     private val upcomingClass = combine(timetable.terms, now) { terms, time -> terms.upcomingClassAfter(time) }
 
     val isRefreshing: StateFlow<Boolean> = refresher.isRefreshing
-    val mailUrl = PendingUrl(viewModelScope)
 
     val state: StateFlow<HomeState> = combine(
         upcomingClass,
         campusCard.balanceYuan,
-        mail.unreadCount,
         electricity.meters,
         session.account,
-    ) { upcoming, balance, unreadMail, meters, account ->
-        homeState(upcoming, balance, unreadMail, meters, account)
+    ) { upcoming, balance, meters, account ->
+        homeState(upcoming, balance, meters, account)
     }.stateIn(
         viewModelScope,
         SharingStarted.Eagerly,
         homeState(
             timetable.terms.value.upcomingClassAfter(now.value),
             campusCard.balanceYuan.value,
-            mail.unreadCount.value,
             electricity.meters.value,
             session.account.value,
         ),
@@ -79,20 +71,14 @@ class HomeViewModel @Inject constructor(
         refresher.refresh()
     }
 
-    fun openMail() {
-        mailUrl.fetch(mail::loginUrl)
-    }
-
     private fun homeState(
         upcomingClass: UpcomingClass,
         campusCardBalanceYuan: BigDecimal?,
-        mailCount: Int?,
         meters: List<MeterReading>?,
         account: AccountState,
     ) = HomeState(
         upcomingClass = upcomingClass,
         campusCardBalanceYuan = campusCardBalanceYuan,
-        mailCount = mailCount,
         electricityKilowattHours = meters?.totalKilowattHours(),
         hasMeters = !meters.isNullOrEmpty(),
         profile = (account as? AccountState.SignedIn)?.profile,
@@ -109,7 +95,6 @@ fun HomeRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
-    OpenPendingUrl(viewModel.mailUrl, failureMessage = R.string.mail_open_failed)
     OutcomeHaptics(recharge.outcomes)
     // ViewModel 比分页页面活得久，不更新的话时间会停在第一次进入时。
     LifecycleResumeEffect(viewModel) {
@@ -123,7 +108,6 @@ fun HomeRoute(
         onRefresh = viewModel::refresh,
         isRechargeVisible = recharge.draft != null,
         onOpenRecharge = recharge::open,
-        onOpenMail = viewModel::openMail,
         onOpenElectricitySettings = onOpenElectricitySettings,
         bottomPadding = bottomPadding,
         rechargeSheet = {

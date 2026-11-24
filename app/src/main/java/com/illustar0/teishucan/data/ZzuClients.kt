@@ -7,7 +7,6 @@ import com.illustar0.zzu.cas.CasClient
 import com.illustar0.zzu.cas.Tokens
 import com.illustar0.zzu.eas.EasClient
 import com.illustar0.zzu.ecard.EcardClient
-import com.illustar0.zzu.mail.MailClient
 import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -27,23 +26,17 @@ internal class ZzuClients(
     val cas: CasClient = CasClient(account, password, deviceId)
     private val easClient: EasClient
     private val ecardClient: EcardClient
-    private val mailClient: MailClient
     private val easLogin = Mutex()
     private val ecardLogin = Mutex()
-    private val mailLogin = Mutex()
     private val casAccess = Mutex()
 
     init {
         var eas: EasClient? = null
-        var ecard: EcardClient? = null
         try {
             eas = EasClient(cas)
-            ecard = EcardClient(cas)
-            mailClient = MailClient(cas)
+            ecardClient = EcardClient(cas)
             easClient = eas
-            ecardClient = ecard
         } catch (cause: Throwable) {
-            ecard?.close()
             eas?.close()
             cas.close()
             throw cause
@@ -56,10 +49,6 @@ internal class ZzuClients(
 
     suspend fun ecard(): EcardClient = ecardLogin.withLock {
         ecardClient.apply { if (!isLoggedIn()) logged("Ecard login") { login() } }
-    }
-
-    suspend fun mail(): MailClient = mailLogin.withLock {
-        mailClient.apply { if (!isLoggedIn()) logged("Mail login") { login() } }
     }
 
     /**
@@ -105,7 +94,6 @@ internal class ZzuClients(
     override fun close() {
         easClient.close()
         ecardClient.close()
-        mailClient.close()
         cas.close()
     }
 }

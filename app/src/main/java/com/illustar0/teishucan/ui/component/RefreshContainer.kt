@@ -76,7 +76,6 @@ private val Exception.messageRes: Int?
             CampusFeature.Timetable -> R.string.timetable_refresh_failed
             CampusFeature.CampusCard -> R.string.campus_card_refresh_failed
             CampusFeature.Electricity -> R.string.electricity_refresh_failed
-            CampusFeature.Mail -> R.string.mail_refresh_failed
             CampusFeature.Services -> R.string.service_open_failed
         }
 

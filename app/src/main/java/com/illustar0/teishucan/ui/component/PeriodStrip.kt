@@ -85,14 +85,22 @@ fun PeriodStrip(
     }
 }
 
-/** [PeriodStrip] 的默认尺寸与分隔点配色。 */
+/** [PeriodStrip] 的默认尺寸与基础色阶 */
 object PeriodStripDefaults {
     val SegmentHeight: Dp = 6.dp
     val SegmentGap: Dp = 3.dp
     val SeparatorGap: Dp = 6.dp
     val SeparatorDotSize: Dp = 4.dp
 
+    private const val EmptySegmentAlpha = 0.14f
+
+    /** 空节次轨道默认色。 */
     @Composable
     @ReadOnlyComposable
-    fun separatorColor(): Color = MiuixTheme.colorScheme.outline
+    fun emptyColor(): Color = MiuixTheme.colorScheme.onSurface.copy(alpha = EmptySegmentAlpha)
+
+    /** 分组分隔点默认色。 */
+    @Composable
+    @ReadOnlyComposable
+    fun separatorColor(): Color = MiuixTheme.colorScheme.onSurfaceVariantActions
 }

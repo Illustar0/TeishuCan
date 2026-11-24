@@ -41,8 +41,9 @@ import com.illustar0.teishucan.domain.NextClass
 import com.illustar0.teishucan.domain.StudentProfile
 import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.domain.UpcomingClass
-import com.illustar0.teishucan.ui.component.RefreshContainer
 import com.illustar0.teishucan.ui.component.PeriodStrip
+import com.illustar0.teishucan.ui.component.PeriodStripDefaults
+import com.illustar0.teishucan.ui.component.RefreshContainer
 import com.illustar0.teishucan.ui.component.formatKilowattHours
 import com.illustar0.teishucan.ui.component.formatYuan
 import com.illustar0.teishucan.ui.theme.BlurredBar
@@ -86,8 +87,8 @@ private val LeadIconClearance = LeadIconSize - LeadIconEndOverhang - 8.dp
 /** 足够高，让图标上沿留在卡片内。 */
 private val LeadCardMinHeight = LeadIconSize - LeadIconBottomOverhang
 
-private const val UpcomingClassAlpha = 0.35f
-private const val FinishedClassAlpha = 0.15f
+private const val UpcomingClassAlpha = 0.42f
+private const val FinishedClassAlpha = 0.32f
 
 private const val StatColumnCount = 2
 
@@ -349,14 +350,17 @@ private fun DayPeriodStrip(
     modifier: Modifier = Modifier,
 ) {
     val colors = MiuixTheme.colorScheme
+    val emptyColor = PeriodStripDefaults.emptyColor()
+    val finishedColor = colors.onSurface.copy(alpha = FinishedClassAlpha)
+    val upcomingColor = colors.primary.copy(alpha = UpcomingClassAlpha)
     PeriodStrip(
         periodColor = { period ->
             val dayClass = nextClass.dayClasses.find { period in it }
             when {
-                dayClass == null -> colors.dividerLine
+                dayClass == null -> emptyColor
                 dayClass == nextClass.periods -> colors.primary
-                dayClass.startPeriod < nextClass.periods.startPeriod -> colors.primary.copy(alpha = FinishedClassAlpha)
-                else -> colors.primary.copy(alpha = UpcomingClassAlpha)
+                dayClass.startPeriod < nextClass.periods.startPeriod -> finishedColor
+                else -> upcomingColor
             }
         },
         modifier = modifier,

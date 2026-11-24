@@ -82,7 +82,7 @@ android {
     namespace = "com.illustar0.teishucan"
     compileSdk {
         version = release(37) {
-            minorApiLevel = 1
+            minorApiLevel = 2
         }
     }
 

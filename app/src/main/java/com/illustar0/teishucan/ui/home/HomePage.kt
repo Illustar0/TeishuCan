@@ -109,6 +109,7 @@ private data class HomeStat(
     val value: AnnotatedString,
     val isPlaceholder: Boolean = false,
     val onClick: (() -> Unit)? = null,
+    val hasArrow: Boolean = onClick != null,
     val isHeldDown: Boolean = false,
 )
 
@@ -400,6 +401,7 @@ private fun homeStats(
             value = balance ?: notFetched,
             isPlaceholder = balance == null,
             onClick = actions.onOpenRecharge,
+            hasArrow = false,
             isHeldDown = isRechargeVisible,
         ),
         HomeStat(
@@ -491,7 +493,7 @@ private fun StatCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (isInteractive) {
+                if (stat.hasArrow) {
                     Icon(
                         imageVector = MiuixIcons.Basic.ArrowRight,
                         contentDescription = null,

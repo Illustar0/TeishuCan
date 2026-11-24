@@ -184,6 +184,8 @@
     <string name="mfa_resend_countdown">再送信（%1$d）</string>
     <string name="mfa_failed">確認コードが正しくありません。もう一度入力してください</string>
     <string name="mfa_send_failed">送信できませんでした。しばらくしてからもう一度お試しください</string>
+    <string name="mfa_trust_device">この端末を信頼する</string>
+    <string name="mfa_trust_device_summary">次回以降、この端末でのログイン時に SMS 認証を省略します</string>
     <string name="logout_title">ログアウトしますか？</string>
     <string name="logout_summary">端末に保存されたアカウントとパスワードは削除されます。</string>
     <string name="logout_cancel">キャンセル</string>

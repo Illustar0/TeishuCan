@@ -56,6 +56,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.basic.TextFieldDefaults
@@ -63,6 +65,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Close
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
+import top.yukonga.miuix.kmp.preference.CheckboxPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private const val MfaResendIntervalSeconds = 60
@@ -317,6 +320,18 @@ private fun MfaCodePage(
             mfaHelperText(isCodeRequested = isCodeRequested, securePhone = mfa.securePhone),
         )
         LoginFailureText(attempt.failure)
+        Card(
+            modifier = Modifier.padding(top = 12.dp),
+            colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer),
+        ) {
+            CheckboxPreference(
+                title = stringResource(R.string.mfa_trust_device),
+                summary = stringResource(R.string.mfa_trust_device_summary),
+                checked = mfa.shouldTrustDevice,
+                onCheckedChange = { mfa.shouldTrustDevice = it },
+                enabled = !attempt.isSubmitting,
+            )
+        }
         Row(
             modifier = Modifier.padding(top = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),

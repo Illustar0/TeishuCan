@@ -175,6 +175,8 @@
     <string name="mfa_resend_countdown">重新发送（%1$d）</string>
     <string name="mfa_failed">验证码不正确，请重新输入</string>
     <string name="mfa_send_failed">发送失败，请稍后再试</string>
+    <string name="mfa_trust_device">信任此设备</string>
+    <string name="mfa_trust_device_summary">之后在此设备登录时无需手机验证</string>
     <string name="logout_title">确定要退出登录吗？</string>
     <string name="logout_summary">保存在本机的账户密码将被删除。</string>
     <string name="logout_cancel">取消</string>

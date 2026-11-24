@@ -178,15 +178,26 @@ class ZzuSession @Inject constructor(
         }
     }
 
-    /** 用 [code] 完成返回 [LoginResult.MfaRequired] 的登录。 */
-    suspend fun verifyMfa(code: String) {
+    /** 用 [code] 完成返回 [LoginResult.MfaRequired] 的登录。[shouldTrustDevice] 为 true 时同时标记本设备为受信任设备。 */
+    suspend fun verifyMfa(code: String, shouldTrustDevice: Boolean = false) {
         val clients = awaitingMfa()
         accountStep {
             logged("MFA verification") {
                 clients.cas.verifySms(code)
                 clients.cas.login()
             }
+            if (shouldTrustDevice) {
+                trustCurrentDevice(clients)
+            }
             finishLogin(clients)
+        }
+    }
+
+    private suspend fun trustCurrentDevice(clients: ZzuClients) {
+        try {
+            logged("Device trust") { clients.cas.setDeviceTrust(deviceId, isTrusted = true) }
+        } catch (cause: ZzuException) {
+            Log.w(Tag, "Could not trust this device", cause)
         }
     }
 

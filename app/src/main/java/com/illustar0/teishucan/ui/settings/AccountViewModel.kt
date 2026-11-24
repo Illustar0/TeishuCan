@@ -70,6 +70,7 @@ class MfaVerification(
         internal set
     var code by mutableStateOf("")
     var sentCodeCount by mutableIntStateOf(0)
+    var shouldTrustDevice by mutableStateOf(true)
 }
 
 data class LoginFailure(@param:StringRes val fallbackMessage: Int, val reason: String?)
@@ -156,7 +157,7 @@ class AccountViewModel @Inject constructor(
         val attempt = login ?: return
         val mfa = attempt.mfa ?: return
         submit(attempt, LoginAction.VerifyCode, R.string.mfa_failed, onFailure = { mfa.code = "" }) {
-            session.verifyMfa(mfa.code)
+            session.verifyMfa(mfa.code, shouldTrustDevice = mfa.shouldTrustDevice)
             finishLogin(mfa.passwordSave)
         }
     }

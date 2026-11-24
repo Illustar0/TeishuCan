@@ -37,7 +37,12 @@ private val ServiceGroups = listOf(
     ),
     ServiceGroup(
         titleRes = R.string.services_student_affairs,
-        services = listOf(CampusService.CampusCard, CampusService.Leave, CampusService.PresidentMailbox),
+        services = listOf(
+            CampusService.CampusCard,
+            CampusService.Mail,
+            CampusService.Leave,
+            CampusService.PresidentMailbox,
+        ),
     ),
 )
 

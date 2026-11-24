@@ -19,6 +19,7 @@ private fun CampusService.toSsoService() = when (this) {
     CampusService.Library -> SsoService.LIBRARY
     CampusService.LibraryReservation -> SsoService.LIBRARY_RESERVATION
     CampusService.CampusCard -> SsoService.ECARD
+    CampusService.Mail -> SsoService.EMAIL
     CampusService.Leave -> SsoService.LEAVE
     CampusService.PresidentMailbox -> SsoService.PRESIDENT_MAILBOX
     CampusService.StudentStatus -> SsoService.UndergradEas.STUDENT_STATUS

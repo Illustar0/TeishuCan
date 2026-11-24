@@ -12,6 +12,8 @@
     <string name="service_library_reservation_summary">预约座位与研讨间</string>
     <string name="service_campus_card">一卡通</string>
     <string name="service_campus_card_summary">校园卡相关服务</string>
+    <string name="service_mail">邮箱</string>
+    <string name="service_mail_summary">通过校园邮箱收发邮件</string>
     <string name="service_leave">请假</string>
     <string name="service_leave_summary">提交和查看请假申请</string>
     <string name="services_academic">教务</string>

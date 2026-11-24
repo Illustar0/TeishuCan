@@ -18,6 +18,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.ContactsBook
 import top.yukonga.miuix.kmp.icon.extended.Email
 import top.yukonga.miuix.kmp.icon.extended.ListView
+import top.yukonga.miuix.kmp.icon.extended.Messages
 import top.yukonga.miuix.kmp.icon.extended.Months
 import top.yukonga.miuix.kmp.icon.extended.Tasks
 import top.yukonga.miuix.kmp.icon.extended.Years
@@ -83,6 +84,7 @@ private val CampusService.titleRes: Int
         CampusService.Library -> R.string.service_library
         CampusService.LibraryReservation -> R.string.service_library_reservation
         CampusService.CampusCard -> R.string.service_campus_card
+        CampusService.Mail -> R.string.service_mail
         CampusService.Leave -> R.string.service_leave
         CampusService.PresidentMailbox -> R.string.service_president_mailbox
         CampusService.StudentStatus -> R.string.service_student_status
@@ -103,6 +105,7 @@ private val CampusService.summaryRes: Int
         CampusService.Library -> R.string.service_library_summary
         CampusService.LibraryReservation -> R.string.service_library_reservation_summary
         CampusService.CampusCard -> R.string.service_campus_card_summary
+        CampusService.Mail -> R.string.service_mail_summary
         CampusService.Leave -> R.string.service_leave_summary
         CampusService.PresidentMailbox -> R.string.service_president_mailbox_summary
         CampusService.StudentStatus -> R.string.service_student_status_summary
@@ -122,8 +125,9 @@ private val CampusService.icon: ImageVector
         CampusService.Library -> ImageVector.vectorResource(R.drawable.ic_lucide_library_big)
         CampusService.LibraryReservation -> ImageVector.vectorResource(R.drawable.ic_lucide_armchair)
         CampusService.CampusCard -> ImageVector.vectorResource(R.drawable.ic_lucide_id_card)
+        CampusService.Mail -> MiuixIcons.Email
         CampusService.Leave -> ImageVector.vectorResource(R.drawable.ic_lucide_calendar_off)
-        CampusService.PresidentMailbox -> MiuixIcons.Email
+        CampusService.PresidentMailbox -> MiuixIcons.Messages
         CampusService.StudentStatus -> MiuixIcons.ContactsBook
         CampusService.ProgramCompletion -> MiuixIcons.Tasks
         CampusService.AcademicWarnings -> ImageVector.vectorResource(R.drawable.ic_lucide_triangle_alert)

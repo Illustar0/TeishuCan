@@ -14,6 +14,8 @@
     <string name="service_library_reservation_summary">座席やディスカッションルームを予約</string>
     <string name="service_campus_card">学生カード</string>
     <string name="service_campus_card_summary">学生カード関連サービス</string>
+    <string name="service_mail">メール</string>
+    <string name="service_mail_summary">学内メールの送受信</string>
     <string name="service_leave">休暇申請</string>
     <string name="service_leave_summary">休暇の申請と確認</string>
     <string name="services_academic">教務</string>

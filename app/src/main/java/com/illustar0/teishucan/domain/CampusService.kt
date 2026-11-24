@@ -5,6 +5,7 @@ enum class CampusService {
     Library,
     LibraryReservation,
     CampusCard,
+    Mail,
     Leave,
     PresidentMailbox,
     StudentStatus,

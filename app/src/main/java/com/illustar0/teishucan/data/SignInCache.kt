@@ -77,7 +77,10 @@ internal class SignInCache<T>(
                 latest
             } else {
                 val current = if (latest.snapshot != null) latest.snapshot.value else initial
-                latest.copy(snapshot = Snapshot(latest.signInId, fetchedAt, transform(current)), version = refreshVersion)
+                latest.copy(
+                    snapshot = Snapshot(latest.signInId, fetchedAt, transform(current)),
+                    version = refreshVersion,
+                )
             }
         }
     }

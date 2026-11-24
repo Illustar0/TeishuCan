@@ -60,7 +60,10 @@ class TimetableRepository @Inject constructor(
     suspend fun refresh() = refreshTracker.track {
         session.request(CampusFeature.Timetable) {
             val clients = this
-            val candidate = SharedRefresh(clients, scope.async(start = CoroutineStart.LAZY) { fetchCurrentTerm(clients) })
+            val candidate = SharedRefresh(
+                owner = clients,
+                result = scope.async(start = CoroutineStart.LAZY) { fetchCurrentTerm(clients) },
+            )
             val running = latestRefresh.updateAndGet { latest ->
                 if (latest != null && latest.owner === clients && !latest.result.isCompleted) latest else candidate
             }

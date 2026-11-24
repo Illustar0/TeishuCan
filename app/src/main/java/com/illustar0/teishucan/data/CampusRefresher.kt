@@ -57,7 +57,12 @@ class CampusRefresher @Inject constructor(
         AutoRefreshSource(maxAge = 5.minutes, campusCard.isRefreshing, campusCard::isStaleAt, campusCard::refresh),
         AutoRefreshSource(maxAge = 30.minutes, electricity.isRefreshing, electricity::isStaleAt, electricity::refresh),
         AutoRefreshSource(maxAge = 12.hours, timetable.isRefreshing, timetable::isStaleAt, timetable::refresh),
-        AutoRefreshSource(maxAge = 12.hours, session.isProfileRefreshing, session::isProfileStaleAt, session::refreshProfile),
+        AutoRefreshSource(
+            maxAge = 12.hours,
+            isRefreshing = session.isProfileRefreshing,
+            isStale = session::isProfileStaleAt,
+            refresh = session::refreshProfile,
+        ),
     )
 
     val refreshFailure = pendingFailure.asStateFlow()

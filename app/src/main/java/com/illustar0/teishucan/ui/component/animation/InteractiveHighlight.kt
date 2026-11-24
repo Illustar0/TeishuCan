@@ -55,7 +55,7 @@ internal class InteractiveHighlight(
                 y = pos.y.coerceIn(0f, size.height),
             )
             val spotColor = Color.White.copy(alpha = 0.12f * progress)
-            if (spotShader != null) {
+            if (spotShader != null && isRuntimeShaderSupported()) {
                 spotShader.setColorUniform("color", spotColor)
                 spotShader.setFloatUniform("radius", radius)
                 spotShader.setFloatUniform("position", center.x, center.y)

@@ -4,6 +4,8 @@
 
 package com.illustar0.teishucan.ui.component.effect
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -11,10 +13,12 @@ import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.invalidateDraw
+import androidx.compose.ui.platform.InspectorInfo
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 internal fun Modifier.bgEffectDraw(
     painter: BgEffectPainter,
     preset: BgEffectConfig.Config,
@@ -39,6 +43,7 @@ internal fun Modifier.bgEffectDraw(
     alpha = alpha,
 )
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 private data class BgEffectElement(
     val painter: BgEffectPainter,
     val preset: BgEffectConfig.Config,
@@ -51,6 +56,15 @@ private data class BgEffectElement(
     val colorStage: () -> Float,
     val alpha: () -> Float,
 ) : ModifierNodeElement<BgEffectNode>() {
+
+    override fun InspectorInfo.inspectableProperties() {
+        name = "bgEffectDraw"
+        properties["deviceType"] = deviceType
+        properties["isDarkTheme"] = isDarkTheme
+        properties["effectBackground"] = effectBackground
+        properties["isFullSize"] = isFullSize
+        properties["playing"] = playing
+    }
 
     override fun create(): BgEffectNode = BgEffectNode(
         painter = painter,
@@ -81,6 +95,7 @@ private data class BgEffectElement(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 private class BgEffectNode(
     private var painter: BgEffectPainter,
     private var preset: BgEffectConfig.Config,

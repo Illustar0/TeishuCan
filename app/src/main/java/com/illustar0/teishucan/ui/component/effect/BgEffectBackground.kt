@@ -34,8 +34,7 @@ fun BgEffectBackground(
     alpha: () -> Float = { 1f },
     content: @Composable (BoxScope.() -> Unit),
 ) {
-    val shaderSupported = remember { isRuntimeShaderSupported() }
-    if (!shaderSupported) {
+    if (!isRuntimeShaderSupported()) {
         Box(modifier = modifier, content = content)
         return
     }

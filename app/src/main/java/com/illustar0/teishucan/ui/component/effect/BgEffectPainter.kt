@@ -5,6 +5,8 @@
 
 package com.illustar0.teishucan.ui.component.effect
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.Brush
 import top.yukonga.miuix.kmp.material.RuntimeShader
 import top.yukonga.miuix.kmp.material.asBrush
@@ -18,6 +20,7 @@ import kotlin.math.sin
  * 共用是安全的：各个 update 方法缓存的是着色器此刻的 uniform，每次绘制前都会重新设置，
  * 而绘制时写入的是那一刻的 uniform，多处轮流使用也不会互相串值。
  */
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 internal class BgEffectPainter private constructor(
     private val isOs3: Boolean,
 ) {

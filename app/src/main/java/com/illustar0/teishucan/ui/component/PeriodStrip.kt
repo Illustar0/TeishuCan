@@ -1,22 +1,23 @@
 package com.illustar0.teishucan.ui.component
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import top.yukonga.miuix.kmp.squircle.squircleSurface
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private val PeriodGroups = listOf(1..4, 5..8, 9..10)
+private val TotalPeriods = PeriodGroups.sumOf { it.count() }
+private val SeparatorCount = PeriodGroups.size - 1
 
 /**
  * 分段可视化条
@@ -31,37 +32,55 @@ fun PeriodStrip(
     separatorDotSize: Dp = PeriodStripDefaults.SeparatorDotSize,
     separatorColor: Color = PeriodStripDefaults.separatorColor(),
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(separatorGap),
-        verticalAlignment = Alignment.CenterVertically,
+    val canvasHeight = maxOf(segmentHeight, separatorDotSize)
+
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(canvasHeight),
     ) {
+        val segHeightPx = segmentHeight.toPx()
+        val segGapPx = segmentGap.toPx()
+        val sepGapPx = separatorGap.toPx()
+        val dotSizePx = separatorDotSize.toPx()
+        val dotRadiusPx = dotSizePx / 2f
+        val barCorner = CornerRadius(segHeightPx / 2f)
+        val barTop = (size.height - segHeightPx) / 2f
+        val centerY = size.height / 2f
+
+        val separatorWidth = dotSizePx + 2 * sepGapPx
+        val groupsTotalWidth = (size.width - SeparatorCount * separatorWidth).coerceAtLeast(0f)
+        val isRtl = layoutDirection == LayoutDirection.Rtl
+
+        var cursorX = 0f
         PeriodGroups.forEachIndexed { groupIndex, range ->
             if (groupIndex > 0) {
-                Box(
-                    modifier = Modifier
-                        .size(separatorDotSize)
-                        .squircleSurface(color = separatorColor, cornerRadius = separatorDotSize / 2),
+                cursorX += sepGapPx
+                val dotCenterX = if (isRtl) size.width - cursorX - dotRadiusPx else cursorX + dotRadiusPx
+                drawCircle(
+                    color = separatorColor,
+                    radius = dotRadiusPx,
+                    center = Offset(dotCenterX, centerY),
                 )
+                cursorX += dotSizePx + sepGapPx
             }
+
             val groupSize = range.last - range.first + 1
-            Row(
-                modifier = Modifier.weight(groupSize.toFloat()),
-                horizontalArrangement = Arrangement.spacedBy(segmentGap),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                for (period in range) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(segmentHeight)
-                            .squircleSurface(
-                                color = periodColor(period),
-                                cornerRadius = segmentHeight / 2,
-                            ),
-                    )
-                }
+            val groupWidth = groupsTotalWidth * (groupSize.toFloat() / TotalPeriods)
+            val segWidth = ((groupWidth - (groupSize - 1) * segGapPx) / groupSize).coerceAtLeast(0f)
+
+            var segX = cursorX
+            for (period in range) {
+                val drawX = if (isRtl) size.width - segX - segWidth else segX
+                drawRoundRect(
+                    color = periodColor(period),
+                    topLeft = Offset(drawX, barTop),
+                    size = Size(segWidth, segHeightPx),
+                    cornerRadius = barCorner,
+                )
+                segX += segWidth + segGapPx
             }
+            cursorX += groupWidth
         }
     }
 }

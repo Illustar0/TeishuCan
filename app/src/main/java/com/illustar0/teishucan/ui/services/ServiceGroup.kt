@@ -18,9 +18,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.ContactsBook
 import top.yukonga.miuix.kmp.icon.extended.Email
 import top.yukonga.miuix.kmp.icon.extended.ListView
-import top.yukonga.miuix.kmp.icon.extended.Messages
 import top.yukonga.miuix.kmp.icon.extended.Months
-import top.yukonga.miuix.kmp.icon.extended.Tasks
 import top.yukonga.miuix.kmp.icon.extended.Years
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -127,9 +125,9 @@ private val CampusService.icon: ImageVector
         CampusService.CampusCard -> ImageVector.vectorResource(R.drawable.ic_lucide_id_card)
         CampusService.Mail -> MiuixIcons.Email
         CampusService.Leave -> ImageVector.vectorResource(R.drawable.ic_lucide_calendar_off)
-        CampusService.PresidentMailbox -> MiuixIcons.Messages
+        CampusService.PresidentMailbox -> ImageVector.vectorResource(R.drawable.ic_lucide_inbox)
         CampusService.StudentStatus -> MiuixIcons.ContactsBook
-        CampusService.ProgramCompletion -> MiuixIcons.Tasks
+        CampusService.ProgramCompletion -> ImageVector.vectorResource(R.drawable.ic_lucide_clipboard_check)
         CampusService.AcademicWarnings -> ImageVector.vectorResource(R.drawable.ic_lucide_triangle_alert)
         CampusService.Exams -> ImageVector.vectorResource(R.drawable.ic_lucide_file_pen_line)
         CampusService.Grades -> ImageVector.vectorResource(R.drawable.ic_lucide_award)

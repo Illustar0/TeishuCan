@@ -7,6 +7,7 @@ import com.illustar0.zzu.cas.CasClient
 import com.illustar0.zzu.cas.Tokens
 import com.illustar0.zzu.eas.EasClient
 import com.illustar0.zzu.ecard.EcardClient
+import com.illustar0.zzu.mail.MailClient
 import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -15,18 +16,38 @@ import kotlinx.coroutines.sync.withLock
  * 一个账号的全部 SDK 客户端，同生共死。每次登录都是新实例，引用相等即代表同一次登录。
  *
  * SDK 自己保证调用的并发安全，这里的锁只用来避免并发调用方重复登录或重复换新令牌，
- * 都不会跨越业务请求持有。
+ * 都不会跨越业务请求持有。[deviceId] 由 [casDeviceId] 生成。
  */
-internal class ZzuClients private constructor(
+internal class ZzuClients(
     private val account: String,
     private val password: String,
+    deviceId: String,
 ) : AutoCloseable {
-    val cas = CasClient(account, password)
-    private val easClient = EasClient(cas)
-    private val ecardClient = EcardClient(cas)
+    val cas: CasClient = CasClient(account, password, deviceId)
+    private val easClient: EasClient
+    private val ecardClient: EcardClient
+    private val mailClient: MailClient
     private val easLogin = Mutex()
     private val ecardLogin = Mutex()
+    private val mailLogin = Mutex()
     private val casAccess = Mutex()
+
+    init {
+        var eas: EasClient? = null
+        var ecard: EcardClient? = null
+        try {
+            eas = EasClient(cas)
+            ecard = EcardClient(cas)
+            mailClient = MailClient(cas)
+            easClient = eas
+            ecardClient = ecard
+        } catch (cause: Throwable) {
+            ecard?.close()
+            eas?.close()
+            cas.close()
+            throw cause
+        }
+    }
 
     suspend fun eas(): EasClient = easLogin.withLock {
         easClient.apply { if (!isLoggedIn()) logged("EAS login") { login() } }
@@ -34,6 +55,10 @@ internal class ZzuClients private constructor(
 
     suspend fun ecard(): EcardClient = ecardLogin.withLock {
         ecardClient.apply { if (!isLoggedIn()) logged("Ecard login") { login() } }
+    }
+
+    suspend fun mail(): MailClient = mailLogin.withLock {
+        mailClient.apply { if (!isLoggedIn()) logged("Mail login") { login() } }
     }
 
     /**
@@ -78,21 +103,8 @@ internal class ZzuClients private constructor(
     override fun close() {
         easClient.close()
         ecardClient.close()
+        mailClient.close()
         cas.close()
-    }
-
-    companion object {
-        /** [deviceId] 由 [casDeviceId] 生成。 */
-        suspend fun create(account: String, password: String, deviceId: String): ZzuClients {
-            val clients = ZzuClients(account, password)
-            try {
-                clients.cas.setDevice(deviceId)
-            } catch (cause: Throwable) {
-                clients.close()
-                throw cause
-            }
-            return clients
-        }
     }
 }
 

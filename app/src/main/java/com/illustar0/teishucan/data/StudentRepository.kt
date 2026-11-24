@@ -8,9 +8,13 @@ import com.illustar0.teishucan.domain.StudentData
 import com.illustar0.teishucan.domain.StudentProfile
 import com.illustar0.zzu.cas.PersonalInfo
 import com.illustar0.zzu.cas.SsoService
+import java.math.BigDecimal
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.supervisorScope
 import kotlin.time.Duration
 import kotlin.time.Instant
 
@@ -27,14 +31,46 @@ class StudentRepository @Inject constructor(
 
     suspend fun isStaleAt(now: Instant, maxAge: Duration): Boolean = cache.isStaleAt(now, maxAge)
 
+    /** 并发刷新个人资料、校园卡余额与未读邮件；部分失败时保留已拿到的数据，再抛出第一个失败。 */
     suspend fun refresh() = session.request(CampusFeature.CampusCard) {
         val refreshVersion = cache.nextRefreshVersion()
-        val info = cas.userInfo()
-        cache.update(
-            this,
-            refreshVersion,
-            saveRelatedData = { session.saveProfile(this, info.toStudentProfile()) },
-        ) { info.toStudentData() }
+        val fetched = supervisorScope {
+            val info = async { runCatchingNonCancellation { cas.userInfo() } }
+            val balance = async { runCatchingNonCancellation { ecard().balance() } }
+            val unreadMail = async { runCatchingNonCancellation { mail().unreadCount() } }
+            StudentRefresh(info.await(), balance.await(), unreadMail.await())
+        }
+        applyRefresh(this, refreshVersion, fetched)
+        fetched.firstFailure?.let { throw it }
+    }
+
+    private suspend fun applyRefresh(owner: ZzuClients, refreshVersion: Long, fetched: StudentRefresh) {
+        val profile = fetched.info.getOrNull()?.toStudentProfile()
+        val balance = fetched.balance.getOrNull()
+        val unreadMail = fetched.unreadMail.getOrNull()
+        if (fetched.firstFailure == null) {
+            cache.update(
+                owner,
+                refreshVersion,
+                saveRelatedData = { if (profile != null) session.saveProfile(owner, profile) },
+            ) {
+                StudentData(
+                    campusCardBalanceYuan = balance,
+                    mailCount = unreadMail,
+                )
+            }
+            return
+        }
+        if (profile != null) session.saveProfile(owner, profile)
+        if (balance != null || unreadMail != null) {
+            cache.amend(owner) { current ->
+                current.copy(
+                    campusCardBalanceYuan = balance ?: current.campusCardBalanceYuan,
+                    mailCount = unreadMail ?: current.mailCount,
+                    researchProjectCount = null,
+                )
+            }
+        }
     }
 
     /** 余额可能已在应用外变化，例如在收银台付了款。下次自动刷新时必定更新。 */
@@ -55,10 +91,27 @@ class StudentRepository @Inject constructor(
     }
 
     suspend fun mailLoginUrl(): String =
-        session.request(CampusFeature.Mail) { cas.serviceLoginUrl(SsoService.EMAIL) }
+        session.request(CampusFeature.Mail) { cas.serviceSsoUrl(SsoService.EMAIL) }
 
     suspend fun serviceLoginUrl(service: CampusService): String =
-        session.request(CampusFeature.Services) { cas.serviceLoginUrl(service.toSsoService()) }
+        session.request(CampusFeature.Services) { cas.serviceSsoUrl(service.toSsoService()) }
+}
+
+private class StudentRefresh(
+    val info: Result<PersonalInfo>,
+    val balance: Result<BigDecimal>,
+    val unreadMail: Result<Int>,
+) {
+    val firstFailure: Throwable?
+        get() = info.exceptionOrNull() ?: balance.exceptionOrNull() ?: unreadMail.exceptionOrNull()
+}
+
+private suspend inline fun <T> runCatchingNonCancellation(block: () -> T): Result<T> = try {
+    Result.success(block())
+} catch (cause: CancellationException) {
+    throw cause
+} catch (cause: Exception) {
+    Result.failure(cause)
 }
 
 private fun CampusService.toSsoService() = when (this) {
@@ -80,9 +133,3 @@ private fun CampusService.toSsoService() = when (this) {
 }
 
 internal fun PersonalInfo.toStudentProfile() = StudentProfile(name, organizationName, identityTypeName)
-
-private fun PersonalInfo.toStudentData() = StudentData(
-    campusCardBalanceYuan = balance,
-    mailCount = unreadEmailCount.toInt(),
-    researchProjectCount = researchCount.toInt(),
-)

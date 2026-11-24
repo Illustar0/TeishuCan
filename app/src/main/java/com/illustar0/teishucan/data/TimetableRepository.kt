@@ -6,10 +6,11 @@ import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.TimetableWeek
 import com.illustar0.zzu.ZzuTimeZone
-import com.illustar0.zzu.eas.Lesson
 import com.illustar0.zzu.eas.Semester
 import com.illustar0.zzu.eas.SemesterId
-import com.illustar0.zzu.eas.TeachingWeek
+import com.illustar0.zzu.eas.SessionTeacher
+import com.illustar0.zzu.eas.SessionView
+import com.illustar0.zzu.eas.Timetable
 import java.time.DayOfWeek
 import java.time.LocalTime
 import java.time.temporal.TemporalAdjusters
@@ -70,44 +71,39 @@ class TimetableRepository @Inject constructor(
     private suspend fun fetchCurrentTerm(clients: ZzuClients) {
         val eas = clients.eas()
         val current = eas.currentSemester()
-        val (listedSemesters, weeks) = coroutineScope {
+        val (listedSemesters, timetable) = coroutineScope {
             val listedSemesters = async { eas.semesters() }
-            val weeks = async { eas.teachingWeeks(current.id) }
-            listedSemesters.await() to weeks.await()
+            val timetable = async { eas.timetable(current.id) }
+            listedSemesters.await() to timetable.await()
         }
         val semesters = (listedSemesters + current).distinctBy { it.id }.sortedBy { it.startDate }
         cache.update(clients) { terms ->
             val loaded = terms.associateBy { it.id }
             semesters.map { semester ->
                 if (semester.id == current.id) {
-                    semester.toTerm(weeks).copy(isLoaded = true)
+                    timetable.semester.toTerm(timetable)
                 } else {
-                    loaded[semester.id.value.toString()] ?: semester.toTerm(emptyList())
+                    loaded[semester.id.value.toString()] ?: semester.toTerm()
                 }
             }
         }
     }
 
     suspend fun loadTerm(termId: String) = session.request(CampusFeature.Timetable) {
-        val weeks = eas().teachingWeeks(SemesterId(termId.toLong())).associateBy { it.weekIndex }
+        val timetable = eas().timetable(SemesterId(termId.toLong()))
         cache.amend(this) { terms ->
             terms.map { term ->
-                if (term.id != termId) term else term.copy(
-                    weeks = term.weeks.map { week ->
-                        week.copy(entries = weeks[week.number]?.lessons.orEmpty().map { it.toEntry() })
-                    },
-                    isLoaded = true,
-                )
+                if (term.id != termId) term else timetable.semester.toTerm(timetable)
             }
         }
     }
 }
 
-private fun Semester.toTerm(teachingWeeks: List<TeachingWeek>): TimetableTerm {
+internal fun Semester.toTerm(timetable: Timetable? = null): TimetableTerm {
     val start = startDate.toJavaLocalDate()
     val firstDay = if (startsWeekOnSunday) DayOfWeek.SUNDAY else DayOfWeek.MONDAY
     val firstWeekStart = start.with(TemporalAdjusters.previousOrSame(firstDay))
-    val lessonsByWeek = teachingWeeks.associateBy { it.weekIndex }
+    val numbers = timetable?.weekIndices() ?: weekIndices
     return TimetableTerm(
         id = id.value.toString(),
         schoolYear = schoolYear,
@@ -115,27 +111,32 @@ private fun Semester.toTerm(teachingWeeks: List<TeachingWeek>): TimetableTerm {
         number = nameZh.substringAfterLast('-'),
         startDate = start,
         endDate = endDate.toJavaLocalDate(),
-        weeks = weekIndices.map { number ->
-            val weekStart = firstWeekStart.plusWeeks(number - 1L)
+        weeks = numbers.map { number ->
+            val weekStart = weekDateRange(number)?.start?.toJavaLocalDate()
+                ?: firstWeekStart.plusWeeks(number - 1L)
             TimetableWeek(
                 number = number,
                 dates = List(DayOfWeek.entries.size) { weekStart.plusDays(it.toLong()) },
-                entries = lessonsByWeek[number]?.lessons.orEmpty().map { it.toEntry() },
+                entries = timetable?.week(number)?.sessions().orEmpty().map { it.toEntry() },
             )
         },
+        isLoaded = timetable != null,
     )
 }
 
-private fun Lesson.toEntry() = TimetableEntry(
-    day = schedule.weekday.toJavaDayOfWeek(),
-    date = schedule.date.toJavaLocalDate(),
-    startPeriod = schedule.startUnit,
-    startTime = schedule.realStartTime.toCampusTime(),
-    endTime = schedule.realEndTime.toCampusTime(),
-    title = course.nameZh,
-    teacher = schedule.teacherName,
-    location = schedule.room?.nameZh ?: schedule.customPlace,
-    periodSpan = schedule.endUnit - schedule.startUnit + 1,
+internal fun SessionView.toEntry() = TimetableEntry(
+    day = session.weekday.toJavaDayOfWeek(),
+    date = session.date.toJavaLocalDate(),
+    startPeriod = session.startUnit,
+    startTime = session.startTime.toCampusTime(),
+    endTime = session.endTime.toCampusTime(),
+    title = displayTitle,
+    teacher = session.teachers
+        .map(SessionTeacher::nameZh)
+        .filter(String::isNotBlank)
+        .joinToString("、"),
+    location = session.room?.nameZh ?: session.customPlace,
+    periodSpan = session.endUnit - session.startUnit + 1,
 )
 
 private fun Instant.toCampusTime(): LocalTime = toLocalDateTime(ZzuTimeZone).time.toJavaLocalTime()

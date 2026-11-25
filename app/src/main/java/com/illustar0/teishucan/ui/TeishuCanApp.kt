@@ -115,14 +115,16 @@ internal sealed interface Route : NavKey {
 internal enum class AppDestination(
     @param:StringRes val labelRes: Int,
     val icon: ImageVector,
+    /** 只在登录期间显示的分页。 */
+    val requiresSignIn: Boolean,
 ) {
-    Home(R.string.destination_home, MiuixIcons.Home),
-    Timetable(R.string.destination_timetable, MiuixIcons.Months),
-    Services(R.string.destination_services, MiuixIcons.GridView),
-    Settings(R.string.destination_settings, MiuixIcons.Settings),
+    Home(R.string.destination_home, MiuixIcons.Home, requiresSignIn = false),
+    Timetable(R.string.destination_timetable, MiuixIcons.Months, requiresSignIn = true),
+    Services(R.string.destination_services, MiuixIcons.GridView, requiresSignIn = true),
+    Settings(R.string.destination_settings, MiuixIcons.Settings, requiresSignIn = false),
 }
 
-private val SignedOutDestinations = listOf(AppDestination.Home, AppDestination.Settings)
+private val SignedOutDestinations = AppDestination.entries.filterNot(AppDestination::requiresSignIn)
 private val FallbackCardCornerRadius = 32.dp
 private const val TransitionDimAmount = 0.5f
 

@@ -270,9 +270,8 @@ private fun MainScreen(
 ) {
     val appViewModel = hiltViewModel<AppViewModel>()
     val accountViewModel = hiltViewModel<AccountViewModel>()
+    // 启动屏等到会话恢复完才放行，这里不会再看到 Restoring。
     val account by accountViewModel.account.collectAsStateWithLifecycle()
-    // 读出保存的会话之前什么也不画，已登录用户才不会看到一闪而过的登录页。
-    if (account == AccountState.Restoring) return
     val student = (account as? AccountState.SignedIn)?.profile
     val onLoginClick = accountViewModel::startLogin
     // 用状态保存：页数会先于 Scaffold 子组合分页内容而变化，内容捕获的列表届时会比页数短。

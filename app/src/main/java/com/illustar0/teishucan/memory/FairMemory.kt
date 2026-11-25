@@ -35,6 +35,10 @@ import kotlin.time.Duration.Companion.seconds
 private const val Tag = "FairMemory"
 private const val TrimAction = "itgsa.intent.action.TRIM"
 private const val KillAction = "itgsa.intent.action.KILL"
+private const val NoticeExtra = "common"
+private const val CallbackKey = "callback"
+private const val NotifyTypeKey = "notifyType"
+private const val NotifyIdKey = "notifyId"
 private const val PhysicalMemory = 1000
 private const val JavaHeap = 2000
 private const val Handled = 0
@@ -147,12 +151,12 @@ internal class FairMemory @Inject constructor(
 }
 
 private fun readNotice(intent: Intent): MemoryNotice? {
-    val common = intent.getBundleExtra("common") ?: return null
-    val callback = common.getBinder("callback") ?: return null
-    val type = common.getInt("notifyType")
+    val common = intent.getBundleExtra(NoticeExtra) ?: return null
+    val callback = common.getBinder(CallbackKey) ?: return null
+    val type = common.getInt(NotifyTypeKey)
     if (type != PhysicalMemory && type != JavaHeap) return null
-    if (!common.containsKey("notifyId")) return null
-    return MemoryNotice(type, common.getInt("notifyId"), callback)
+    if (!common.containsKey(NotifyIdKey)) return null
+    return MemoryNotice(type, common.getInt(NotifyIdKey), callback)
 }
 
 private class MemoryNotice(private val type: Int, private val id: Int, private val callback: IBinder) {

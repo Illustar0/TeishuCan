@@ -24,6 +24,9 @@ import kotlinx.serialization.Serializable
 
 private const val Tag = "NavigationRecovery"
 
+/** MemoryLimiter 结束进程时，退出原因描述里带着的标记。 */
+private const val MemoryLimiterExitMarker = "MemoryLimiter:AnonSwap"
+
 @Serializable
 internal data class NavigationSnapshot(
     val routes: List<Route> = listOf(Route.Main),
@@ -82,7 +85,7 @@ internal class NavigationRecovery @Inject constructor(
         val manager = context.getSystemService(ActivityManager::class.java)
         val exit = manager?.getHistoricalProcessExitReasons(context.packageName, previousPid, 1)?.firstOrNull()
         return exit?.reason == ApplicationExitInfo.REASON_OTHER &&
-            exit.description.orEmpty().contains("MemoryLimiter:AnonSwap")
+            exit.description.orEmpty().contains(MemoryLimiterExitMarker)
     }
 
     private fun read(): Record? = try {

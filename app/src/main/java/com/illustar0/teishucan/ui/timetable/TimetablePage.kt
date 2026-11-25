@@ -97,6 +97,10 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.utils.springAnimateToPage
 
+private const val CopiedIndicatorMillis = 2000L
+
+private val TimetablePadding = PaddingValues(start = 4.dp, end = 8.dp, bottom = 8.dp)
+
 enum class TimetableStatus { Ready, NoLessons, Loading, Failed, NotFetched }
 
 data class TimetableState(
@@ -565,10 +569,6 @@ private fun WeekStepButton(
         )
     }
 }
-
-private const val CopiedIndicatorMillis = 2000L
-
-private val TimetablePadding = PaddingValues(start = 4.dp, end = 8.dp, bottom = 8.dp)
 
 private fun formatDateRange(start: LocalDate, end: LocalDate, formatter: DateTimeFormatter): String =
     "${start.format(formatter)} – ${end.format(formatter)}"

@@ -86,6 +86,8 @@ private val TextureShape = RoundedCornerShape(16.dp)
 private const val CardBlurRadius = 60f
 private const val LogoBlurRadius = 200f
 private const val TitleBlurRadius = 150f
+private const val FadeOutSpan = 0.15f
+private const val FadeOutShrink = 0.05f
 
 // 以下混色取自 Miuix 示例应用的 ColorBlendToken 与关于页。
 private val PuredRegularLight = listOf(
@@ -313,9 +315,6 @@ private fun AboutHeader(
         )
     }
 }
-
-private const val FadeOutSpan = 0.15f
-private const val FadeOutShrink = 0.05f
 
 private fun Modifier.fadeOutOnScroll(scrollProgress: () -> Float, start: Float): Modifier = graphicsLayer {
     val progress = ((scrollProgress() - start) / FadeOutSpan).coerceIn(0f, 1f)

@@ -24,10 +24,47 @@ import top.yukonga.miuix.kmp.icon.extended.Years
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-internal class ServiceGroup(
-    @param:StringRes val titleRes: Int,
-    val services: List<CampusService>,
-)
+/** 服务页上的一组服务，按声明顺序排列。[isUndergradEas] 的组收在本科教务子页里，不直接列在服务页上。 */
+internal enum class ServiceGroup(@param:StringRes val titleRes: Int, val isUndergradEas: Boolean) {
+    Library(R.string.services_library, isUndergradEas = false),
+    StudentAffairs(R.string.services_student_affairs, isUndergradEas = false),
+    EasRecords(R.string.services_eas_records, isUndergradEas = true),
+    EasExamsAndGrades(R.string.services_eas_exams_and_grades, isUndergradEas = true),
+    EasSchedule(R.string.services_eas_schedule, isUndergradEas = true),
+    ;
+
+    /** 组内的服务，按 [CampusService] 的声明顺序排列。 */
+    val services: List<CampusService> by lazy { CampusService.entries.filter { it.group == this } }
+}
+
+private val CampusService.group: ServiceGroup
+    get() = when (this) {
+        CampusService.Library,
+        CampusService.LibraryReservation,
+        -> ServiceGroup.Library
+
+        CampusService.CampusCard,
+        CampusService.Mail,
+        CampusService.Leave,
+        CampusService.PresidentMailbox,
+        -> ServiceGroup.StudentAffairs
+
+        CampusService.StudentStatus,
+        CampusService.ProgramCompletion,
+        CampusService.AcademicWarnings,
+        -> ServiceGroup.EasRecords
+
+        CampusService.Exams,
+        CampusService.Grades,
+        -> ServiceGroup.EasExamsAndGrades
+
+        CampusService.Timetable,
+        CampusService.CourseOfferings,
+        CampusService.SchoolCalendar,
+        CampusService.AvailableClassrooms,
+        CampusService.ClassroomTimetable,
+        -> ServiceGroup.EasSchedule
+    }
 
 @Composable
 internal fun ServiceGroupSection(

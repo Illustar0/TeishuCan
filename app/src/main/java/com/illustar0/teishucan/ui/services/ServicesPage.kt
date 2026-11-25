@@ -55,23 +55,7 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 private val SearchBarMaxTopPadding = 12.dp
 private val SearchResultsTopPadding = 6.dp
 
-private val ServiceGroups = listOf(
-    ServiceGroup(
-        titleRes = R.string.services_library,
-        services = listOf(CampusService.Library, CampusService.LibraryReservation),
-    ),
-    ServiceGroup(
-        titleRes = R.string.services_student_affairs,
-        services = listOf(
-            CampusService.CampusCard,
-            CampusService.Mail,
-            CampusService.Leave,
-            CampusService.PresidentMailbox,
-        ),
-    ),
-)
-
-private val SearchableGroups = ServiceGroups + UndergradEasGroups
+private val ServiceGroups = ServiceGroup.entries.filterNot(ServiceGroup::isUndergradEas)
 
 private sealed interface ServiceSearchHit {
     data object UndergradEas : ServiceSearchHit
@@ -257,7 +241,7 @@ private fun matchingServiceHits(query: String): List<ServiceSearchHit> {
     ) {
         hits += ServiceSearchHit.UndergradEas
     }
-    SearchableGroups.forEach { group ->
+    ServiceGroup.entries.forEach { group ->
         val groupTitle = stringResource(group.titleRes)
         group.services.forEach { service ->
             if (

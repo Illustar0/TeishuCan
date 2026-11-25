@@ -29,30 +29,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
-internal val UndergradEasGroups = listOf(
-    ServiceGroup(
-        titleRes = R.string.services_eas_records,
-        services = listOf(
-            CampusService.StudentStatus,
-            CampusService.ProgramCompletion,
-            CampusService.AcademicWarnings,
-        ),
-    ),
-    ServiceGroup(
-        titleRes = R.string.services_eas_exams_and_grades,
-        services = listOf(CampusService.Exams, CampusService.Grades),
-    ),
-    ServiceGroup(
-        titleRes = R.string.services_eas_schedule,
-        services = listOf(
-            CampusService.Timetable,
-            CampusService.CourseOfferings,
-            CampusService.SchoolCalendar,
-            CampusService.AvailableClassrooms,
-            CampusService.ClassroomTimetable,
-        ),
-    ),
-)
+private val UndergradEasGroups = ServiceGroup.entries.filter(ServiceGroup::isUndergradEas)
 
 @Composable
 fun UndergradEasPage(

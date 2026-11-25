@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Process
 import android.util.AtomicFile
 import android.util.Log
+import com.illustar0.teishucan.data.StoreJson
 import com.illustar0.teishucan.di.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -19,7 +20,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 private const val Tag = "NavigationRecovery"
 
@@ -85,7 +85,7 @@ internal class NavigationRecovery @Inject constructor(
     }
 
     private fun read(): Record? = try {
-        Json.decodeFromString<Record>(file.readFully().decodeToString())
+        StoreJson.decodeFromString<Record>(file.readFully().decodeToString())
     } catch (_: FileNotFoundException) {
         null
     } catch (cause: IOException) {
@@ -98,7 +98,7 @@ internal class NavigationRecovery @Inject constructor(
     }
 
     private fun write(record: Record): Boolean = try {
-        val content = Json.encodeToString(record).encodeToByteArray()
+        val content = StoreJson.encodeToString(record).encodeToByteArray()
         val output = file.startWrite()
         try {
             output.write(content)

@@ -24,7 +24,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 import kotlin.time.Instant
 
 @Serializable
@@ -96,14 +95,14 @@ class EncryptedSessionStore @Inject constructor(
 private fun encrypt(session: StoredSession): ByteArray {
     val cipher = Cipher.getInstance(SessionCipher)
     cipher.init(Cipher.ENCRYPT_MODE, sessionKey())
-    return cipher.iv + cipher.doFinal(Json.encodeToString(session).encodeToByteArray())
+    return cipher.iv + cipher.doFinal(StoreJson.encodeToString(session).encodeToByteArray())
 }
 
 private fun decrypt(encrypted: ByteArray): StoredSession {
     val cipher = Cipher.getInstance(SessionCipher)
     cipher.init(Cipher.DECRYPT_MODE, sessionKey(), GCMParameterSpec(SessionTagBits, encrypted, 0, SessionIvSize))
     val plaintext = cipher.doFinal(encrypted, SessionIvSize, encrypted.size - SessionIvSize)
-    return Json.decodeFromString(plaintext.decodeToString())
+    return StoreJson.decodeFromString(plaintext.decodeToString())
 }
 
 /** 不要求用户认证：启动时要静默恢复登录，每次解密都验证身份会让保存会话失去意义。 */

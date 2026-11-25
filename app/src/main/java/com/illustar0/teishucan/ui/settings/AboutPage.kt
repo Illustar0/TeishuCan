@@ -80,12 +80,27 @@ private const val SourceCodeUrl = "https://github.com/Illustar0/TeishuCan"
 private const val LicenseUrl = "https://www.gnu.org/licenses/gpl-3.0.html"
 private const val LogoSpacerKey = "logoSpacer"
 
-private val HeaderTopPadding = 40.dp + 52.dp
+/** 头部与标题栏之间的留白。 */
+private val HeaderTopPadding = 92.dp
+
+/** 头部与下方卡片之间的留白。列表滚过头部和这段留白时推进 scrollProgress。 */
 private val HeaderBottomGap = 126.dp
+
+/** 量到头部实际高度之前用的估计值，只影响第一帧的占位。 */
+private val EstimatedHeaderHeight = 300.dp
+
+private val LogoSize = 88.dp
+private val LogoForegroundSize = 160.dp
+private val AppIconSize = 80.dp
 private val TextureShape = RoundedCornerShape(16.dp)
 private const val CardBlurRadius = 60f
 private const val LogoBlurRadius = 200f
 private const val TitleBlurRadius = 150f
+
+/** 头部各行开始淡出时的 scrollProgress。越靠下的越早淡出，因为列表先盖住它们。 */
+private const val LogoFadeStart = 0.35f
+private const val TitleFadeStart = 0.20f
+private const val VersionFadeStart = 0.05f
 private const val FadeOutSpan = 0.15f
 private const val FadeOutShrink = 0.05f
 
@@ -171,7 +186,7 @@ private fun AboutContent(
     val density = LocalDensity.current
     // 只录入动态背景，供 Logo、标题与卡片透出它的颜色。
     val backdrop = rememberBlurBackdrop()
-    var headerHeight by remember { mutableStateOf(300.dp) }
+    var headerHeight by remember { mutableStateOf(EstimatedHeaderHeight) }
     val listPadding = PaddingValues(
         start = padding.calculateStartPadding(layoutDirection),
         top = padding.calculateTopPadding(),
@@ -261,8 +276,8 @@ private fun AboutHeader(
     ) {
         Box(
             modifier = Modifier
-                .size(88.dp)
-                .fadeOutOnScroll(scrollProgress, start = 0.35f),
+                .size(LogoSize)
+                .fadeOutOnScroll(scrollProgress, start = LogoFadeStart),
             contentAlignment = Alignment.Center,
         ) {
             if (backdrop != null) {
@@ -270,7 +285,7 @@ private fun AboutHeader(
                     painter = painterResource(R.drawable.ic_launcher_foreground),
                     contentDescription = null,
                     modifier = Modifier
-                        .requiredSize(160.dp)
+                        .requiredSize(LogoForegroundSize)
                         .textureBlur(
                             backdrop = backdrop,
                             shape = TextureShape,
@@ -280,14 +295,14 @@ private fun AboutHeader(
                         ),
                 )
             } else {
-                AppIcon(modifier = Modifier.size(80.dp))
+                AppIcon(modifier = Modifier.size(AppIconSize))
             }
         }
         Text(
             text = stringResource(R.string.app_name),
             modifier = Modifier
                 .padding(top = 12.dp, bottom = 5.dp)
-                .fadeOutOnScroll(scrollProgress, start = 0.20f)
+                .fadeOutOnScroll(scrollProgress, start = TitleFadeStart)
                 .then(
                     if (backdrop != null) {
                         Modifier.textureBlur(
@@ -308,7 +323,7 @@ private fun AboutHeader(
             text = stringResource(R.string.settings_about_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE),
             modifier = Modifier
                 .fillMaxWidth()
-                .fadeOutOnScroll(scrollProgress, start = 0.05f),
+                .fadeOutOnScroll(scrollProgress, start = VersionFadeStart),
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             textAlign = TextAlign.Center,
             style = MiuixTheme.textStyles.body2,

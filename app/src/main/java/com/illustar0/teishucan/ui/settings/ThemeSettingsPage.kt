@@ -60,6 +60,12 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
+private const val SwatchesPerRow = 4
+private val SwatchSize = 44.dp
+
+/** 色块亮度高于此值时勾选标记用黑色，否则用白色。 */
+private const val DarkCheckmarkMinLuminance = 0.4f
+
 @Composable
 fun ThemeSettingsPage(
     settings: ThemeSettings,
@@ -257,7 +263,7 @@ private fun SeedColorPicker(
             .padding(vertical = 16.dp)
             .selectableGroup(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
-        maxItemsInEachRow = 4,
+        maxItemsInEachRow = SwatchesPerRow,
     ) {
         SeedColor.entries.forEach { color ->
             Column(
@@ -277,7 +283,7 @@ private fun SeedColorPicker(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(SwatchSize)
                         .clip(CircleShape)
                         .background(color.color),
                     contentAlignment = Alignment.Center,
@@ -286,7 +292,11 @@ private fun SeedColorPicker(
                         Icon(
                             imageVector = MiuixIcons.Basic.Check,
                             contentDescription = null,
-                            tint = if (color.color.luminance() > 0.4f) Color.Black else Color.White,
+                            tint = if (color.color.luminance() > DarkCheckmarkMinLuminance) {
+                                Color.Black
+                            } else {
+                                Color.White
+                            },
                         )
                     }
                 }

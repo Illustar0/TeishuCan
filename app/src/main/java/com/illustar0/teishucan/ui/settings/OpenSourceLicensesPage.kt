@@ -61,6 +61,9 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 private const val LicenseChipAlpha = 0.2f
 
+/** 许可证全文在弹窗里的最大高度，更长时在弹窗内滚动。 */
+private val LicenseTextMaxHeight = 420.dp
+
 @Composable
 fun OpenSourceLicensesPage(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -216,7 +219,7 @@ private fun LicenseDialog(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 420.dp),
+                .heightIn(max = LicenseTextMaxHeight),
         ) {
             LazyColumn(
                 modifier = Modifier

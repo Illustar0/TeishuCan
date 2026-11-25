@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.ClassPeriods
@@ -82,9 +83,10 @@ private const val LeadDescriptionAlpha = 0.8f
 private val LeadIconSize = 170.dp
 private val LeadIconEndOverhang = 50.dp
 private val LeadIconBottomOverhang = 38.dp
+private val LeadIconTextGap = 8.dp
 
-/** 让文字和节次条避开图标留在卡片内的部分。 */
-private val LeadIconClearance = LeadIconSize - LeadIconEndOverhang - 8.dp
+/** 让文字和节次条避开图标留在卡片内的部分，再留出 [LeadIconTextGap]。 */
+private val LeadIconClearance = LeadIconSize - LeadIconEndOverhang - LeadIconTextGap
 
 /** 足够高，让图标上沿留在卡片内。 */
 private val LeadCardMinHeight = LeadIconSize - LeadIconBottomOverhang
@@ -92,7 +94,11 @@ private val LeadCardMinHeight = LeadIconSize - LeadIconBottomOverhang
 private const val UpcomingClassAlpha = 0.42f
 private const val FinishedClassAlpha = 0.32f
 
+/** 下一节课卡片里，上课时刻与地点分成上下两组，中间留出的间距。 */
+private val NextClassPlaceGap = 36.dp
+
 private const val StatColumnCount = 2
+private val StatArrowSize = DpSize(width = 10.dp, height = 16.dp)
 
 data class HomeState(
     val upcomingClass: UpcomingClass = UpcomingClass.NotFetched,
@@ -287,7 +293,7 @@ private fun NextClassCard(upcomingClass: UpcomingClass) {
                         upcomingClass.startTime.format(rememberClassTimeFormatter()),
                     ),
                 )
-                Spacer(modifier = Modifier.height(36.dp))
+                Spacer(modifier = Modifier.height(NextClassPlaceGap))
                 LeadDescription(upcomingClass.location)
                 DayPeriodStrip(nextClass = upcomingClass, modifier = Modifier.padding(top = 10.dp))
             }
@@ -472,7 +478,7 @@ private fun StatCard(
                         contentDescription = null,
                         modifier = Modifier
                             .padding(start = 4.dp)
-                            .size(width = 10.dp, height = 16.dp),
+                            .size(StatArrowSize),
                         tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
                     )
                 }

@@ -3,6 +3,7 @@ package com.illustar0.teishucan.ui.theme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,9 +27,10 @@ private const val BarBlurRadius = 25f
 private const val BarTintAlpha = 0.8f
 private const val FloatingBarTintAlpha = 0.6f
 
-val LocalIsBlurEnabled = staticCompositionLocalOf { false }
+// 两个开关随设置和内存回收翻转，只让读取它们的地方重组，不连带整棵界面。
+val LocalIsBlurEnabled = compositionLocalOf { false }
 
-val LocalIsLiquidGlassEnabled = staticCompositionLocalOf { false }
+val LocalIsLiquidGlassEnabled = compositionLocalOf { false }
 
 /** 内存紧张时负责释放图层的 [FairMemory]；预览中没有它，图层只随组合释放。 */
 internal val LocalFairMemory = staticCompositionLocalOf<FairMemory?> { null }

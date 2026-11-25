@@ -25,6 +25,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -36,8 +37,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.todayIn
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 
 private const val SelectedTermIdKey = "selectedTermId"
+
+private val StateStopTimeout = 5.seconds
 
 private enum class TermLoad { Loading, Failed }
 
@@ -79,7 +83,12 @@ class TimetableViewModel @Inject constructor(
             status = statusOf(term, term?.let { loads[it.id] }, isRefreshing),
             isRefreshing = isRefreshing,
         )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, TimetableState(today = Clock.System.todayIn(CampusZone)))
+    }.stateIn(
+        viewModelScope,
+        // 只在有人收集时计时：页面可见时，以及登录期间 runSignedIn 跟随展示的学期时。转屏等短暂中断不重启上游。
+        SharingStarted.WhileSubscribed(stopTimeout = StateStopTimeout),
+        TimetableState(today = Clock.System.todayIn(CampusZone)),
+    )
 
     init {
         viewModelScope.launch {

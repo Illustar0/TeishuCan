@@ -24,6 +24,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -31,7 +32,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.KSerializer
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
@@ -78,16 +78,17 @@ internal class SignIn(override val clients: ZzuClients, val session: StoredSessi
  * 只读本机就能恢复登录，离线启动不会掉线，令牌留到第一次请求时再激活。
  *
  * 这里也是学生资料的唯一来源：资料与令牌一起存在 [SignIn.session] 中，界面从 [account] 读取。
- * 其余数据的快照 [snapshots] 同样只在登录期间存在，登录结束时一并删除。
+ * 其余数据的快照由各仓库的 [SnapshotStore] 跟随 [state] 自行保存，登录结束时它们各自删除。
  */
 @Singleton
 class ZzuSession @Inject constructor(
     @ApplicationContext private val context: Context,
     private val store: EncryptedSessionStore,
-    private val snapshots: SignInSnapshotStore,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     private val mutableState = MutableStateFlow<SessionState>(SessionState.Restoring)
+
+    internal val state: StateFlow<SessionState> = mutableState.asStateFlow()
 
     private val deviceId: String by lazy {
         @SuppressLint("HardwareIds") // 只用来派生登录设备标识，见 casDeviceId。
@@ -124,8 +125,6 @@ class ZzuSession @Inject constructor(
                 Log.w(Tag, "Could not restore the saved session", cause)
                 SessionState.SignedOut
             }
-            // 删除存档后、删除快照前进程被杀，快照就会失去主人。
-            if (restored == SessionState.SignedOut) snapshots.clear()
             mutableState.value = restored
         }
     }
@@ -141,9 +140,6 @@ class ZzuSession @Inject constructor(
         }
         return SignIn(clients, saved)
     }
-
-    internal fun <T> createSnapshotCache(name: String, initial: T, serializer: KSerializer<T>) =
-        SignInCache(mutableState, scope, initial, snapshots.file(name, serializer))
 
     suspend fun login(account: String, password: String): LoginResult {
         require(account.isNotBlank() && password.isNotEmpty())
@@ -323,14 +319,15 @@ class ZzuSession @Inject constructor(
         }
     }
 
-    /** 当前状态满足 [condition] 时切换到 [next]，同时删除被替换登录的存档与快照并释放它的客户端。 */
+    /**
+     * 当前状态满足 [condition] 时切换到 [next]，同时删除被替换登录的存档并释放它的客户端。
+     * 被替换登录的快照由各 [SnapshotStore] 看到状态切换后删除。
+     */
     private suspend fun replaceState(next: SessionState, condition: (SessionState) -> Boolean = { true }) {
         val replaced = transition {
             mutableState.value.takeIf(condition)?.also { current ->
                 if (current is SignIn) store.clear()
                 mutableState.value = next
-                // 先切换状态再删快照：此后的写入都会发现登录已结束而放弃。
-                if (current is SignIn) snapshots.clear()
             }
         }
         replaced?.clients?.close()

@@ -44,10 +44,11 @@ class ElectricityRepository @Inject constructor(
     private val savedMeters = store.data
 
     /** 各房间的剩余电量，以 [MeterLocation.meterId] 为键。 */
-    private val remainingEnergy = session.createSnapshotCache(
-        "electricity.json",
-        emptyMap(),
-        serializer<Map<String, Double>>(),
+    private val remainingEnergy = stores.createSnapshotStore(
+        name = "electricity_snapshot.json",
+        initial = emptyMap(),
+        serializer = serializer<Map<String, Double>>(),
+        session = session.state,
     )
     private val refreshTracker = RefreshTracker()
 

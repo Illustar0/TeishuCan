@@ -22,8 +22,10 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.json.Json
 
 /** 本机存储共用的 JSON 格式：容忍旧版本写下的多余字段和未知枚举值。 */
@@ -35,7 +37,7 @@ internal val StoreJson = Json {
 /**
  * 本机存储的唯一入口：每个文件一个 DataStore，在应用作用域内的 IO 线程上读写，与进程同寿命。
  *
- * DataStore 要求同一个文件在进程里只有一个实例，所以只能由单例调用 [create] 或 [createEncrypted]，每个文件一次。
+ * DataStore 要求同一个文件在进程里只有一个实例，所以只能由单例调用这里的 create 方法，每个文件一次。
  */
 @Singleton
 class JsonDataStoreFactory @Inject constructor(
@@ -66,6 +68,17 @@ class JsonDataStoreFactory @Inject constructor(
             createAead = createAead,
         )
         return JsonDataStore(context.dataStoreFile(name), encrypted, scope)
+    }
+
+    /** 以明文 JSON 存在 [name] 里、跟随 [session] 的登录快照，见 [SnapshotStore]。 */
+    internal fun <T> createSnapshotStore(
+        name: String,
+        initial: T,
+        serializer: KSerializer<T>,
+        session: StateFlow<SessionState>,
+    ): SnapshotStore<T> {
+        val store = create(name, defaultValue = null, Snapshot.serializer(serializer).nullable)
+        return SnapshotStore(store, initial, session, scope)
     }
 }
 

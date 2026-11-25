@@ -17,11 +17,13 @@ import kotlin.time.Instant
 @Singleton
 class CampusCardRepository @Inject constructor(
     private val session: ZzuSession,
+    stores: JsonDataStoreFactory,
 ) {
-    private val balance = session.createSnapshotCache(
-        "campus_card.json",
-        null,
-        BigDecimalAsStringSerializer.nullable,
+    private val balance = stores.createSnapshotStore(
+        name = "campus_card_snapshot.json",
+        initial = null,
+        serializer = BigDecimalAsStringSerializer.nullable,
+        session = session.state,
     )
     private val refreshTracker = RefreshTracker()
 

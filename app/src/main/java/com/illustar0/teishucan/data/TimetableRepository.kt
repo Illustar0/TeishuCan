@@ -36,12 +36,14 @@ import kotlin.time.Instant
 @Singleton
 class TimetableRepository @Inject constructor(
     private val session: ZzuSession,
+    stores: JsonDataStoreFactory,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
-    private val cache = session.createSnapshotCache(
-        "timetable.json",
-        emptyList(),
-        serializer<List<TimetableTerm>>(),
+    private val cache = stores.createSnapshotStore(
+        name = "timetable_snapshot.json",
+        initial = emptyList(),
+        serializer = serializer<List<TimetableTerm>>(),
+        session = session.state,
     )
     private val refreshTracker = RefreshTracker()
 

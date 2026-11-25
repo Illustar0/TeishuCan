@@ -91,12 +91,18 @@ class AccountViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
     private val outcomes = Channel<ActionOutcome>(Channel.CONFLATED)
-    private val passwordSaveRequests = Channel<CreatePasswordRequest>(Channel.CONFLATED)
 
     val account: StateFlow<AccountState> = session.account
     val loginOutcomes: Flow<ActionOutcome> = outcomes.receiveAsFlow()
-    val passwordSaves: Flow<CreatePasswordRequest> = passwordSaveRequests.receiveAsFlow()
     val logoutFailure = PendingFailure()
+
+    /**
+     * 等待交给系统密码管理器保存的账号密码，没有时为 null。
+     *
+     * 用状态而不是事件保存：界面在保存途中重建时会重新发起，处理完后由界面用 [consumePasswordSave] 确认。
+     */
+    var pendingPasswordSave by mutableStateOf<CreatePasswordRequest?>(null)
+        private set
 
     /** 进行中的登录尝试，只在登录面板打开期间存在。 */
     var login by mutableStateOf<LoginAttempt?>(null)
@@ -185,7 +191,7 @@ class AccountViewModel @Inject constructor(
         viewModelScope.launch {
             logoutFailure.capture {
                 session.logout()
-                passwordSaveRequests.tryReceive()
+                pendingPasswordSave = null
                 if (PlatformCapabilities.isSystemPasswordManagerSupported) {
                     try {
                         CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest())
@@ -206,8 +212,13 @@ class AccountViewModel @Inject constructor(
         outcomes.trySend(ActionOutcome.Succeeded)
         login = null
         if (passwordSave != null) {
-            passwordSaveRequests.trySend(passwordSave)
+            pendingPasswordSave = passwordSave
         }
+    }
+
+    /** 确认 [request] 已交给系统密码管理器处理过，不论用户是否保存。这期间又到来的新请求会保留。 */
+    fun consumePasswordSave(request: CreatePasswordRequest) {
+        if (pendingPasswordSave === request) pendingPasswordSave = null
     }
 
     private fun submit(

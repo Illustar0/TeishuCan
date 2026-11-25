@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
@@ -55,7 +56,6 @@ import com.illustar0.teishucan.ui.component.SheetActionButton
 import com.illustar0.teishucan.ui.component.pageSlide
 import com.illustar0.teishucan.ui.component.rememberShownContent
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
 import kotlin.time.Duration.Companion.seconds
@@ -85,7 +85,8 @@ private val MfaCodeInput = InputTransformation.byValue { _, proposed ->
 @Composable
 fun LoginSheet(
     attempt: LoginAttempt?,
-    passwordSaves: Flow<CreatePasswordRequest>,
+    passwordSave: CreatePasswordRequest?,
+    onConsumePasswordSave: (CreatePasswordRequest) -> Unit,
     onSubmitCredentials: () -> Unit,
     onSubmitSavedPassword: (PasswordCredential) -> Unit,
     onSendMfaCode: () -> Unit,
@@ -102,19 +103,20 @@ fun LoginSheet(
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     var isChoosingPassword by remember { mutableStateOf(false) }
-    if (credentialActivity != null && credentialManager != null) {
+    val currentOnConsumePasswordSave by rememberUpdatedState(onConsumePasswordSave)
+    if (credentialActivity != null && credentialManager != null && passwordSave != null) {
         val lifecycle = LocalLifecycleOwner.current.lifecycle
-        LaunchedEffect(credentialManager, lifecycle, passwordSaves, autofillManager) {
-            passwordSaves.collect { request ->
-                lifecycle.withResumed { autofillManager?.cancel() }
-                try {
-                    credentialManager.createCredential(credentialActivity, request)
-                } catch (_: CreateCredentialCancellationException) {
-                    return@collect
-                } catch (cause: CreateCredentialException) {
+        // 界面重建打断这次保存时不确认，新的界面会重新发起。
+        LaunchedEffect(credentialManager, lifecycle, passwordSave, autofillManager) {
+            lifecycle.withResumed { autofillManager?.cancel() }
+            try {
+                credentialManager.createCredential(credentialActivity, passwordSave)
+            } catch (cause: CreateCredentialException) {
+                if (cause !is CreateCredentialCancellationException) {
                     Log.w(Tag, "Could not save password: ${cause.javaClass.simpleName}")
                 }
             }
+            currentOnConsumePasswordSave(passwordSave)
         }
     }
 

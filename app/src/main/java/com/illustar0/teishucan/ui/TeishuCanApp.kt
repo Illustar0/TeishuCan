@@ -368,7 +368,8 @@ private fun MainScreen(
         OutcomeHaptics(accountViewModel.loginOutcomes)
         LoginSheet(
             attempt = accountViewModel.login,
-            passwordSaves = accountViewModel.passwordSaves,
+            passwordSave = accountViewModel.pendingPasswordSave,
+            onConsumePasswordSave = accountViewModel::consumePasswordSave,
             onSubmitCredentials = accountViewModel::submitCredentials,
             onSubmitSavedPassword = accountViewModel::submitSavedPassword,
             onSendMfaCode = accountViewModel::sendMfaCode,

@@ -8,13 +8,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.builtins.nullable
 import kotlin.time.Instant
 
 private const val SessionFileName = "zzu_session.enc"
 private const val SessionKeyAlias = "teishucan.zzu.session"
 
-/** 一次登录的全部存档。账号与密码也在其中：令牌失效时要靠它们静默重新登录。 */
+/**
+ * 一次登录的全部存档。账号与密码也在其中：令牌失效时要靠它们静默重新登录。
+ *
+ * [profileRefreshVersion] 是写下 [profile] 的那次查询开始的顺序，只在进程内有意义，所以不落盘，从磁盘读回时为 0。
+ */
 @Serializable
 internal data class StoredSession(
     val signInId: String,
@@ -23,6 +28,7 @@ internal data class StoredSession(
     val tokens: Tokens,
     val profile: StudentProfile,
     val profileFetchedAt: Instant? = null,
+    @Transient val profileRefreshVersion: Long = 0,
 ) {
     override fun toString(): String = "StoredSession(<redacted>)"
 }

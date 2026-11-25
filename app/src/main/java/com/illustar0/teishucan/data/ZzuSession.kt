@@ -100,8 +100,6 @@ class ZzuSession @Inject constructor(
     private val transitionLock = Mutex()
     private val profileRefresh = RefreshTracker()
     private val profileRefreshVersions = AtomicLong()
-    private var lastProfileOwner: ZzuClients? = null
-    private var lastProfileVersion: Long = 0
 
     val isProfileRefreshing: StateFlow<Boolean> = profileRefresh.isRefreshing
 
@@ -256,12 +254,10 @@ class ZzuSession @Inject constructor(
         fetchedAt: Instant,
     ) {
         updateSession(owner) { session ->
-            if (lastProfileOwner === owner && lastProfileVersion > refreshVersion) {
+            if (session.profileRefreshVersion > refreshVersion) {
                 session
             } else {
-                lastProfileOwner = owner
-                lastProfileVersion = refreshVersion
-                session.copy(profile = profile, profileFetchedAt = fetchedAt)
+                session.copy(profile = profile, profileFetchedAt = fetchedAt, profileRefreshVersion = refreshVersion)
             }
         }
     }
@@ -276,12 +272,10 @@ class ZzuSession @Inject constructor(
     private suspend fun finishLogin(clients: ZzuClients) {
         val refreshVersion = profileRefreshVersions.incrementAndGet()
         val profile = logged("Profile query") { clients.cas.userInfo().toStudentProfile() }
-        val saved = clients.storedSession(profile, Clock.System.now())
+        val saved = clients.storedSession(profile, Clock.System.now()).copy(profileRefreshVersion = refreshVersion)
         transition {
             check(mutableState.value.clients === clients) { "The login was abandoned" }
             store.write(saved)
-            lastProfileOwner = clients
-            lastProfileVersion = refreshVersion
             mutableState.value = SignIn(clients, saved)
         }
     }

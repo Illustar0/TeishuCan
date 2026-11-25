@@ -27,9 +27,4 @@ internal object PlatformCapabilities {
     @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     val isSystemPasswordManagerSupported: Boolean
         get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
-
-    /** Android 17 起系统的 MemoryLimiter 可能直接结束进程，并在退出原因里记下它。 */
-    @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.CINNAMON_BUN)
-    val isMemoryLimiterPresent: Boolean
-        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN
 }

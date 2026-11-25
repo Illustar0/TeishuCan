@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         val startupState = viewModel.state
-        // 启动屏保持到主题、导航和会话全部就绪，避免首帧闪白或闪成错误的主题与登录态。
+        // 启动屏保持到主题和会话都就绪，避免首帧闪白或闪成错误的主题与登录态。
         splashScreen.setKeepOnScreenCondition { startupState.value is StartupState.Loading }
         setContent {
             val state = startupState.collectAsStateWithLifecycle()
@@ -66,8 +66,6 @@ class MainActivity : AppCompatActivity() {
                     TeishuCanApp(
                         themeSettings = ready.themeSettings,
                         onThemeSettingsUpdate = viewModel::updateTheme,
-                        restoredNavigation = ready.restoredNavigation,
-                        onNavigationChange = viewModel::recordNavigation,
                         isSignedOut = account == AccountState.SignedOut,
                     )
                 }

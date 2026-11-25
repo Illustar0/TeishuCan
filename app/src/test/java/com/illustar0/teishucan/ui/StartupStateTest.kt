@@ -18,12 +18,11 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class StartupStateTest {
     @Test
-    fun staysLoading_untilThemeNavigationAndSessionAllComplete() = runTest {
+    fun staysLoading_untilThemeAndSessionBothComplete() = runTest {
         val theme = MutableSharedFlow<ThemeSettings>(replay = 1)
-        val navigation = MutableSharedFlow<NavigationSnapshot>(replay = 1)
         val account = MutableStateFlow<AccountState>(AccountState.Restoring)
 
-        val state = startupStateFlow(theme, navigation, account)
+        val state = startupStateFlow(theme, account)
             .stateIn(backgroundScope, SharingStarted.Eagerly, StartupState.Loading)
 
         runCurrent()
@@ -34,37 +33,26 @@ class StartupStateTest {
         runCurrent()
         assertEquals(StartupState.Loading, state.value)
 
-        val restoredNavigation = NavigationSnapshot(
-            routes = listOf(Route.Main, Route.ThemeSettings),
-            destination = AppDestination.Settings,
-        )
-        navigation.emit(restoredNavigation)
-        runCurrent()
-        assertEquals(StartupState.Loading, state.value)
-
         account.value = AccountState.SignedOut
         runCurrent()
-        assertEquals(StartupState.Ready(initialTheme, restoredNavigation), state.value)
+        assertEquals(StartupState.Ready(initialTheme), state.value)
     }
 
     @Test
     fun readyState_updatesOnThemeChangesButIgnoresLaterAccountChanges() = runTest {
         val theme = MutableSharedFlow<ThemeSettings>(replay = 1)
-        val navigation = MutableSharedFlow<NavigationSnapshot>(replay = 1)
         val account = MutableStateFlow<AccountState>(AccountState.Restoring)
         val emissions = mutableListOf<StartupState>()
 
         backgroundScope.launch {
-            startupStateFlow(theme, navigation, account).collect { emissions.add(it) }
+            startupStateFlow(theme, account).collect { emissions.add(it) }
         }
 
         val initialTheme = ThemeSettings(mode = ThemeMode.System)
-        val snapshot = NavigationSnapshot()
         theme.emit(initialTheme)
-        navigation.emit(snapshot)
         account.value = AccountState.SignedOut
         runCurrent()
-        assertEquals(listOf(StartupState.Ready(initialTheme, snapshot)), emissions)
+        assertEquals(listOf(StartupState.Ready(initialTheme)), emissions)
 
         account.value = AccountState.SignedIn(
             StudentProfile(name = "Test", faculty = "CS", identityType = "Undergrad"),
@@ -76,10 +64,7 @@ class StartupStateTest {
         theme.emit(updatedTheme)
         runCurrent()
         assertEquals(
-            listOf(
-                StartupState.Ready(initialTheme, snapshot),
-                StartupState.Ready(updatedTheme, snapshot),
-            ),
+            listOf(StartupState.Ready(initialTheme), StartupState.Ready(updatedTheme)),
             emissions,
         )
     }

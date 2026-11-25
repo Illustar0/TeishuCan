@@ -20,17 +20,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
-import com.illustar0.teishucan.di.ApplicationScope
-import com.illustar0.teishucan.ui.NavigationRecovery
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.time.Duration.Companion.seconds
 
 private const val Tag = "TeishuCan.FairMemory"
 private const val TrimAction = "itgsa.intent.action.TRIM"
@@ -43,14 +35,9 @@ private const val PhysicalMemory = 1000
 private const val JavaHeap = 2000
 private const val Handled = 0
 private const val Failed = 1
-private val SaveTimeout = 2.5.seconds
 
 @Singleton
-internal class FairMemory @Inject constructor(
-    @ApplicationContext private val context: Context,
-    @ApplicationScope private val applicationScope: CoroutineScope,
-    private val navigationRecovery: NavigationRecovery,
-) {
+internal class FairMemory @Inject constructor(@ApplicationContext private val context: Context) {
     private val releaseCallbacks = mutableSetOf<() -> Unit>()
 
     var areHeavyEffectsEnabled by mutableStateOf(true)
@@ -129,23 +116,8 @@ internal class FairMemory @Inject constructor(
                 null
             } ?: return
 
-            val trimmed = trim()
-            if (action == TrimAction) {
-                notice.reply(if (trimmed) Handled else Failed)
-                return
-            }
-
-            val pending = goAsync()
-            applicationScope.launch(start = CoroutineStart.UNDISPATCHED) {
-                try {
-                    val save = async { navigationRecovery.saveBeforeKill() }
-                    val saved = withTimeoutOrNull(SaveTimeout) { save.await() } == true
-                    save.cancel()
-                    notice.reply(if (saved) Handled else Failed)
-                } finally {
-                    pending.finish()
-                }
-            }
+            // 结束进程前也只需释放图形内存：导航已在进入后台时存进 Activity 的保存状态。
+            notice.reply(if (trim()) Handled else Failed)
         }
     }
 }

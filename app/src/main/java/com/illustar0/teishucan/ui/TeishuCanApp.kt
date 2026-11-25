@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -132,23 +133,16 @@ private const val TransitionDimAmount = 0.5f
 internal fun TeishuCanApp(
     themeSettings: ThemeSettings,
     onThemeSettingsUpdate: ((ThemeSettings) -> ThemeSettings) -> Unit,
-    restoredNavigation: NavigationSnapshot,
-    onNavigationChange: suspend (NavigationSnapshot) -> Unit,
     isSignedOut: Boolean,
 ) {
-    // 需要登录的页面在恢复导航时不再打开；会话因请求失败而结束时，用户可能正停在这些页面上，要让它们离开。
-    val navController = rememberNavController(
-        *restoredNavigation.routes.filterNot { isSignedOut && it.requiresSignIn }.toTypedArray(),
-    )
+    // 返回栈与当前分页都存进 Activity 的保存状态，转屏和进程被回收后都由系统交还。
+    val navController = rememberNavController<Route>(Route.Main)
+    // 会话因请求失败而结束，或恢复出的返回栈比登录活得久时，用户可能正停在需要登录的页面上，要让它们离开。
     LaunchedEffect(navController, isSignedOut) {
         if (isSignedOut) navController.backStack.removeAll { it is Route && it.requiresSignIn }
     }
-    var destination by remember { mutableStateOf(restoredNavigation.destination) }
-    val recordNavigation by rememberUpdatedState(onNavigationChange)
-    LaunchedEffect(navController) {
-        snapshotFlow { NavigationSnapshot(navController.backStack.filterIsInstance<Route>(), destination) }
-            .collect { recordNavigation(it) }
-    }
+    // 记在 NavDisplay 之外：Activity 重建后分页器从这里回到原来的分页。
+    var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
     val navigate: (Route) -> Unit = { route ->
         // 转场期间入口仍可点击，而返回栈不接受重复的键。
         if (navController.backStack.last() != route) {
@@ -200,7 +194,7 @@ internal fun TeishuCanApp(
         entry<Route.Main> {
             MainScreen(
                 isFloatingNavigationBar = themeSettings.isFloatingNavigationBarEnabled,
-                initialDestination = restoredNavigation.destination,
+                initialDestination = destination,
                 onNavigate = navigate,
                 onDestinationChange = { destination = it },
             )

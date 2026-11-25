@@ -88,6 +88,7 @@ import top.yukonga.miuix.kmp.basic.BadgedBox
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.NavigationItem
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.blur.Backdrop
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
@@ -198,6 +199,27 @@ private fun rememberGravityRotatedStroke(
     }
 }
 
+/**
+ * 液态玻璃底栏上的选中药丸。[tabs] 录下强调色的标签内容，[backdrop] 把它叠在 [background] 上供药丸折射，
+ * 边缘描上随重力转动的 [stroke]。
+ */
+private class GlassPill(
+    val background: LayerBackdrop,
+    val tabs: LayerBackdrop,
+    val backdrop: Backdrop,
+    val stroke: State<EdgeStroke>,
+)
+
+/** 药丸的标签图层要占一块显存，描边要一直监听重力传感器，所以只在画液态玻璃时调用。 */
+@Composable
+private fun rememberGlassPill(background: LayerBackdrop): GlassPill {
+    val tabs = rememberReleasableBackdrop()
+    val backdrop = rememberCombinedBackdrop(background, tabs)
+    // Read .value only inside draw-phase lambdas, never in composition.
+    val stroke = rememberGravityRotatedStroke(iosIndicatorSpecular, extraDegrees = 90f)
+    return remember(background, tabs, backdrop, stroke) { GlassPill(background, tabs, backdrop, stroke) }
+}
+
 /** 液态玻璃的容器色，半透明，让下方内容透出来。 */
 @Composable
 private fun glassContainerColor(): Color = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
@@ -283,7 +305,6 @@ internal fun LiquidGlassNavigationBar(
     val tabContentColor = MiuixTheme.colorScheme.onSurface
     val containerColor = glassContainerColor()
 
-    val tabsBackdrop = rememberReleasableBackdrop()
     val density = LocalDensity.current
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
     val animationScope = rememberCoroutineScope()
@@ -394,10 +415,7 @@ internal fun LiquidGlassNavigationBar(
         )
     }
 
-    // Read .value only inside draw-phase lambdas, never in composition.
-    val pillStroke = rememberGravityRotatedStroke(iosIndicatorSpecular, extraDegrees = 90f)
-
-    val combinedBackdrop = backdrop?.let { rememberCombinedBackdrop(it, tabsBackdrop) }
+    val glassPill = if (isLiquidGlass && backdrop != null) rememberGlassPill(backdrop) else null
 
     val navBarBottomPadding = WindowInsets.navigationBars.only(WindowInsetsSides.Bottom).asPaddingValues().calculateBottomPadding()
     val bottomPaddingValue = if (navBarBottomPadding != 0.dp) 8.dp + navBarBottomPadding else 36.dp
@@ -499,7 +517,7 @@ internal fun LiquidGlassNavigationBar(
                 )
             }
 
-            if (isLiquidGlass && backdrop != null) {
+            if (glassPill != null) {
                 CompositionLocalProvider(
                     LocalIosTabScale provides { lerp(1f, 1.2f, dampedDrag.pressProgress) },
                     LocalContentColor provides accentColor,
@@ -508,10 +526,10 @@ internal fun LiquidGlassNavigationBar(
                         modifier = Modifier
                             .clearAndSetSemantics {}
                             .alpha(0f)
-                            .layerBackdrop(tabsBackdrop)
+                            .layerBackdrop(glassPill.tabs)
                             .graphicsLayer { translationX = panelOffset }
                             .drawBackdrop(
-                                backdrop = backdrop,
+                                backdrop = glassPill.background,
                                 shape = { pillShape },
                                 effects = {
                                     vibrancy()
@@ -534,7 +552,7 @@ internal fun LiquidGlassNavigationBar(
 
             if (tabWidthPx > 0f) {
                 val tabWidthDp = with(density) { tabWidthPx.toDp() }
-                if (isLiquidGlass && combinedBackdrop != null) {
+                if (glassPill != null) {
                     Box(
                         modifier = Modifier
                             .padding(horizontal = 4.dp)
@@ -544,7 +562,7 @@ internal fun LiquidGlassNavigationBar(
                                 translationX = if (isLtr) progressOffset + panelOffset else -progressOffset + panelOffset
                             }
                             .drawBackdrop(
-                                backdrop = combinedBackdrop,
+                                backdrop = glassPill.backdrop,
                                 shape = { pillShape },
                                 effects = {
                                     val progress = dampedDrag.pressProgress
@@ -558,7 +576,7 @@ internal fun LiquidGlassNavigationBar(
                                 onDrawFront = {
                                     drawEdgeStroke(
                                         shape = pillShape,
-                                        stroke = pillStroke.value,
+                                        stroke = glassPill.stroke.value,
                                         alpha = dampedDrag.pressProgress,
                                     )
                                 },

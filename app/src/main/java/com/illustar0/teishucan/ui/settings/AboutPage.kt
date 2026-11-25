@@ -72,6 +72,8 @@ import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.interfaces.ExperimentalScrollBarApi
+import top.yukonga.miuix.kmp.nav.core.LocalNavTransitionScope
+import top.yukonga.miuix.kmp.nav.transition.NavRole
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -187,6 +189,9 @@ private fun AboutContent(
     val density = LocalDensity.current
     // 只录入动态背景，供 Logo、标题与卡片透出它的颜色。
     val backdrop = rememberBlurBackdrop()
+    // 被盖住的页面仍留在组合里，背景动画要自己停下。role 随转场逐帧变化，这里只在它跨过边界时重组。
+    val navTransition = LocalNavTransitionScope.current
+    val isCovered by remember(navTransition) { derivedStateOf { navTransition.role == NavRole.Covered } }
     var headerHeight by remember { mutableStateOf(EstimatedHeaderHeight) }
     val listPadding = PaddingValues(
         start = padding.calculateStartPadding(layoutDirection),
@@ -195,7 +200,7 @@ private fun AboutContent(
     )
 
     BgEffectBackground(
-        dynamicBackground = true,
+        dynamicBackground = !isCovered,
         modifier = modifier.fillMaxSize(),
         bgModifier = Modifier.blurSource(backdrop),
         alpha = { 1f - scrollProgress() },

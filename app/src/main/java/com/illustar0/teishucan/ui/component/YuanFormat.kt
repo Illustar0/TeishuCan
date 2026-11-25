@@ -15,8 +15,5 @@ val RechargeAmountInput = InputTransformation.byValue { _, proposed ->
 fun formatYuan(amount: Int): String =
     formatYuan(amount.toBigDecimal())
 
-fun formatYuan(amount: BigDecimal): String =
-    "¥" + NumberFormat.getNumberInstance(Locale.CHINA).apply {
-        minimumFractionDigits = 2
-        maximumFractionDigits = 2
-    }.format(amount)
+/** 校园卡以人民币计价，无论界面语言都按中国大陆的人民币格式显示。 */
+fun formatYuan(amount: BigDecimal): String = NumberFormat.getCurrencyInstance(Locale.CHINA).format(amount)

@@ -128,16 +128,29 @@ Future<void> _fetchIos(
 
   final archive = _decodeTarGz(bytes);
   const stripPrefix = 'libzzu-ios-xcframework/';
+  const simBinaryOld = 'libzzu.xcframework/ios-arm64_x86_64-simulator/libzzu-ios-simulator.a';
+  const simBinaryNew = 'libzzu.xcframework/ios-arm64_x86_64-simulator/libzzu.a';
   var extractedCount = 0;
   for (final entry in archive) {
     if (!entry.isFile) continue;
     final normalized = entry.name.replaceAll('\\', '/');
     if (!normalized.startsWith(stripPrefix)) continue;
-    final rel = normalized.substring(stripPrefix.length);
+    var rel = normalized.substring(stripPrefix.length);
     if (!rel.startsWith('libzzu.xcframework/')) continue;
+    // CocoaPods rejects static xcframeworks whose slices use differing binary names.
+    if (rel == simBinaryOld) {
+      rel = simBinaryNew;
+    }
     final outFile = File('${frameworksDir.path}/$rel');
     outFile.parent.createSync(recursive: true);
-    outFile.writeAsBytesSync(entry.content as List<int>);
+    if (rel == 'libzzu.xcframework/Info.plist') {
+      final plistText = utf8
+          .decode(entry.content as List<int>)
+          .replaceAll('<string>libzzu-ios-simulator.a</string>', '<string>libzzu.a</string>');
+      outFile.writeAsStringSync(plistText);
+    } else {
+      outFile.writeAsBytesSync(entry.content as List<int>);
+    }
     extractedCount++;
   }
   if (extractedCount == 0 || !xcframeworkDir.existsSync()) {

@@ -102,23 +102,26 @@ jobs:
 
       - name: Verify libzzu symbols are linked
         run: |
-          found=0
-          if [ -f "build/ios/iphoneos/Runner.app/Frameworks/libzzu_ffi.framework/libzzu_ffi" ]; then
-            if nm -gU "build/ios/iphoneos/Runner.app/Frameworks/libzzu_ffi.framework/libzzu_ffi" | grep -q "zzu_abi_version"; then
-              echo "Found zzu_abi_version in libzzu_ffi.framework"
-              found=1
+          target=""
+          for candidate in \
+            "build/ios/iphoneos/Runner.app/Frameworks/libzzu_ffi.framework/libzzu_ffi" \
+            "build/ios/iphoneos/Runner.app/Runner"; do
+            if [ -f "$candidate" ] && nm -gU "$candidate" | grep -q "zzu_abi_version"; then
+              target="$candidate"
+              break
             fi
-          fi
-          if [ -f "build/ios/iphoneos/Runner.app/Runner" ]; then
-            if nm -gU "build/ios/iphoneos/Runner.app/Runner" | grep -q "zzu_abi_version"; then
-              echo "Found zzu_abi_version in Runner binary"
-              found=1
-            fi
-          fi
-          if [ "$found" -ne 1 ]; then
+          done
+          if [ -z "$target" ]; then
             echo "ERROR: zzu_abi_version symbol was stripped or missing from Runner.app"
             exit 1
           fi
+          echo "Checking required exported symbols in $target"
+          for sym in zzu_abi_version zzu_runtime_new zzu_cas_call zzu_timetable_to_calendar; do
+            if ! nm -gU "$target" | grep -q "$sym"; then
+              echo "ERROR: $sym missing from $target"
+              exit 1
+            fi
+          done
 
       - uses: actions/upload-artifact@v4
         with:

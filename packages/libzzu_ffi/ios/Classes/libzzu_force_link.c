@@ -1,3 +1,6 @@
+#include <stddef.h>
+#include <stdint.h>
+
 #include "libzzu_force_link.h"
 
 extern void zzu_abi_version(void);
@@ -39,7 +42,8 @@ extern void zzu_timetable_to_calendar(void);
 extern void zzu_room_id_parse(void);
 extern void zzu_recharge_order_checkout_url_for(void);
 
-static const void *const kLibzzuForceLinkTable[] = {
+__attribute__((used))
+const void *const kLibzzuForceLinkTable[] = {
     (const void *)&zzu_abi_version,
     (const void *)&zzu_version,
     (const void *)&zzu_buffer_data,
@@ -81,5 +85,12 @@ static const void *const kLibzzuForceLinkTable[] = {
 };
 
 const void *libzzu_force_link(void) {
-  return kLibzzuForceLinkTable[0];
+  // Touch all entries via volatile accumulator so Release -Os cannot fold away slots 1..37.
+  volatile uintptr_t acc = 0;
+  const size_t count =
+      sizeof(kLibzzuForceLinkTable) / sizeof(kLibzzuForceLinkTable[0]);
+  for (size_t i = 0; i < count; i++) {
+    acc ^= (uintptr_t)kLibzzuForceLinkTable[i];
+  }
+  return acc != 0 ? kLibzzuForceLinkTable[0] : NULL;
 }

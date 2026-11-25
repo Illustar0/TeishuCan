@@ -18,7 +18,7 @@ import androidx.credentials.exceptions.ClearCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.illustar0.teishucan.R
-import com.illustar0.teishucan.concurrency.captureFailure
+import com.illustar0.teishucan.concurrency.PendingFailure
 import com.illustar0.teishucan.data.ZzuSession
 import com.illustar0.teishucan.domain.AccountState
 import com.illustar0.teishucan.domain.LoginResult
@@ -31,9 +31,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
@@ -85,12 +83,11 @@ class AccountViewModel @Inject constructor(
 ) : ViewModel() {
     private val outcomes = Channel<ActionOutcome>(Channel.CONFLATED)
     private val passwordSaveRequests = Channel<CreatePasswordRequest>(Channel.CONFLATED)
-    private val pendingLogoutFailure = MutableStateFlow<Exception?>(null)
 
     val account: StateFlow<AccountState> = session.account
     val loginOutcomes: Flow<ActionOutcome> = outcomes.receiveAsFlow()
     val passwordSaves: Flow<CreatePasswordRequest> = passwordSaveRequests.receiveAsFlow()
-    val logoutFailure = pendingLogoutFailure.asStateFlow()
+    val logoutFailure = PendingFailure()
 
     /** 进行中的登录尝试，只在登录面板打开期间存在。 */
     var login by mutableStateOf<LoginAttempt?>(null)
@@ -177,7 +174,7 @@ class AccountViewModel @Inject constructor(
 
     fun logout() {
         viewModelScope.launch {
-            pendingLogoutFailure.captureFailure {
+            logoutFailure.capture {
                 session.logout()
                 passwordSaveRequests.tryReceive()
                 if (PlatformCapabilities.isSystemPasswordManagerSupported) {
@@ -189,10 +186,6 @@ class AccountViewModel @Inject constructor(
                 }
             }
         }
-    }
-
-    fun onLogoutFailureShown(failure: Exception) {
-        pendingLogoutFailure.compareAndSet(failure, null)
     }
 
     override fun onCleared() {

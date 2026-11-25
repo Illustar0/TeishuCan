@@ -7,11 +7,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.illustar0.teishucan.concurrency.captureFailure
-import com.illustar0.teishucan.domain.campusReason
+import com.illustar0.teishucan.concurrency.PendingFailure
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,21 +25,16 @@ import kotlinx.coroutines.launch
  * 否则它会在用户回到页面时突然打开，甚至打开上一个账号的地址。
  */
 class PendingUrl(private val scope: CoroutineScope) {
-    private val pendingFailure = MutableStateFlow<Exception?>(null)
     private val readyUrl = MutableStateFlow<String?>(null)
     private var fetching: Job? = null
 
     val url: StateFlow<String?> = readyUrl.asStateFlow()
-    internal val failure = pendingFailure.asStateFlow()
-
-    internal fun onFailureShown(failure: Exception) {
-        pendingFailure.compareAndSet(failure, null)
-    }
+    internal val failure = PendingFailure()
 
     /** 在后台用 [fetchUrl] 获取地址。上一次还没结束时忽略，否则连点会打开多个浏览器页面。 */
     fun fetch(fetchUrl: suspend () -> String) {
         if (fetching?.isActive == true) return
-        fetching = scope.launch { pendingFailure.captureFailure { readyUrl.value = fetchUrl() } }
+        fetching = scope.launch { failure.capture { readyUrl.value = fetchUrl() } }
     }
 
     /** 确认 [url] 已处理。这期间又就绪的新地址会保留。 */
@@ -58,18 +51,10 @@ class PendingUrl(private val scope: CoroutineScope) {
 @Composable
 fun OpenPendingUrl(pendingUrl: PendingUrl, @StringRes failureMessage: Int) {
     val url by pendingUrl.url.collectAsStateWithLifecycle()
-    val failure by pendingUrl.failure.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val resources = LocalResources.current
     val uriHandler = LocalUriHandler.current
 
-    failure?.let { shownFailure ->
-        LaunchedEffect(shownFailure) {
-            val message = shownFailure.campusReason ?: resources.getString(failureMessage)
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            pendingUrl.onFailureShown(shownFailure)
-        }
-    }
+    FailureToasts(pendingUrl.failure, fallbackMessage = failureMessage)
 
     url?.let { readyUrl ->
         LaunchedEffect(readyUrl) {

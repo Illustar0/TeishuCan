@@ -367,12 +367,8 @@ private fun MainScreen(
             }
         }
         // 全应用刷新的失败与当前在哪一页无关。
-        FailureToasts(appViewModel.refreshFailure, onAcknowledge = appViewModel::onRefreshFailureShown)
-        FailureToasts(
-            accountViewModel.logoutFailure,
-            fallbackMessage = R.string.logout_failed,
-            onAcknowledge = accountViewModel::onLogoutFailureShown,
-        )
+        FailureToasts(appViewModel.refreshFailure)
+        FailureToasts(accountViewModel.logoutFailure, fallbackMessage = R.string.logout_failed)
         // 放在分页器之上，因为登录成功后打开它的页面会被替换。
         OutcomeHaptics(accountViewModel.loginOutcomes)
         LoginSheet(

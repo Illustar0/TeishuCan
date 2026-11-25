@@ -8,8 +8,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import com.illustar0.teishucan.concurrency.PendingFailure
 import com.illustar0.teishucan.concurrency.RefreshQueue
-import com.illustar0.teishucan.concurrency.captureFailure
 import com.illustar0.teishucan.data.CampusZone
 import com.illustar0.teishucan.data.TimetableRepository
 import com.illustar0.teishucan.data.ZzuSession
@@ -27,7 +27,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -54,15 +53,13 @@ class TimetableViewModel @Inject constructor(
     /** 各学期课程的加载情况，没有记录的学期既不在加载也没有失败。 */
     private val termLoads = MutableStateFlow<Map<String, TermLoad>>(emptyMap())
 
-    private val pendingFailure = MutableStateFlow<Exception?>(null)
+    val failure = PendingFailure()
 
     /** 这次登录发起的加载与刷新都在这里运行。登录结束时整个取消，迟到的结果不会落到下一个账号上。 */
     private var signInScope = newSignInScope()
     private val refreshQueue = RefreshQueue(viewModelScope) {
-        signInScope.launch { pendingFailure.captureFailure { refreshPage() } }.join()
+        signInScope.launch { failure.capture { refreshPage() } }.join()
     }
-
-    val failure = pendingFailure.asStateFlow()
 
     val state: StateFlow<TimetableState> = combine(
         timetable.terms,
@@ -88,7 +85,7 @@ class TimetableViewModel @Inject constructor(
                 .distinctUntilChanged()
                 .filterNotNull()
                 .collect { termId ->
-                    signInScope.launch { pendingFailure.captureFailure { load(termId) } }
+                    signInScope.launch { failure.capture { load(termId) } }
                 }
         }
         // 选中的学期、各学期的加载情况和待提示的失败都属于这次登录，下一个账号应该从头开始。
@@ -100,7 +97,7 @@ class TimetableViewModel @Inject constructor(
                     signInScope = newSignInScope()
                     selectedTermId.value = null
                     termLoads.value = emptyMap()
-                    pendingFailure.value = null
+                    failure.clear()
                 }
         }
     }
@@ -110,10 +107,6 @@ class TimetableViewModel @Inject constructor(
     }
 
     fun refresh() = refreshQueue.request()
-
-    fun onFailureShown(failure: Exception) {
-        pendingFailure.compareAndSet(failure, null)
-    }
 
     private suspend fun refreshPage() {
         timetable.refresh()
@@ -155,7 +148,7 @@ fun TimetableRoute(bottomPadding: Dp) {
     val viewModel = hiltViewModel<TimetableViewModel>()
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    FailureToasts(viewModel.failure, onAcknowledge = viewModel::onFailureShown)
+    FailureToasts(viewModel.failure)
 
     TimetablePage(
         state = state,

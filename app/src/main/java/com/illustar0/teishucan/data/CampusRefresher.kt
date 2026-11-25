@@ -1,7 +1,7 @@
 package com.illustar0.teishucan.data
 
+import com.illustar0.teishucan.concurrency.PendingFailure
 import com.illustar0.teishucan.concurrency.RefreshQueue
-import com.illustar0.teishucan.concurrency.captureFailure
 import com.illustar0.teishucan.concurrency.refreshAll
 import com.illustar0.teishucan.di.ApplicationScope
 import com.illustar0.teishucan.domain.AccountState
@@ -11,10 +11,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -53,22 +51,18 @@ class CampusRefresher @Inject constructor(
         ),
     )
 
-    private val pendingFailure = MutableStateFlow<Exception?>(null)
+    /** 手动刷新的失败，与当前在哪一页无关。 */
+    val refreshFailure = PendingFailure()
     private val manualRefresh = RefreshQueue(scope) {
-        pendingFailure.captureFailure { refreshAll(sources.map(RefreshSource::refresh)) }
+        refreshFailure.capture { refreshAll(sources.map(RefreshSource::refresh)) }
     }
 
-    val refreshFailure = pendingFailure.asStateFlow()
     val isRefreshing: StateFlow<Boolean> = combine(
         listOf(manualRefresh.isRefreshing) + sources.map(RefreshSource::isRefreshing),
     ) { states -> states.any { it } }
         .stateIn(scope, SharingStarted.Eagerly, false)
 
     fun refresh() = manualRefresh.request()
-
-    fun onRefreshFailureShown(failure: Exception) {
-        pendingFailure.compareAndSet(failure, null)
-    }
 
     /** 全应用唯一的自动刷新：应用进入前台时，或在前台完成登录时。 */
     fun refreshOnForeground(isForeground: Flow<Boolean>) {

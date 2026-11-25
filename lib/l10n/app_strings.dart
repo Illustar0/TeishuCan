@@ -33,6 +33,7 @@ class AppStrings {
   String get servicesLibrary => isChinese ? '图书馆' : '図書館';
   String get servicesStudentAffairs => isChinese ? '学生事务' : '学生サービス';
   String get servicesAcademic => isChinese ? '教务' : '教務';
+  String get servicesNetwork => isChinese ? '校园网' : '学内ネットワーク';
   String get servicesEasRecords => isChinese ? '学籍与培养' : '学籍と教育課程';
   String get servicesEasExamsAndGrades => isChinese ? '考试与成绩' : '試験と成績';
   String get servicesEasSchedule => isChinese ? '课表与教室' : '時間割と教室';
@@ -40,6 +41,9 @@ class AppStrings {
   String get serviceUndergradEas => isChinese ? '本科教务系统' : '学部教務システム';
   String get serviceUndergradEasSummary =>
       isChinese ? '学籍、考试与成绩' : '学籍、試験、成績';
+  String get serviceCampusNetwork => isChinese ? '校园网认证与设备' : 'ネットワーク認証と端末';
+  String get serviceCampusNetworkSummary =>
+      isChinese ? 'Portal 认证登录与在线设备管理' : 'Portal 認証ログインと接続中端末の管理';
 
   String serviceTitle(CampusService service) => switch (service) {
         CampusService.library => isChinese ? '图书馆门户' : '図書館ポータル',
@@ -90,6 +94,41 @@ class AppStrings {
         CampusService.classroomTimetable =>
           isChinese ? '查询各教室的课程安排' : '教室ごとの授業予定を確認',
       };
+
+  String get networkPortalSection => isChinese ? 'Portal 认证' : 'Portal 認証';
+  String get networkDiscoverAction => isChinese ? '自动探测门户' : 'ポータルを自動検出';
+  String get networkDiscovering => isChinese ? '正在探测门户…' : 'ポータルを検出中…';
+  String get networkDiscoverSuccess => isChinese ? '已探测到校园网门户' : 'ポータルを検出しました';
+  String get networkDiscoverFailed => isChinese
+      ? '未能探测到校园网门户，请确认已接入校园网或手动填写'
+      : 'ポータルを検出できませんでした。学内ネットワークへの接続を確認してください';
+  String get networkPortalUrl => isChinese ? 'Portal 服务地址' : 'Portal サーバー URL';
+  String get networkUserIp => isChinese ? '本机 IPv4 地址' : '端末 IPv4 アドレス';
+  String get networkUseSystemRoute => isChinese ? '由系统路由选择出口地址' : 'システムルートを送信元に使用';
+  String get networkUseSystemRouteSummary =>
+      isChinese ? '位于路由器后方（NAT）时建议开启' : 'ルーター配下（NAT）で接続する場合に有効化';
+  String get networkAccount => isChinese ? '校园网账号' : 'ネットワークアカウント';
+  String get networkPassword => isChinese ? '校园网密码' : 'ネットワークパスワード';
+  String get networkIsp => isChinese ? '运营商' : 'プロバイダ';
+  String get networkIspAuto => isChinese ? '默认（无后缀）' : 'デフォルト（サフィックスなし）';
+  String get networkLoadIsps => isChinese ? '读取运营商' : 'プロバイダ取得';
+  String get networkLoadingIsps => isChinese ? '读取中…' : '取得中…';
+  String get networkLoginAction => isChinese ? '连接校园网' : 'ネットワークに接続';
+  String get networkLoggingIn => isChinese ? '认证中…' : '認証中…';
+  String get networkLoginSuccess => isChinese ? '校园网认证成功' : 'ネットワーク認証に成功しました';
+  String get networkLoginFailed => isChinese ? '校园网认证失败' : 'ネットワーク認証に失敗しました';
+  String get networkSelfServiceSection => isChinese ? '在线设备管理（/Self）' : '接続中端末管理（/Self）';
+  String get networkSelfServiceUrl => isChinese ? '自助服务地址' : 'セルフサービス URL';
+  String get networkLoadDevices => isChinese ? '查询在线设备' : '端末一覧を更新';
+  String get networkLoadingDevices => isChinese ? '查询中…' : '取得中…';
+  String get networkNoDevices => isChinese ? '暂无在线设备，点击刷新查询' : '接続中の端末はありません';
+  String get networkKickDevice => isChinese ? '下线' : '切断';
+  String get networkKickConfirmTitle => isChinese ? '强制设备下线' : '端末を強制切断しますか？';
+  String networkKickConfirmMessage(String? label) => isChinese
+      ? '确定将 ${label ?? '该设备'} 踢下线吗？'
+      : '${label ?? 'この端末'} をネットワークから切断しますか？';
+  String get networkKickSuccess => isChinese ? '设备已下线' : '端末を切断しました';
+  String get networkActionFailed => isChinese ? '操作失败，请重试' : '操作に失敗しました';
 
   String get homeNextClass => isChinese ? '下一节课' : '次の授業';
   String get homeRemainingElectricity => isChinese ? '剩余电量' : '残り電力量';
@@ -172,6 +211,16 @@ class AppStrings {
   String get timetableNextWeek => isChinese ? '下一周' : '次の週';
   String get timetableBackToCurrentWeek =>
       isChinese ? '回到本周' : '今週に戻る';
+  String get timetableSelectWeek => isChinese ? '选择周次' : '週を選択';
+  String get timetableCurrentWeekTag => isChinese ? '本周' : '今週';
+  String timetableLessonCount(int count) =>
+      isChinese ? '$count 节课' : '$count コマ';
+  String get timetableExportIcs =>
+      isChinese ? '导出课表 (.ics)' : '時間割を書き出す (.ics)';
+  String get timetableExportedIcs =>
+      isChinese ? '已复制 iCalendar (.ics) 课表内容' : 'iCalendar (.ics) データをコピーしました';
+  String get timetableExportUnavailable =>
+      isChinese ? '请先刷新并加载当前学期课表' : '先に時間割を取得してください';
   String get timetableNotFetched => isChinese ? '课表未获取' : '時間割は未取得です';
   String get timetableFetch => isChinese ? '获取课表' : '時間割を取得';
   String get timetableLoading => isChinese ? '课表加载中…' : '時間割を読み込み中…';
@@ -266,6 +315,11 @@ class AppStrings {
   String get settingsAboutOpenSourceLicensesSummary => isChinese
       ? '本应用使用的第三方开源库'
       : 'このアプリで使用しているライブラリ';
+  String get licensesEmpty =>
+      isChinese ? '暂无开源许可证信息' : 'オープンソースライセンス情報がありません';
+  String licensesCount(int count) =>
+      isChinese ? '$count 项许可' : '$count 件のライセンス';
+  String get licensesClose => isChinese ? '关闭' : '閉じる';
 
   String get settingsElectricity => isChinese ? '电表管理' : '電力メーター';
   String get settingsElectricitySummary =>
@@ -318,6 +372,11 @@ class AppStrings {
   String get settingsThemeSummary =>
       isChinese ? '自定义外观和配色' : '外観とカラーをカスタマイズします';
   String get settingsThemeMode => isChinese ? '深色模式' : 'ダークモード';
+  String get settingsThemeMonet => isChinese ? 'Monet 配色' : 'モネ配色';
+  String get settingsThemeMonetSummary => isChinese
+      ? '使用 Material You 配色代替默认风格'
+      : 'Material You 配色でデフォルトの配色を置き換えます';
+  String get settingsThemePaletteStyle => isChinese ? '配色风格' : 'パレットスタイル';
   String get settingsThemeSeedColor => isChinese ? '主题色' : 'テーマカラー';
   String get settingsThemeBlur => isChinese ? '模糊效果' : 'ぼかし効果';
   String get settingsThemeBlurSummary =>
@@ -325,11 +384,27 @@ class AppStrings {
   String get settingsThemeFloatingNavBar => isChinese ? '悬浮底栏' : 'フローティングナビゲーションバー';
   String get settingsThemeFloatingNavBarSummary =>
       isChinese ? '让底部导航栏悬浮显示' : '下部のナビゲーションバーを浮かせて表示します';
+  String get settingsThemeLiquidGlass => isChinese ? '液态玻璃' : 'リキッドグラス';
+  String get settingsThemeLiquidGlassSummary => isChinese
+      ? '为悬浮栏启用玻璃高光折射质感'
+      : 'フローティングバーにガラス効果を有効にします';
 
   String themeModeLabel(AppThemeMode mode) => switch (mode) {
         AppThemeMode.system => isChinese ? '跟随系统' : 'システム',
         AppThemeMode.light => isChinese ? '浅色' : 'ライト',
         AppThemeMode.dark => isChinese ? '深色' : 'ダーク',
+      };
+
+  String paletteStyleLabel(PaletteStyle style) => switch (style) {
+        PaletteStyle.tonalSpot => isChinese ? '柔和色调' : 'トーナルスポット',
+        PaletteStyle.neutral => isChinese ? '中性' : 'ニュートラル',
+        PaletteStyle.vibrant => isChinese ? '鲜明' : 'ビビッド',
+        PaletteStyle.expressive => isChinese ? '表现力' : 'エクスプレッシブ',
+        PaletteStyle.rainbow => isChinese ? '彩虹' : 'レインボー',
+        PaletteStyle.fruitSalad => isChinese ? '水果沙拉' : 'フルーツサラダ',
+        PaletteStyle.monochrome => isChinese ? '单色' : 'モノクローム',
+        PaletteStyle.fidelity => isChinese ? '高保真' : 'フィデリティ',
+        PaletteStyle.content => isChinese ? '内容' : 'コンテンツ',
       };
 
   String seedColorLabel(SeedColor seed) => switch (seed) {

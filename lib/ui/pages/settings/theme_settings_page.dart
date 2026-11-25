@@ -40,34 +40,80 @@ class ThemeSettingsPage extends StatelessWidget {
             ),
             children: [
               RoundedCard(
-                child: PreferenceRow(
-                  title: strings.settingsThemeMode,
-                  trailing: ChevronTrailing(
-                    valueText: strings.themeModeLabel(settings.mode),
-                  ),
-                  onTap: () => _pickThemeMode(context, settings),
-                ),
-              ),
-              SectionTitle(strings.settingsThemeSeedColor),
-              RoundedCard(
-                margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                padding: const EdgeInsets.all(16),
-                child: Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+                child: Column(
                   children: [
-                    for (final seed in SeedColor.values)
-                      _SeedSwatch(
-                        seed: seed,
-                        label: strings.seedColorLabel(seed),
-                        selected: settings.seedColor == seed,
-                        onTap: () => preferences.updateTheme(
-                          (s) => s.copyWith(seedColor: seed),
+                    PreferenceRow(
+                      title: strings.settingsThemeMode,
+                      trailing: ChevronTrailing(
+                        valueText: strings.themeModeLabel(settings.mode),
+                      ),
+                      onTap: () => _pickThemeMode(context, settings),
+                    ),
+                    Divider(height: 1, color: palette.divider),
+                    PreferenceRow(
+                      title: strings.settingsThemeMonet,
+                      summary: strings.settingsThemeMonetSummary,
+                      trailing: Switch(
+                        value: settings.isMonetEnabled,
+                        onChanged: (value) => preferences.updateTheme(
+                          (s) => s.copyWith(isMonetEnabled: value),
                         ),
                       ),
+                      onTap: () => preferences.updateTheme(
+                        (s) => s.copyWith(isMonetEnabled: !s.isMonetEnabled),
+                      ),
+                    ),
+                    if (settings.isMonetEnabled) ...[
+                      Divider(height: 1, color: palette.divider),
+                      PreferenceRow(
+                        title: strings.settingsThemePaletteStyle,
+                        trailing: ChevronTrailing(
+                          valueText:
+                              strings.paletteStyleLabel(settings.paletteStyle),
+                        ),
+                        onTap: () => _pickPaletteStyle(context, settings),
+                      ),
+                    ],
                   ],
                 ),
               ),
+              if (settings.isMonetEnabled) ...[
+                SectionTitle(strings.settingsThemeSeedColor),
+                RoundedCard(
+                  margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      for (var row = 0;
+                          row < SeedColor.values.length;
+                          row += 4) ...[
+                        if (row > 0) const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            for (var i = row;
+                                i < row + 4 && i < SeedColor.values.length;
+                                i++)
+                              Expanded(
+                                child: _SeedSwatch(
+                                  seed: SeedColor.values[i],
+                                  label:
+                                      strings.seedColorLabel(SeedColor.values[i]),
+                                  selected:
+                                      settings.seedColor == SeedColor.values[i],
+                                  onTap: () => preferences.updateTheme(
+                                    (s) => s.copyWith(
+                                      seedColor: SeedColor.values[i],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
               RoundedCard(
                 child: Column(
                   children: [
@@ -102,6 +148,22 @@ class ThemeSettingsPage extends StatelessWidget {
                         ),
                       ),
                     ),
+                    Divider(height: 1, color: palette.divider),
+                    PreferenceRow(
+                      title: strings.settingsThemeLiquidGlass,
+                      summary: strings.settingsThemeLiquidGlassSummary,
+                      trailing: Switch(
+                        value: settings.isLiquidGlassEnabled,
+                        onChanged: (value) => preferences.updateTheme(
+                          (s) => s.copyWith(isLiquidGlassEnabled: value),
+                        ),
+                      ),
+                      onTap: () => preferences.updateTheme(
+                        (s) => s.copyWith(
+                          isLiquidGlassEnabled: !s.isLiquidGlassEnabled,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -115,11 +177,43 @@ class ThemeSettingsPage extends StatelessWidget {
   Future<void> _pickThemeMode(
     BuildContext context,
     ThemeSettings settings,
-  ) async {
+  ) =>
+      _pickOption<AppThemeMode>(
+        context: context,
+        title: strings.settingsThemeMode,
+        options: AppThemeMode.values,
+        selected: settings.mode,
+        labelOf: strings.themeModeLabel,
+        onSelect: (mode) => preferences.updateTheme((s) => s.copyWith(mode: mode)),
+      );
+
+  Future<void> _pickPaletteStyle(
+    BuildContext context,
+    ThemeSettings settings,
+  ) =>
+      _pickOption<PaletteStyle>(
+        context: context,
+        title: strings.settingsThemePaletteStyle,
+        options: PaletteStyle.values,
+        selected: settings.paletteStyle,
+        labelOf: strings.paletteStyleLabel,
+        onSelect: (style) =>
+            preferences.updateTheme((s) => s.copyWith(paletteStyle: style)),
+      );
+
+  Future<void> _pickOption<T>({
+    required BuildContext context,
+    required String title,
+    required List<T> options,
+    required T selected,
+    required String Function(T option) labelOf,
+    required ValueChanged<T> onSelect,
+  }) async {
     final palette = TeishuPalette.of(context);
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
+      isScrollControlled: true,
       builder: (ctx) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         child: Column(
@@ -129,38 +223,44 @@ class ThemeSettingsPage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Text(
-                strings.settingsThemeMode,
+                title,
                 style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
               ),
             ),
             const SizedBox(height: 8),
-            RoundedCard(
-              color: palette.secondaryCard,
-              margin: EdgeInsets.zero,
-              radius: 16,
-              child: Column(
-                children: [
-                  for (var i = 0; i < AppThemeMode.values.length; i++) ...[
-                    if (i > 0) Divider(height: 1, color: palette.divider),
-                    PreferenceRow(
-                      title: strings.themeModeLabel(AppThemeMode.values[i]),
-                      trailing: settings.mode == AppThemeMode.values[i]
-                          ? Icon(
-                              Icons.check_rounded,
-                              color: Theme.of(ctx).colorScheme.primary,
-                            )
-                          : null,
-                      onTap: () {
-                        Navigator.of(ctx).pop();
-                        preferences.updateTheme(
-                          (s) => s.copyWith(mode: AppThemeMode.values[i]),
-                        );
-                      },
-                    ),
-                  ],
-                ],
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(ctx).height * 0.55,
+              ),
+              child: RoundedCard(
+                color: palette.secondaryCard,
+                margin: EdgeInsets.zero,
+                radius: 16,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (var i = 0; i < options.length; i++) ...[
+                        if (i > 0) Divider(height: 1, color: palette.divider),
+                        PreferenceRow(
+                          title: labelOf(options[i]),
+                          trailing: selected == options[i]
+                              ? Icon(
+                                  Icons.check_rounded,
+                                  color: Theme.of(ctx).colorScheme.primary,
+                                )
+                              : null,
+                          onTap: () {
+                            Navigator.of(ctx).pop();
+                            onSelect(options[i]);
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
@@ -193,23 +293,38 @@ class _SeedSwatch extends StatelessWidget {
       button: true,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: seed.color,
-            shape: BoxShape.circle,
-            border: selected
-                ? Border.all(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    width: 2.5,
-                  )
-                : null,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: seed.color,
+                  shape: BoxShape.circle,
+                  border: selected
+                      ? Border.all(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          width: 2.5,
+                        )
+                      : null,
+                ),
+                child: selected
+                    ? Icon(Icons.check_rounded, color: checkColor, size: 22)
+                    : null,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            ],
           ),
-          child: selected
-              ? Icon(Icons.check_rounded, color: checkColor, size: 22)
-              : null,
         ),
       ),
     );

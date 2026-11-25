@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:libzzu_ffi/libzzu_ffi.dart';
 
 import '../../../data/zzu_session.dart';
 import '../../../domain/account.dart';
@@ -89,13 +90,14 @@ class _LoginSheetState extends State<_LoginSheet> {
           });
       }
     } on CampusRequestException catch (e) {
-      _passwordController.clear();
+      if (e.cause is ZzuAuthenticationException) {
+        _passwordController.clear();
+      }
       if (!mounted) return;
       setState(() {
-        _failureText = e.reason ?? widget.strings.loginFailed;
+        _failureText = _formatLoginFailure(e, widget.strings.loginFailed);
       });
     } catch (_) {
-      _passwordController.clear();
       if (!mounted) return;
       setState(() {
         _failureText = widget.strings.loginFailed;
@@ -450,4 +452,20 @@ class _LoginSheetState extends State<_LoginSheet> {
       ],
     );
   }
+}
+
+String _formatLoginFailure(CampusRequestException error, String fallback) {
+  final reason = error.reason?.trim();
+  final base = (reason != null && reason.isNotEmpty) ? reason : fallback;
+  final cause = error.cause;
+  if (cause is ZzuTransportException || cause is ZzuRuntimeException) {
+    final rawDetail = (cause as ZzuException).cause?.trim();
+    if (rawDetail != null && rawDetail.isNotEmpty && !base.contains(rawDetail)) {
+      final compact = rawDetail.replaceAll(RegExp(r'\s+'), ' ');
+      final shortDetail =
+          compact.length > 120 ? '${compact.substring(0, 120)}…' : compact;
+      return '$base ($shortDetail)';
+    }
+  }
+  return base;
 }

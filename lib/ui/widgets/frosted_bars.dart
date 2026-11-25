@@ -94,6 +94,70 @@ class FrostedTopBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
+class LiquidGlassPillContainer extends StatelessWidget {
+  const LiquidGlassPillContainer({
+    super.key,
+    required this.isBlurEnabled,
+    required this.isLiquidGlass,
+    required this.child,
+    this.borderRadius = 32,
+  });
+
+  final bool isBlurEnabled;
+  final bool isLiquidGlass;
+  final Widget child;
+  final double borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = TeishuPalette.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final useGlass = isBlurEnabled && isLiquidGlass;
+    final sigma = useGlass ? 28.0 : (isBlurEnabled ? 22.0 : 0.0);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: useGlass
+                ? (isDark
+                    ? Colors.black.withValues(alpha: 0.46)
+                    : Colors.white.withValues(alpha: 0.56))
+                : (isBlurEnabled ? palette.frostedBar : palette.card),
+            gradient: useGlass
+                ? LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withValues(alpha: isDark ? 0.16 : 0.42),
+                      Colors.white.withValues(alpha: isDark ? 0.03 : 0.12),
+                    ],
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(
+              color: useGlass
+                  ? Colors.white.withValues(alpha: isDark ? 0.24 : 0.68)
+                  : palette.divider.withValues(alpha: 0.7),
+              width: useGlass ? 1.0 : 0.8,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: useGlass ? 0.14 : 0.08),
+                blurRadius: useGlass ? 24 : 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
 class TeishuNavDestination {
   const TeishuNavDestination({
     required this.label,
@@ -114,6 +178,7 @@ class TeishuBottomBar extends StatelessWidget {
     required this.onSelect,
     required this.isFloating,
     required this.isBlurEnabled,
+    this.isLiquidGlass = false,
   });
 
   final List<TeishuNavDestination> destinations;
@@ -121,6 +186,7 @@ class TeishuBottomBar extends StatelessWidget {
   final ValueChanged<int> onSelect;
   final bool isFloating;
   final bool isBlurEnabled;
+  final bool isLiquidGlass;
 
   @override
   Widget build(BuildContext context) {
@@ -136,45 +202,25 @@ class TeishuBottomBar extends StatelessWidget {
             heightFactor: 1,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 440),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(32),
-                child: BackdropFilter(
-                  filter: isBlurEnabled
-                      ? ImageFilter.blur(sigmaX: 24, sigmaY: 24)
-                      : ImageFilter.blur(sigmaX: 0, sigmaY: 0),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: isBlurEnabled ? palette.frostedBar : palette.card,
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(
-                        color: palette.divider.withValues(alpha: 0.7),
-                        width: 0.8,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
-                          blurRadius: 18,
-                          offset: const Offset(0, 6),
+              child: LiquidGlassPillContainer(
+                isBlurEnabled: isBlurEnabled,
+                isLiquidGlass: isLiquidGlass,
+                borderRadius: 32,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      for (var i = 0; i < destinations.length; i++)
+                        _FloatingNavItem(
+                          destination: destinations[i],
+                          selected: i == selectedIndex,
+                          onTap: () => onSelect(i),
                         ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          for (var i = 0; i < destinations.length; i++)
-                            _FloatingNavItem(
-                              destination: destinations[i],
-                              selected: i == selectedIndex,
-                              onTap: () => onSelect(i),
-                            ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),

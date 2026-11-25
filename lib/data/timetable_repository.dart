@@ -13,7 +13,7 @@ class TimetableRepository extends ChangeNotifier {
   TimetableRepository({
     required this._session,
     required SnapshotStorage snapshots,
-  }) : _cache = SnapshotCache<List<TimetableTerm>>(
+  })  : _cache = SnapshotCache<List<TimetableTerm>>(
           storage: snapshots,
           fileName: 'timetable.json',
           initialValue: const <TimetableTerm>[],
@@ -22,13 +22,29 @@ class TimetableRepository extends ChangeNotifier {
               .toList(growable: false),
           toJson: (terms) =>
               terms.map((t) => t.toJson()).toList(growable: false),
+        ),
+        _rawTimetables = SnapshotCache<Map<String, Map<String, dynamic>>>(
+          storage: snapshots,
+          fileName: 'timetable_raw.json',
+          initialValue: const <String, Map<String, dynamic>>{},
+          fromJson: (json) {
+            final map = json as Map<String, dynamic>? ?? const {};
+            return <String, Map<String, dynamic>>{
+              for (final entry in map.entries)
+                if (entry.value is Map<String, dynamic>)
+                  entry.key: entry.value as Map<String, dynamic>,
+            };
+          },
+          toJson: (raw) => raw,
         ) {
     _cache.addListener(notifyListeners);
-    _session.addSessionBinding(_cache.bindSession);
+    _rawTimetables.addListener(notifyListeners);
+    _session.addSessionBinding(_onSessionChange);
   }
 
   final ZzuSessionController _session;
   final SnapshotCache<List<TimetableTerm>> _cache;
+  final SnapshotCache<Map<String, Map<String, dynamic>>> _rawTimetables;
 
   bool _isRefreshing = false;
   ZzuClients? _inFlightOwner;
@@ -37,7 +53,26 @@ class TimetableRepository extends ChangeNotifier {
   List<TimetableTerm> get terms => _cache.value;
   bool get isRefreshing => _isRefreshing;
 
+  void _onSessionChange(String? signInId) {
+    _cache.bindSession(signInId);
+    _rawTimetables.bindSession(signInId);
+  }
+
   bool isStaleAt(DateTime now, Duration maxAge) => _cache.isStaleAt(now, maxAge);
+
+  bool canExportTerm(String termId) => _rawTimetables.value.containsKey(termId);
+
+  String? exportTermIcs(String termId, {String? calendarName}) {
+    final raw = _rawTimetables.value[termId];
+    if (raw == null) return null;
+    final parsed = Timetable.fromJson(raw);
+    return timetableToCalendar(
+      parsed,
+      options: calendarName == null
+          ? null
+          : CalendarExportOptions(calendarName: calendarName),
+    );
+  }
 
   Future<void> refresh() async {
     _isRefreshing = true;
@@ -69,6 +104,7 @@ class TimetableRepository extends ChangeNotifier {
 
   Future<void> _fetchCurrentTerm(ZzuClients clients, String signInId) async {
     final refreshVersion = _cache.nextRefreshVersion();
+    final rawVersion = _rawTimetables.nextRefreshVersion();
     final eas = await clients.eas();
     final current = await eas.currentSemester();
     final results = await Future.wait<Object>(<Future<Object>>[
@@ -85,6 +121,14 @@ class TimetableRepository extends ChangeNotifier {
     byId[current.id] = current;
     final semesters = byId.values.toList()
       ..sort((a, b) => a.startDate.compareTo(b.startDate));
+
+    final currentId = timetable.semester.id.toString();
+    await _rawTimetables.update(signInId, rawVersion, (existingRaw) {
+      return <String, Map<String, dynamic>>{
+        ...existingRaw,
+        currentId: timetable.rawJson,
+      };
+    });
 
     await _cache.update(signInId, refreshVersion, (existingTerms) {
       final loaded = <String, TimetableTerm>{
@@ -103,6 +147,12 @@ class TimetableRepository extends ChangeNotifier {
       _session.request(CampusFeature.timetable, (clients, signInId) async {
         final eas = await clients.eas();
         final timetable = await eas.timetable(semesterId: int.parse(termId));
+        await _rawTimetables.amend(signInId, (rawMap) {
+          return <String, Map<String, dynamic>>{
+            ...rawMap,
+            termId: timetable.rawJson,
+          };
+        });
         await _cache.amend(signInId, (terms) {
           return terms
               .map(
@@ -117,7 +167,9 @@ class TimetableRepository extends ChangeNotifier {
   @override
   void dispose() {
     _cache.removeListener(notifyListeners);
+    _rawTimetables.removeListener(notifyListeners);
     _cache.dispose();
+    _rawTimetables.dispose();
     super.dispose();
   }
 }

@@ -71,25 +71,57 @@ class TeishuPalette extends ThemeExtension<TeishuPalette> {
   }
 }
 
+DynamicSchemeVariant _schemeVariant(PaletteStyle style) => switch (style) {
+      PaletteStyle.tonalSpot => DynamicSchemeVariant.tonalSpot,
+      PaletteStyle.neutral => DynamicSchemeVariant.neutral,
+      PaletteStyle.vibrant => DynamicSchemeVariant.vibrant,
+      PaletteStyle.expressive => DynamicSchemeVariant.expressive,
+      PaletteStyle.rainbow => DynamicSchemeVariant.rainbow,
+      PaletteStyle.fruitSalad => DynamicSchemeVariant.fruitSalad,
+      PaletteStyle.monochrome => DynamicSchemeVariant.monochrome,
+      PaletteStyle.fidelity => DynamicSchemeVariant.fidelity,
+      PaletteStyle.content => DynamicSchemeVariant.content,
+    };
+
 ThemeData buildTeishuTheme(ThemeSettings settings, Brightness brightness) {
   final isDark = brightness == Brightness.dark;
-  final seed = settings.seedColor.color;
+  final seed =
+      settings.isMonetEnabled ? settings.seedColor.color : SeedColor.blue.color;
   final scheme = ColorScheme.fromSeed(
     seedColor: seed,
     brightness: brightness,
+    dynamicSchemeVariant: settings.isMonetEnabled
+        ? _schemeVariant(settings.paletteStyle)
+        : DynamicSchemeVariant.tonalSpot,
   );
 
-  final bg = isDark ? const Color(0xFF000000) : const Color(0xFFF7F7F7);
-  final card = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFFFFFFF);
-  final secondaryCard =
-      isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F2F7);
-  final divider =
-      isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA);
-  final mutedText =
-      isDark ? const Color(0xFF98989F) : const Color(0xFF6E6E73);
-  final frostedBar = isDark
-      ? const Color(0xFF141416).withValues(alpha: 0.78)
-      : Colors.white.withValues(alpha: 0.80);
+  final Color bg;
+  final Color card;
+  final Color secondaryCard;
+  final Color divider;
+  final Color mutedText;
+  final Color frostedBar;
+
+  if (settings.isMonetEnabled) {
+    bg = isDark ? scheme.surface : scheme.surfaceContainerLowest;
+    card = isDark ? scheme.surfaceContainerLow : scheme.surfaceContainer;
+    secondaryCard =
+        isDark ? scheme.surfaceContainerHigh : scheme.surfaceContainerHigh;
+    divider = scheme.outlineVariant.withValues(alpha: 0.65);
+    mutedText = scheme.onSurfaceVariant;
+    frostedBar = (isDark ? scheme.surfaceContainer : scheme.surface)
+        .withValues(alpha: 0.80);
+  } else {
+    bg = isDark ? const Color(0xFF000000) : const Color(0xFFF7F7F7);
+    card = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFFFFFFF);
+    secondaryCard =
+        isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF2F2F7);
+    divider = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA);
+    mutedText = isDark ? const Color(0xFF98989F) : const Color(0xFF6E6E73);
+    frostedBar = isDark
+        ? const Color(0xFF141416).withValues(alpha: 0.78)
+        : Colors.white.withValues(alpha: 0.80);
+  }
 
   final palette = TeishuPalette(
     background: bg,

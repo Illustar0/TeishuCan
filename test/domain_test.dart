@@ -206,6 +206,41 @@ void main() {
           CampusService.libraryReservation,
         ]),
       );
+
+      final networkHits = searchCampusServices('校园网', zhStrings);
+      expect(networkHits.whereType<CampusNetworkHit>(), isNotEmpty);
+    });
+  });
+
+  group('ThemeSettings serialization', () {
+    test('round-trips monet, palette style, and liquid glass flags', () {
+      const original = ThemeSettings(
+        mode: AppThemeMode.dark,
+        isMonetEnabled: true,
+        seedColor: SeedColor.purple,
+        paletteStyle: PaletteStyle.expressive,
+        isBlurEnabled: false,
+        isFloatingNavigationBarEnabled: true,
+        isLiquidGlassEnabled: true,
+      );
+      final decoded = ThemeSettings.fromJson(original.toJson());
+      expect(decoded.mode, AppThemeMode.dark);
+      expect(decoded.isMonetEnabled, isTrue);
+      expect(decoded.seedColor, SeedColor.purple);
+      expect(decoded.paletteStyle, PaletteStyle.expressive);
+      expect(decoded.isBlurEnabled, isFalse);
+      expect(decoded.isFloatingNavigationBarEnabled, isTrue);
+      expect(decoded.isLiquidGlassEnabled, isTrue);
+    });
+
+    test('defaults missing optional flags cleanly', () {
+      final decoded = ThemeSettings.fromJson(const <String, dynamic>{
+        'mode': 'light',
+      });
+      expect(decoded.mode, AppThemeMode.light);
+      expect(decoded.isMonetEnabled, isFalse);
+      expect(decoded.paletteStyle, PaletteStyle.tonalSpot);
+      expect(decoded.isLiquidGlassEnabled, isFalse);
     });
   });
 }

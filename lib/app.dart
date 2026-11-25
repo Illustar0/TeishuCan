@@ -20,6 +20,7 @@ import 'l10n/app_strings.dart';
 import 'ui/pages/electricity/electricity_settings_page.dart';
 import 'ui/pages/home/campus_card_recharge_sheet.dart';
 import 'ui/pages/home/home_page.dart';
+import 'ui/pages/services/campus_network_page.dart';
 import 'ui/pages/services/services_page.dart';
 import 'ui/pages/services/undergrad_eas_page.dart';
 import 'ui/pages/settings/about_page.dart';
@@ -323,6 +324,7 @@ class _MainShellState extends State<_MainShell> {
             strings: strings,
             student: student,
             isBlurEnabled: settings.isBlurEnabled,
+            isLiquidGlassEnabled: settings.isLiquidGlassEnabled,
             bottomPadding: bottomBarClearance,
           ),
         );
@@ -361,6 +363,7 @@ class _MainShellState extends State<_MainShell> {
             onSelect: (idx) => _selectTab(tabs, idx),
             isFloating: settings.isFloatingNavigationBarEnabled,
             isBlurEnabled: settings.isBlurEnabled,
+            isLiquidGlass: settings.isLiquidGlassEnabled,
           ),
         );
       },
@@ -397,6 +400,7 @@ class _MainShellState extends State<_MainShell> {
     required AppStrings strings,
     required StudentProfile? student,
     required bool isBlurEnabled,
+    required bool isLiquidGlassEnabled,
     required double bottomPadding,
   }) {
     switch (tab) {
@@ -436,6 +440,7 @@ class _MainShellState extends State<_MainShell> {
           strings: strings,
           repository: widget.deps.timetable,
           isBlurEnabled: isBlurEnabled,
+          isLiquidGlassEnabled: isLiquidGlassEnabled,
           bottomPadding: bottomPadding,
         );
 
@@ -446,6 +451,7 @@ class _MainShellState extends State<_MainShell> {
           isBlurEnabled: isBlurEnabled,
           bottomPadding: bottomPadding,
           onOpenUndergradEas: () => _openUndergradEas(context),
+          onOpenCampusNetwork: () => _openCampusNetwork(context),
         );
 
       case _AppTab.settings:
@@ -515,6 +521,24 @@ class _MainShellState extends State<_MainShell> {
               Localizations.maybeLocaleOf(ctx),
             ),
             repository: widget.deps.services,
+            isBlurEnabled: widget.deps.preferences.theme.isBlurEnabled,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openCampusNetwork(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ListenableBuilder(
+          listenable: widget.deps.preferences,
+          builder: (ctx, _) => CampusNetworkPage(
+            strings: AppStrings.resolve(
+              widget.deps.preferences.language,
+              Localizations.maybeLocaleOf(ctx),
+            ),
+            session: widget.deps.session,
             isBlurEnabled: widget.deps.preferences.theme.isBlurEnabled,
           ),
         ),

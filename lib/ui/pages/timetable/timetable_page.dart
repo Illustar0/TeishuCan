@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:libzzu_ffi/libzzu_ffi.dart';
@@ -21,12 +19,14 @@ class TimetablePage extends StatefulWidget {
     required this.strings,
     required this.repository,
     required this.isBlurEnabled,
+    this.isLiquidGlassEnabled = false,
     required this.bottomPadding,
   });
 
   final AppStrings strings;
   final TimetableRepository repository;
   final bool isBlurEnabled;
+  final bool isLiquidGlassEnabled;
   final double bottomPadding;
 
   @override
@@ -98,12 +98,12 @@ class _TimetablePageState extends State<TimetablePage> {
     } on CampusRequestException catch (e) {
       if (mounted) {
         setState(() => _failedTermIds.add(termId));
-        _showFailure(e.reason ?? widget.strings.timetableRefreshFailed);
+        _showMessage(e.reason ?? widget.strings.timetableRefreshFailed);
       }
     } catch (_) {
       if (mounted) {
         setState(() => _failedTermIds.add(termId));
-        _showFailure(widget.strings.timetableRefreshFailed);
+        _showMessage(widget.strings.timetableRefreshFailed);
       }
     } finally {
       if (mounted) {
@@ -123,9 +123,9 @@ class _TimetablePageState extends State<TimetablePage> {
         await _loadTerm(term.id);
       }
     } on CampusRequestException catch (e) {
-      _showFailure(e.reason ?? widget.strings.timetableRefreshFailed);
+      _showMessage(e.reason ?? widget.strings.timetableRefreshFailed);
     } catch (_) {
-      _showFailure(widget.strings.timetableRefreshFailed);
+      _showMessage(widget.strings.timetableRefreshFailed);
     } finally {
       if (mounted) {
         setState(() => _manualRefreshing = false);
@@ -133,7 +133,28 @@ class _TimetablePageState extends State<TimetablePage> {
     }
   }
 
-  void _showFailure(String message) {
+  Future<void> _exportIcs(TimetableTerm term) async {
+    final strings = widget.strings;
+    try {
+      final ics = widget.repository.exportTermIcs(
+        term.id,
+        calendarName: strings.timetableTermName(term.schoolYear, term.number),
+      );
+      if (ics == null || ics.isEmpty) {
+        _showMessage(strings.timetableExportUnavailable);
+        return;
+      }
+      await Clipboard.setData(ClipboardData(text: ics));
+      if (!mounted) return;
+      _showMessage(strings.timetableExportedIcs);
+    } on ZzuException catch (e) {
+      if (mounted) _showMessage(e.message);
+    } catch (_) {
+      if (mounted) _showMessage(strings.timetableExportUnavailable);
+    }
+  }
+
+  void _showMessage(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -185,6 +206,8 @@ class _TimetablePageState extends State<TimetablePage> {
     final currentWeek = weeks
         .cast<TimetableWeek?>()
         .firstWhere((w) => w!.dates.contains(today), orElse: () => null);
+    final canExport =
+        readyTerm != null && widget.repository.canExportTerm(readyTerm.id);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -195,6 +218,12 @@ class _TimetablePageState extends State<TimetablePage> {
             : strings.timetableTermName(term.schoolYear, term.number),
         isBlurEnabled: widget.isBlurEnabled,
         actions: [
+          if (canExport)
+            IconButton(
+              icon: const Icon(Icons.file_download_outlined),
+              tooltip: strings.timetableExportIcs,
+              onPressed: () => _exportIcs(readyTerm),
+            ),
           if (terms.isNotEmpty && term != null)
             IconButton(
               icon: const Icon(Icons.tune_rounded),
@@ -263,11 +292,117 @@ class _TimetablePageState extends State<TimetablePage> {
                   weeks: weeks,
                   selectedIndex: safeWeekIndex,
                   selectedWeek: selectedWeek,
-                  currentWeek: currentWeek,
                   isBlurEnabled: widget.isBlurEnabled,
+                  isLiquidGlassEnabled: widget.isLiquidGlassEnabled,
                   onSelectIndex: _selectWeek,
+                  onOpenWeekPicker: () => _showWeekPicker(
+                    weeks: weeks,
+                    selectedIndex: safeWeekIndex,
+                    currentWeek: currentWeek,
+                  ),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showWeekPicker({
+    required List<TimetableWeek> weeks,
+    required int selectedIndex,
+    required TimetableWeek? currentWeek,
+  }) async {
+    final strings = widget.strings;
+    final palette = TeishuPalette.of(context);
+    final currentIdx = currentWeek == null
+        ? -1
+        : weeks.indexWhere((w) => w.number == currentWeek.number);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Text(
+                      strings.timetableSelectWeek,
+                      style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ),
+                if (currentIdx >= 0 && currentIdx != selectedIndex)
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _selectWeek(currentIdx);
+                    },
+                    child: Text(strings.timetableBackToCurrentWeek),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(ctx).height * 0.55,
+              ),
+              child: RoundedCard(
+                color: palette.secondaryCard,
+                margin: EdgeInsets.zero,
+                radius: 16,
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: weeks.length,
+                  separatorBuilder: (_, _) =>
+                      Divider(height: 1, color: palette.divider),
+                  itemBuilder: (_, index) {
+                    final week = weeks[index];
+                    final isCurrent =
+                        currentWeek != null && week.number == currentWeek.number;
+                    final dateRange = week.dates.isNotEmpty
+                        ? _formatRange(
+                            week.dates.first,
+                            week.dates.last,
+                            includeYear: false,
+                          )
+                        : '';
+                    final lessonCountText =
+                        strings.timetableLessonCount(week.entries.length);
+                    final summary = dateRange.isNotEmpty
+                        ? '$dateRange · $lessonCountText'
+                        : lessonCountText;
+                    return PreferenceRow(
+                      title: isCurrent
+                          ? '${strings.timetableWeekNumber(week.number)} (${strings.timetableCurrentWeekTag})'
+                          : strings.timetableWeekNumber(week.number),
+                      summary: summary,
+                      trailing: index == selectedIndex
+                          ? Icon(
+                              Icons.check_rounded,
+                              color: Theme.of(ctx).colorScheme.primary,
+                            )
+                          : null,
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        _selectWeek(index);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -380,18 +515,20 @@ class _WeekSwitcherBar extends StatelessWidget {
     required this.weeks,
     required this.selectedIndex,
     required this.selectedWeek,
-    required this.currentWeek,
     required this.isBlurEnabled,
+    required this.isLiquidGlassEnabled,
     required this.onSelectIndex,
+    required this.onOpenWeekPicker,
   });
 
   final AppStrings strings;
   final List<TimetableWeek> weeks;
   final int selectedIndex;
   final TimetableWeek selectedWeek;
-  final TimetableWeek? currentWeek;
   final bool isBlurEnabled;
+  final bool isLiquidGlassEnabled;
   final ValueChanged<int> onSelectIndex;
+  final VoidCallback onOpenWeekPicker;
 
   @override
   Widget build(BuildContext context) {
@@ -399,84 +536,62 @@ class _WeekSwitcherBar extends StatelessWidget {
     final theme = Theme.of(context);
     final hasPrev = selectedIndex > 0;
     final hasNext = selectedIndex < weeks.length - 1;
-    final canJumpToCurrent =
-        currentWeek != null && currentWeek!.number != selectedWeek.number;
 
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: BackdropFilter(
-            filter: isBlurEnabled
-                ? ImageFilter.blur(sigmaX: 20, sigmaY: 20)
-                : ImageFilter.blur(sigmaX: 0, sigmaY: 0),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: isBlurEnabled ? palette.frostedBar : palette.card,
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
-                  color: palette.divider.withValues(alpha: 0.7),
-                  width: 0.8,
+        child: LiquidGlassPillContainer(
+          isBlurEnabled: isBlurEnabled,
+          isLiquidGlass: isLiquidGlassEnabled,
+          borderRadius: 28,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left_rounded),
+                  tooltip: strings.timetablePreviousWeek,
+                  onPressed:
+                      hasPrev ? () => onSelectIndex(selectedIndex - 1) : null,
                 ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.chevron_left_rounded),
-                      tooltip: strings.timetablePreviousWeek,
-                      onPressed:
-                          hasPrev ? () => onSelectIndex(selectedIndex - 1) : null,
-                    ),
-                    Expanded(
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: canJumpToCurrent
-                            ? () {
-                                final idx = weeks.indexWhere(
-                                  (w) => w.number == currentWeek!.number,
-                                );
-                                if (idx >= 0) onSelectIndex(idx);
-                              }
-                            : null,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                strings.timetableWeekNumber(selectedWeek.number),
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              if (selectedWeek.dates.isNotEmpty)
-                                Text(
-                                  _formatRange(
-                                    selectedWeek.dates.first,
-                                    selectedWeek.dates.last,
-                                    includeYear: false,
-                                  ),
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: palette.mutedText,
-                                  ),
-                                ),
-                            ],
+                Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: onOpenWeekPicker,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            strings.timetableWeekNumber(selectedWeek.number),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
+                          if (selectedWeek.dates.isNotEmpty)
+                            Text(
+                              _formatRange(
+                                selectedWeek.dates.first,
+                                selectedWeek.dates.last,
+                                includeYear: false,
+                              ),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: palette.mutedText,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.chevron_right_rounded),
-                      tooltip: strings.timetableNextWeek,
-                      onPressed:
-                          hasNext ? () => onSelectIndex(selectedIndex + 1) : null,
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right_rounded),
+                  tooltip: strings.timetableNextWeek,
+                  onPressed:
+                      hasNext ? () => onSelectIndex(selectedIndex + 1) : null,
+                ),
+              ],
             ),
           ),
         ),

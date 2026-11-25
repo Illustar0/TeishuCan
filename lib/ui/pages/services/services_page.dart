@@ -17,6 +17,7 @@ class ServicesPage extends StatefulWidget {
     required this.isBlurEnabled,
     required this.bottomPadding,
     required this.onOpenUndergradEas,
+    required this.onOpenCampusNetwork,
   });
 
   final AppStrings strings;
@@ -24,6 +25,7 @@ class ServicesPage extends StatefulWidget {
   final bool isBlurEnabled;
   final double bottomPadding;
   final VoidCallback onOpenUndergradEas;
+  final VoidCallback onOpenCampusNetwork;
 
   @override
   State<ServicesPage> createState() => _ServicesPageState();
@@ -140,6 +142,13 @@ class _ServicesPageState extends State<ServicesPage> {
                     for (var i = 0; i < hits.length; i++) ...[
                       if (i > 0) Divider(height: 1, color: palette.divider),
                       switch (hits[i]) {
+                        CampusNetworkHit() => PreferenceRow(
+                            leading: const Icon(Icons.wifi_rounded),
+                            title: strings.serviceCampusNetwork,
+                            summary: strings.serviceCampusNetworkSummary,
+                            trailing: const ChevronTrailing(),
+                            onTap: widget.onOpenCampusNetwork,
+                          ),
                         UndergradEasHit() => PreferenceRow(
                             leading: const Icon(Icons.school_outlined),
                             title: strings.serviceUndergradEas,
@@ -168,6 +177,17 @@ class _ServicesPageState extends State<ServicesPage> {
                 summary: strings.serviceUndergradEasSummary,
                 trailing: const ChevronTrailing(),
                 onTap: widget.onOpenUndergradEas,
+              ),
+            ),
+            SectionTitle(strings.servicesNetwork),
+            RoundedCard(
+              margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: PreferenceRow(
+                leading: const Icon(Icons.wifi_rounded),
+                title: strings.serviceCampusNetwork,
+                summary: strings.serviceCampusNetworkSummary,
+                trailing: const ChevronTrailing(),
+                onTap: widget.onOpenCampusNetwork,
               ),
             ),
             for (final group in mainServiceGroups) ...[

@@ -48,6 +48,10 @@ class ZzuSessionController extends ChangeNotifier {
   AccountState get account => _account;
   bool get isProfileRefreshing => _isProfileRefreshing;
   String? get currentSignInId => _savedSession?.signInId;
+  String? get savedAccount => _savedSession?.account;
+  String? get savedPassword => _savedSession?.password;
+
+  Future<ZzuRuntime> ensureRuntime() => _ensureRuntime();
 
   void addSessionBinding(void Function(String? signInId) onSessionChange) {
     _sessionListeners.add(onSessionChange);

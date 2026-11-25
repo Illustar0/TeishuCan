@@ -84,6 +84,10 @@ final class UndergradEasHit extends ServiceSearchHit {
   const UndergradEasHit();
 }
 
+final class CampusNetworkHit extends ServiceSearchHit {
+  const CampusNetworkHit();
+}
+
 final class CampusServiceHit extends ServiceSearchHit {
   const CampusServiceHit(this.service);
   final CampusService service;
@@ -103,6 +107,13 @@ bool matchesServiceQuery(String query, List<String> candidates) {
 
 List<ServiceSearchHit> searchCampusServices(String query, AppStrings strings) {
   final hits = <ServiceSearchHit>[];
+  if (matchesServiceQuery(query, <String>[
+    strings.serviceCampusNetwork,
+    strings.serviceCampusNetworkSummary,
+    strings.servicesNetwork,
+  ])) {
+    hits.add(const CampusNetworkHit());
+  }
   if (matchesServiceQuery(query, <String>[
     strings.serviceUndergradEas,
     strings.serviceUndergradEasSummary,

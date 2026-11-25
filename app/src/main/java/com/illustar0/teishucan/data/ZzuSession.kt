@@ -20,6 +20,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -129,7 +130,7 @@ class ZzuSession @Inject constructor(
 
     private suspend fun restoredState(): SessionState {
         val saved = store.read() ?: return SessionState.SignedOut
-        val clients = ZzuClients(saved.account, saved.password, deviceId)
+        val clients = newClients(saved.account, saved.password)
         try {
             clients.presetTokens(saved.tokens)
         } catch (cause: Throwable) {
@@ -139,11 +140,28 @@ class ZzuSession @Inject constructor(
         return SignIn(clients, saved)
     }
 
+    /**
+     * 在后台线程创建一次登录的客户端：进程内第一次创建时 SDK 要加载 libzzu 并读出全部系统根证书，不能占着主线程。
+     *
+     * 客户端建好时调用方已被取消的话，[withContext] 会丢弃结果，所以由这里关掉它。
+     */
+    private suspend fun newClients(account: String, password: String): ZzuClients {
+        var created: ZzuClients? = null
+        try {
+            return withContext(Dispatchers.IO) {
+                ZzuClients(account, password, deviceId).also { created = it }
+            }
+        } catch (cause: CancellationException) {
+            created?.close()
+            throw cause
+        }
+    }
+
     suspend fun login(account: String, password: String): LoginResult {
         require(account.isNotBlank() && password.isNotEmpty())
         awaitRestored()
         return accountStep {
-            val clients = ZzuClients(account, password, deviceId)
+            val clients = newClients(account, password)
             replaceState(SessionState.LoggingIn(clients))
             try {
                 authenticate(clients)

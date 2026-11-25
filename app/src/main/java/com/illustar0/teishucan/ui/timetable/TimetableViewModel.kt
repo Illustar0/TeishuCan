@@ -59,7 +59,7 @@ class TimetableViewModel @Inject constructor(
 
     /** 这次登录发起的加载与刷新都在这里运行。登录结束时整个取消，迟到的结果不会落到下一个账号上。 */
     private var signInScope = newSignInScope()
-    private val refreshQueue = RefreshQueue(viewModelScope) {
+    private val refreshQueue = RefreshQueue {
         signInScope.launch { failure.capture { refreshPage() } }.join()
     }
 
@@ -88,6 +88,7 @@ class TimetableViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Eagerly, TimetableState(today = LocalDate.now(CampusZone)))
 
     init {
+        viewModelScope.launch { refreshQueue.run() }
         // 无论学期是选中的、恢复的还是默认的，只要正在展示却还没有课程就加载。换过学期再换回来会重试失败的学期。
         viewModelScope.launch {
             state.map { it.term?.takeUnless(TimetableTerm::isLoaded)?.id }

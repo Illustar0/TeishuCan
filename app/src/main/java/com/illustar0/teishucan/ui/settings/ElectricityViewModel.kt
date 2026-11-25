@@ -55,7 +55,7 @@ class ElectricityViewModel @Inject constructor(
     private val rechargeOutcomeChannel = Channel<ActionOutcome>(Channel.CONFLATED)
     val failure = PendingFailure()
 
-    private val refreshQueue = RefreshQueue(viewModelScope) {
+    private val refreshQueue = RefreshQueue {
         failure.capture {
             // 这里的余额只服务于电表充值，没有电表就没有要更新的内容。
             if (electricity.meters.filterNotNull().first().isNotEmpty()) {
@@ -83,6 +83,10 @@ class ElectricityViewModel @Inject constructor(
         SharingStarted.Eagerly,
         ElectricityUiState(electricity.meters.value, campusCard.balanceYuan.value),
     )
+
+    init {
+        viewModelScope.launch { refreshQueue.run() }
+    }
 
     /** 进行中的电表草稿，只在弹层打开期间存在。 */
     var editor by mutableStateOf<MeterEditorState?>(null)

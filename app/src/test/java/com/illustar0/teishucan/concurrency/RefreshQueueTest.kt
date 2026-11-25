@@ -3,6 +3,7 @@ package com.illustar0.teishucan.concurrency
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -16,7 +17,7 @@ class RefreshQueueTest {
     fun requestsDuringCancelledRefresh_runOnceAfterward() = runTest {
         val finishFirstRefresh = CompletableDeferred<Unit>()
         var calls = 0
-        val queue = RefreshQueue(backgroundScope) {
+        val queue = RefreshQueue {
             calls++
             if (calls == 1) {
                 finishFirstRefresh.await()
@@ -24,6 +25,7 @@ class RefreshQueueTest {
             }
         }
 
+        backgroundScope.launch { queue.run() }
         queue.request()
         runCurrent()
         assertTrue(queue.isRefreshing.value)
@@ -36,5 +38,22 @@ class RefreshQueueTest {
         runCurrent()
         assertEquals(2, calls)
         assertFalse(queue.isRefreshing.value)
+    }
+
+    @Test
+    fun cancelledRun_leavesLaterRequestsForTheNextRun() = runTest {
+        var calls = 0
+        val queue = RefreshQueue { calls++ }
+
+        val firstRun = backgroundScope.launch { queue.run() }
+        runCurrent()
+        firstRun.cancel()
+        queue.request()
+        runCurrent()
+        assertEquals(0, calls)
+
+        backgroundScope.launch { queue.run() }
+        runCurrent()
+        assertEquals(1, calls)
     }
 }

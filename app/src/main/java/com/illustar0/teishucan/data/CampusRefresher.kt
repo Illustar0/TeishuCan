@@ -53,7 +53,7 @@ class CampusRefresher @Inject constructor(
 
     /** 手动刷新的失败，与当前在哪一页无关。 */
     val refreshFailure = PendingFailure()
-    private val manualRefresh = RefreshQueue(scope) {
+    private val manualRefresh = RefreshQueue {
         refreshFailure.capture { refreshAll(sources.map(RefreshSource::refresh)) }
     }
 
@@ -61,6 +61,10 @@ class CampusRefresher @Inject constructor(
         listOf(manualRefresh.isRefreshing) + sources.map(RefreshSource::isRefreshing),
     ) { states -> states.any { it } }
         .stateIn(scope, SharingStarted.Eagerly, false)
+
+    init {
+        scope.launch { manualRefresh.run() }
+    }
 
     fun refresh() = manualRefresh.request()
 

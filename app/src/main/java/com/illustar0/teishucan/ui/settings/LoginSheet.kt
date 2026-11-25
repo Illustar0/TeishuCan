@@ -1,6 +1,5 @@
 package com.illustar0.teishucan.ui.settings
 
-import android.content.MutableContextWrapper
 import android.util.Log
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContent
@@ -91,27 +90,21 @@ fun LoginSheet(
     onDismissRequest: () -> Unit,
 ) {
     val autofillManager = LocalAutofillManager.current
-    val activity = LocalActivity.current
-    val credentialContext = remember(activity) {
-        if (PlatformCapabilities.isSystemPasswordManagerSupported && activity != null) {
-            MutableContextWrapper(activity)
-        } else {
-            null
-        }
-    }
-    val credentialManager = remember(credentialContext) {
-        credentialContext?.let { CredentialManager.create(it.applicationContext) }
+    // 密码管理器的界面要从 Activity 启动，才会留在本应用的任务栈里。
+    val credentialActivity = LocalActivity.current.takeIf { PlatformCapabilities.isSystemPasswordManagerSupported }
+    val credentialManager = remember(credentialActivity) {
+        credentialActivity?.let { CredentialManager.create(it.applicationContext) }
     }
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     var isChoosingPassword by remember { mutableStateOf(false) }
-    if (credentialContext != null && credentialManager != null) {
+    if (credentialActivity != null && credentialManager != null) {
         val lifecycle = LocalLifecycleOwner.current.lifecycle
         LaunchedEffect(credentialManager, lifecycle, passwordSaves, autofillManager) {
             passwordSaves.collect { request ->
                 lifecycle.withResumed { autofillManager?.cancel() }
                 try {
-                    credentialManager.createCredential(credentialContext, request)
+                    credentialManager.createCredential(credentialActivity, request)
                 } catch (_: CreateCredentialCancellationException) {
                     return@collect
                 } catch (cause: CreateCredentialException) {
@@ -126,7 +119,7 @@ fun LoginSheet(
     val isBusy = shown.isSubmitting || isChoosingPassword
 
     fun chooseSavedPassword() {
-        if (credentialContext == null || credentialManager == null) return
+        if (credentialActivity == null || credentialManager == null) return
         // 关闭动画期间尝试已经结束，不再为它发起任何操作。
         val target = attempt ?: return
         if (isChoosingPassword || !target.canSubmitCredentials) return
@@ -137,7 +130,7 @@ fun LoginSheet(
         scope.launch {
             try {
                 val request = GetCredentialRequest(listOf(GetPasswordOption()))
-                val password = credentialManager.getCredential(credentialContext, request).credential
+                val password = credentialManager.getCredential(credentialActivity, request).credential
                 if (password is PasswordCredential) {
                     autofillManager?.cancel()
                     onSubmitSavedPassword(password)

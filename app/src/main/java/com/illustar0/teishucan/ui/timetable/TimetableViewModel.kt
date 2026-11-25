@@ -23,12 +23,11 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -36,7 +35,6 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 
 private const val SelectedTermIdKey = "selectedTermId"
@@ -57,11 +55,7 @@ class TimetableViewModel @Inject constructor(
 
     val failure = PendingFailure()
 
-    /** 这次登录发起的加载与刷新都在这里运行。登录结束时整个取消，迟到的结果不会落到下一个账号上。 */
-    private var signInScope = newSignInScope()
-    private val refreshQueue = RefreshQueue {
-        signInScope.launch { failure.capture { refreshPage() } }.join()
-    }
+    private val refreshQueue = RefreshQueue { failure.capture { refreshPage() } }
 
     private val isRefreshing = combine(refreshQueue.isRefreshing, timetable.isRefreshing) { page, timetable ->
         page || timetable
@@ -88,26 +82,13 @@ class TimetableViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Eagerly, TimetableState(today = LocalDate.now(CampusZone)))
 
     init {
-        viewModelScope.launch { refreshQueue.run() }
-        // 无论学期是选中的、恢复的还是默认的，只要正在展示却还没有课程就加载。换过学期再换回来会重试失败的学期。
-        viewModelScope.launch {
-            state.map { it.term?.takeUnless(TimetableTerm::isLoaded)?.id }
-                .distinctUntilChanged()
-                .filterNotNull()
-                .collect { termId ->
-                    signInScope.launch { failure.capture { load(termId) } }
-                }
-        }
-        // 选中的学期、各学期的加载情况和待提示的失败都属于这次登录，下一个账号应该从头开始。
         viewModelScope.launch {
             session.account
-                .filter { it == AccountState.SignedOut }
-                .collect {
-                    signInScope.cancel()
-                    signInScope = newSignInScope()
-                    selectedTermId.value = null
-                    termLoads.value = emptyMap()
-                    failure.clear()
+                .filter { it != AccountState.Restoring }
+                .map { it is AccountState.SignedIn }
+                .distinctUntilChanged()
+                .collectLatest { isSignedIn ->
+                    if (isSignedIn) runSignedIn() else forgetSignIn()
                 }
         }
     }
@@ -137,9 +118,24 @@ class TimetableViewModel @Inject constructor(
         }
     }
 
-    private fun newSignInScope(): CoroutineScope {
-        val parent = viewModelScope.coroutineContext
-        return CoroutineScope(parent + SupervisorJob(parent.job))
+    /**
+     * 一次登录期间的加载与刷新。登录结束时随之取消，迟到的结果不会落到下一个账号上。
+     *
+     * 无论学期是选中的、恢复的还是默认的，只要正在展示却还没有课程就加载。换过学期再换回来会重试失败的学期。
+     */
+    private suspend fun runSignedIn() = coroutineScope {
+        launch { refreshQueue.run() }
+        state.map { it.term?.takeUnless(TimetableTerm::isLoaded)?.id }
+            .distinctUntilChanged()
+            .filterNotNull()
+            .collect { termId -> launch { failure.capture { load(termId) } } }
+    }
+
+    /** 选中的学期、各学期的加载情况和待提示的失败都属于结束的那次登录，下一个账号从头开始。 */
+    private fun forgetSignIn() {
+        selectedTermId.value = null
+        termLoads.value = emptyMap()
+        failure.clear()
     }
 
     private fun statusOf(term: TimetableTerm?, load: TermLoad?, isRefreshing: Boolean): TimetableStatus = when {

@@ -1,3 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 11 及以下使用，规则与 data_extraction_rules.xml 相同。 -->
-<full-backup-content />
+<!-- Android 11 及以下使用，白名单与 data_extraction_rules.xml 相同。 -->
+<full-backup-content>
+    <include domain="file" path="datastore/theme_settings.json" />
+    <include domain="file" path="datastore/electricity_meters.json" />
+    <include domain="file" path="androidx.appcompat.app.AppCompatDelegate.application_locales_record_file" />
+</full-backup-content>

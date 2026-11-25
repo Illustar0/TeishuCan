@@ -62,7 +62,7 @@ class ThemeSettingsStorageTest {
     @Test
     fun data_corruptFile_readsDefaultsAndReplacesFile() = runTest {
         val file = temporaryFolder.newFile("theme_settings.json").apply { writeText("not json") }
-        val store = JsonDataStore(file, ThemeSettings(), ThemeSettings.serializer(), scope = backgroundScope)
+        val store = JsonDataStore(file, serializer, scope = backgroundScope)
 
         assertEquals(ThemeSettings(), store.data.first())
         assertEquals(ThemeSettings(), read(file.readText()))

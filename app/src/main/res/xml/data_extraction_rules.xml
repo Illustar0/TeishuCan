@@ -1,6 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 全部数据都可以备份；登录会话放在 noBackupFilesDir，系统不会备份它。 -->
+<!--
+  只备份用户自己的设置，其余一律不备份：登录会话的密钥留在本机 KeyStore 里，别处解不开；
+  快照、统计标识等也只对本机有意义。新增想备份的文件时要加进这里和 backup_rules.xml。
+-->
 <data-extraction-rules>
-    <cloud-backup />
-    <device-transfer />
+    <cloud-backup>
+        <include domain="file" path="datastore/theme_settings.json" />
+        <include domain="file" path="datastore/electricity_meters.json" />
+        <!-- Android 13 以下由 AppCompat 自己保存应用语言。 -->
+        <include domain="file" path="androidx.appcompat.app.AppCompatDelegate.application_locales_record_file" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="datastore/theme_settings.json" />
+        <include domain="file" path="datastore/electricity_meters.json" />
+        <include domain="file" path="androidx.appcompat.app.AppCompatDelegate.application_locales_record_file" />
+    </device-transfer>
 </data-extraction-rules>

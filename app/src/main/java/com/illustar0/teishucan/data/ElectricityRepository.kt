@@ -1,7 +1,5 @@
 package com.illustar0.teishucan.data
 
-import android.content.Context
-import androidx.datastore.dataStoreFile
 import com.illustar0.teishucan.concurrency.RefreshTracker
 import com.illustar0.teishucan.di.ApplicationScope
 import com.illustar0.teishucan.domain.CampusFeature
@@ -14,7 +12,6 @@ import com.illustar0.teishucan.domain.MeterReading
 import com.illustar0.teishucan.domain.MeterRechargeResult
 import com.illustar0.zzu.ZzuException
 import com.illustar0.zzu.ecard.RoomId
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -35,12 +32,12 @@ import kotlin.time.Instant
 /** 用户添加的电表（保存在本机）及校园电控服务。 */
 @Singleton
 class ElectricityRepository @Inject constructor(
-    @ApplicationContext context: Context,
+    stores: JsonDataStoreFactory,
     private val session: ZzuSession,
     @ApplicationScope scope: CoroutineScope,
 ) {
-    private val store = JsonDataStore(
-        file = context.dataStoreFile("electricity_meters.json"),
+    private val store = stores.create(
+        name = "electricity_meters.json",
         defaultValue = emptyList(),
         serializer = serializer<List<ElectricityMeter>>(),
     )

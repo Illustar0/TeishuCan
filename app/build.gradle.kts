@@ -210,6 +210,7 @@ dependencies {
     implementation(libs.miuix.nav)
     implementation(libs.miuix.preference)
     implementation(libs.miuix.ui)
+    implementation(libs.tink.android)
     ksp(libs.hilt.compiler)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

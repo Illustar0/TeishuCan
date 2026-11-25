@@ -1,10 +1,7 @@
 package com.illustar0.teishucan.data
 
-import android.content.Context
 import android.util.Log
-import androidx.datastore.dataStoreFile
 import com.illustar0.teishucan.domain.ThemeSettings
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -13,9 +10,9 @@ import kotlinx.coroutines.flow.Flow
 private const val Tag = "TeishuCan.Theme"
 
 @Singleton
-class ThemeRepository @Inject constructor(@ApplicationContext context: Context) {
-    private val store = JsonDataStore(
-        file = context.dataStoreFile("theme_settings.json"),
+class ThemeRepository @Inject constructor(stores: JsonDataStoreFactory) {
+    private val store = stores.create(
+        name = "theme_settings.json",
         defaultValue = ThemeSettings(),
         serializer = ThemeSettings.serializer(),
     )

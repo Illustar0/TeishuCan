@@ -57,6 +57,9 @@ import com.illustar0.teishucan.ui.component.rememberShownContent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import kotlin.math.ceil
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeMark
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -70,8 +73,7 @@ import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.preference.CheckboxPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private const val MfaResendIntervalSeconds = 60
-private const val MillisPerSecond = 1000L
+private val MfaResendInterval = 60.seconds
 
 private val MfaCodeInput = InputTransformation.byValue { _, proposed ->
     proposed.filter(Char::isDigit)
@@ -288,8 +290,8 @@ private fun MfaCodePage(
 ) {
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
-    var resendSecondsLeft by remember { mutableIntStateOf(0) }
-    val isCodeRequested = mfa.sentCodeCount > 0
+    var resendSecondsLeft by remember(mfa.codeSentAt) { mutableIntStateOf(resendSecondsLeft(mfa.codeSentAt)) }
+    val isCodeRequested = mfa.isCodeRequested
     val canEnterCode = isCodeRequested && !attempt.isSubmitting
 
     LaunchedEffect(canEnterCode) {
@@ -297,12 +299,10 @@ private fun MfaCodePage(
             focusRequester.requestFocus()
         }
     }
-    LaunchedEffect(mfa.sentCodeCount) {
-        if (mfa.sentCodeCount == 0) return@LaunchedEffect
-        resendSecondsLeft = MfaResendIntervalSeconds
+    LaunchedEffect(mfa.codeSentAt) {
         while (resendSecondsLeft > 0) {
-            delay(MillisPerSecond)
-            resendSecondsLeft--
+            delay(1.seconds)
+            resendSecondsLeft = resendSecondsLeft(mfa.codeSentAt)
         }
     }
 
@@ -375,6 +375,12 @@ private fun MfaCodePage(
             )
         }
     }
+}
+
+/** 距离可以重发验证码还剩的整秒数，向上取整；没发过或已经可以重发时为 0。 */
+private fun resendSecondsLeft(codeSentAt: TimeMark?): Int {
+    val remaining = MfaResendInterval - (codeSentAt ?: return 0).elapsedNow()
+    return ceil(remaining / 1.seconds).toInt().coerceAtLeast(0)
 }
 
 @Composable

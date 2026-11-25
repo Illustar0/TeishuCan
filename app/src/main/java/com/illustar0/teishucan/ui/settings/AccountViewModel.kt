@@ -7,7 +7,6 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.credentials.ClearCredentialStateRequest
@@ -34,6 +33,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 enum class LoginAction { Login, SavedPasswordLogin, SendCode, VerifyCode }
 
@@ -68,8 +69,14 @@ class MfaVerification(
     var securePhone by mutableStateOf(securePhone)
         internal set
     val code = TextFieldState()
-    var sentCodeCount by mutableIntStateOf(0)
+
+    /** 最近一次发出验证码的时刻，还没发过时为 null。界面重建后据此接着倒数重发间隔。 */
+    var codeSentAt by mutableStateOf<TimeMark?>(null)
+        internal set
     var shouldTrustDevice by mutableStateOf(true)
+
+    val isCodeRequested: Boolean
+        get() = codeSentAt != null
 }
 
 data class LoginFailure(@param:StringRes val fallbackMessage: Int, val reason: String?)
@@ -150,7 +157,7 @@ class AccountViewModel @Inject constructor(
         val mfa = attempt.mfa ?: return
         submit(attempt, LoginAction.SendCode, R.string.mfa_send_failed) {
             session.sendMfaCode()?.let { mfa.securePhone = it }
-            mfa.sentCodeCount++
+            mfa.codeSentAt = TimeSource.Monotonic.markNow()
         }
     }
 

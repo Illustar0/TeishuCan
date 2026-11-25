@@ -2,10 +2,14 @@ package com.illustar0.teishucan.ui.component
 
 import android.text.format.DateFormat
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.toJavaDayOfWeek
 
 /** 带年份的日期，如学期起止。 */
 const val DateWithYearSkeleton = "yMd"
@@ -21,6 +25,12 @@ fun rememberLocalizedFormatter(skeleton: String): DateTimeFormatter {
         DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
     }
 }
+
+/** [day] 在当前语言下以 [style] 写出的名称，如「星期一」或「周一」。 */
+@Composable
+@ReadOnlyComposable
+fun localizedDayName(day: DayOfWeek, style: TextStyle): String =
+    day.toJavaDayOfWeek().getDisplayName(style, LocalConfiguration.current.locales[0])
 
 /** 课程时刻的格式，跟随系统的 12/24 小时制设置。 */
 @Composable

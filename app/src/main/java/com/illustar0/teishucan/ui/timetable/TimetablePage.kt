@@ -37,7 +37,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -54,6 +53,7 @@ import com.illustar0.teishucan.ui.component.DateSkeleton
 import com.illustar0.teishucan.ui.component.DateWithYearSkeleton
 import com.illustar0.teishucan.ui.component.RefreshContainer
 import com.illustar0.teishucan.ui.component.Timetable
+import com.illustar0.teishucan.ui.component.localizedDayName
 import com.illustar0.teishucan.ui.component.rememberClassTimeFormatter
 import com.illustar0.teishucan.ui.component.rememberLocalizedFormatter
 import com.illustar0.teishucan.ui.component.liquid.LiquidGlassFloatingToolbar
@@ -72,7 +72,6 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.plus
-import kotlinx.datetime.toJavaDayOfWeek
 import kotlinx.datetime.toJavaLocalDate
 import kotlinx.datetime.toJavaLocalTime
 import kotlin.time.Duration.Companion.seconds
@@ -455,7 +454,7 @@ private fun CopyButtonRow(title: String, value: String) {
 
 @Composable
 private fun entryScheduleText(entry: TimetableEntry): String {
-    val dayName = entry.day.toJavaDayOfWeek().getDisplayName(TextStyle.FULL, LocalConfiguration.current.locales[0])
+    val dayName = localizedDayName(entry.day, TextStyle.FULL)
     val position = if (entry.periodSpan > 1) {
         stringResource(R.string.timetable_entry_period_range, dayName, entry.startPeriod, entry.lastPeriod)
     } else {

@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
@@ -37,7 +36,6 @@ import java.time.format.TextStyle
 import kotlin.math.roundToInt
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toJavaDayOfWeek
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
@@ -89,7 +87,6 @@ private fun DayHeaderRow(
     today: LocalDate,
     colors: TimetableColors,
 ) {
-    val locale = LocalConfiguration.current.locales[0]
     Row(modifier = Modifier.fillMaxWidth()) {
         Spacer(modifier = Modifier.width(TimetableDefaults.PeriodLabelWidth))
         DayOfWeek.entries.forEach { day ->
@@ -104,7 +101,7 @@ private fun DayHeaderRow(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = day.toJavaDayOfWeek().getDisplayName(TextStyle.SHORT, locale),
+                    text = localizedDayName(day, TextStyle.SHORT),
                     color = color,
                     fontWeight = fontWeight,
                     maxLines = 1,
@@ -239,7 +236,7 @@ private fun EntryCell(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dayName = entry.day.toJavaDayOfWeek().getDisplayName(TextStyle.FULL, LocalConfiguration.current.locales[0])
+    val dayName = localizedDayName(entry.day, TextStyle.FULL)
     val position = if (conflictCount > 1) {
         stringResource(R.string.timetable_entry_conflict_position, dayName, entry.startPeriod, conflictCount)
     } else {

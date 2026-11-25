@@ -30,6 +30,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.seconds
 
 private const val Tag = "FairMemory"
 private const val TrimAction = "itgsa.intent.action.TRIM"
@@ -38,7 +39,7 @@ private const val PhysicalMemory = 1000
 private const val JavaHeap = 2000
 private const val Handled = 0
 private const val Failed = 1
-private const val SaveTimeoutMillis = 2_500L
+private val SaveTimeout = 2.5.seconds
 
 @Singleton
 internal class FairMemory @Inject constructor(
@@ -134,7 +135,7 @@ internal class FairMemory @Inject constructor(
             applicationScope.launch(start = CoroutineStart.UNDISPATCHED) {
                 try {
                     val save = async { navigationRecovery.saveBeforeKill() }
-                    val saved = withTimeoutOrNull(SaveTimeoutMillis) { save.await() } == true
+                    val saved = withTimeoutOrNull(SaveTimeout) { save.await() } == true
                     save.cancel()
                     notice.reply(if (saved) Handled else Failed)
                 } finally {

@@ -69,6 +69,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -97,7 +98,7 @@ import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.utils.springAnimateToPage
 
-private const val CopiedIndicatorMillis = 2000L
+private val CopiedIndicatorDuration = 2.seconds
 
 private val TimetablePadding = PaddingValues(start = 4.dp, end = 8.dp, bottom = 8.dp)
 
@@ -412,7 +413,7 @@ private fun CopyButtonRow(title: String, value: String) {
 
     LaunchedEffect(isCopied) {
         if (isCopied) {
-            delay(CopiedIndicatorMillis)
+            delay(CopiedIndicatorDuration)
             isCopied = false
         }
     }

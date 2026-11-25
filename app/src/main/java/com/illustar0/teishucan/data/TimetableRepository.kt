@@ -6,7 +6,6 @@ import com.illustar0.teishucan.domain.CampusFeature
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.TimetableWeek
-import com.illustar0.zzu.ZzuTimeZone
 import com.illustar0.zzu.eas.Semester
 import com.illustar0.zzu.eas.SemesterId
 import com.illustar0.zzu.eas.SessionTeacher
@@ -158,4 +157,4 @@ internal fun SessionView.toEntry() = TimetableEntry(
     periodSpan = session.endUnit - session.startUnit + 1,
 )
 
-private fun Instant.toCampusTime(): LocalTime = toLocalDateTime(ZzuTimeZone).time
+private fun Instant.toCampusTime(): LocalTime = toLocalDateTime(CampusZone).time

@@ -55,9 +55,9 @@ import top.yukonga.miuix.kmp.utils.PressFeedbackType
 fun Timetable(
     week: TimetableWeek,
     today: LocalDate,
+    periodCount: Int,
     onEntriesClick: (List<TimetableEntry>) -> Unit,
     modifier: Modifier = Modifier,
-    periodCount: Int = TimetableDefaults.PeriodCount,
     periodHeight: Dp = TimetableDefaults.PeriodHeight,
     colors: TimetableColors = TimetableDefaults.timetableColors(),
 ) {
@@ -556,7 +556,6 @@ private fun TimetableColors.stackSurfaceColor(depthFromFront: Int): Color = when
 }
 
 object TimetableDefaults {
-    const val PeriodCount = 10
     val PeriodHeight = 64.dp
     val PeriodLabelWidth = 24.dp
     val EntryGap = 2.dp

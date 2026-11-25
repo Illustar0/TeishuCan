@@ -41,6 +41,7 @@ import com.illustar0.teishucan.domain.NextClass
 import com.illustar0.teishucan.domain.StudentProfile
 import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.domain.UpcomingClass
+import com.illustar0.teishucan.domain.dayPartsThrough
 import com.illustar0.teishucan.ui.component.PeriodStrip
 import com.illustar0.teishucan.ui.component.PeriodStripDefaults
 import com.illustar0.teishucan.ui.component.RefreshContainer
@@ -354,6 +355,7 @@ private fun DayPeriodStrip(
     val finishedColor = colors.onSurface.copy(alpha = FinishedClassAlpha)
     val upcomingColor = colors.primary.copy(alpha = UpcomingClassAlpha)
     PeriodStrip(
+        groups = dayPartsThrough(nextClass.dayClasses.maxOf { it.lastPeriod }),
         periodColor = { period ->
             val dayClass = nextClass.dayClasses.find { period in it }
             when {

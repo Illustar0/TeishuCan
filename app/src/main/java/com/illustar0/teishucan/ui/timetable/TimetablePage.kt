@@ -270,6 +270,8 @@ private fun WeekPager(
     onEntriesClick: (List<TimetableEntry>) -> Unit,
     today: LocalDate,
 ) {
+    // 整个学期共用一个高度，翻周时网格不会伸缩。
+    val periodCount = remember(term) { term.periodCount }
     HorizontalPager(
         state = pagerState,
         verticalAlignment = Alignment.Top,
@@ -279,6 +281,7 @@ private fun WeekPager(
         Timetable(
             week = week,
             today = today,
+            periodCount = periodCount,
             onEntriesClick = onEntriesClick,
             modifier = Modifier.padding(TimetablePadding),
         )
@@ -437,8 +440,7 @@ private fun CopyButtonRow(title: String, value: String) {
 private fun entryScheduleText(entry: TimetableEntry): String {
     val dayName = entry.day.getDisplayName(TextStyle.FULL, LocalConfiguration.current.locales[0])
     val position = if (entry.periodSpan > 1) {
-        val lastPeriod = entry.startPeriod + entry.periodSpan - 1
-        stringResource(R.string.timetable_entry_period_range, dayName, entry.startPeriod, lastPeriod)
+        stringResource(R.string.timetable_entry_period_range, dayName, entry.startPeriod, entry.lastPeriod)
     } else {
         stringResource(R.string.timetable_entry_position, dayName, entry.startPeriod)
     }

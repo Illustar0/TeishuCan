@@ -13,6 +13,19 @@ import kotlinx.serialization.UseSerializers
 /** 课表中所有日期与时刻所在的时区，与设备当前所在地无关。 */
 val CampusZone: ZoneId = ZoneId.of("Asia/Shanghai")
 
+/**
+ * 作息表里上午、下午、晚上各自的节次。
+ *
+ * 教务系统允许把课排到晚上最后一节之后，那些节次也算作晚上。
+ */
+private val DayParts = listOf(1..4, 5..8, 9..10)
+
+/** 展示到第 [lastPeriod] 节时一天各段的节次。不足一整天时仍给出完整的作息，晚上延伸到 [lastPeriod]。 */
+fun dayPartsThrough(lastPeriod: Int): List<IntRange> {
+    val evening = DayParts.last()
+    return DayParts.dropLast(1) + listOf(evening.first..maxOf(evening.last, lastPeriod))
+}
+
 /** [date] 当天的一节课，从第 [startPeriod] 节（从 1 开始）起连续占用 [periodSpan] 节。 */
 @Serializable
 data class TimetableEntry(
@@ -25,7 +38,10 @@ data class TimetableEntry(
     val teacher: String,
     val location: String? = null,
     val periodSpan: Int = 1,
-)
+) {
+    val lastPeriod: Int
+        get() = startPeriod + periodSpan - 1
+}
 
 @Serializable
 data class TimetableWeek(
@@ -44,14 +60,24 @@ data class TimetableTerm(
     val endDate: LocalDate,
     val weeks: List<TimetableWeek>,
     val isLoaded: Boolean = false,
-)
+) {
+    /** 课表要展示的节次数：完整的一天，有更晚的课时延伸到最晚的那一节。 */
+    val periodCount: Int
+        get() {
+            val latestPeriod = weeks.flatMap { it.entries }.maxOfOrNull { it.lastPeriod } ?: 0
+            return dayPartsThrough(latestPeriod).last().last
+        }
+}
 
 /** 截至 [today] 已开始的最新学期，这样学期结束后的假期也有对应学期。 */
 fun List<TimetableTerm>.defaultTerm(today: LocalDate): TimetableTerm? =
     filter { it.startDate <= today }.maxByOrNull { it.startDate } ?: firstOrNull()
 
 data class ClassPeriods(val startPeriod: Int, val periodSpan: Int) {
-    operator fun contains(period: Int): Boolean = period in startPeriod until startPeriod + periodSpan
+    val lastPeriod: Int
+        get() = startPeriod + periodSpan - 1
+
+    operator fun contains(period: Int): Boolean = period in startPeriod..lastPeriod
 }
 
 /** 今天和明天接下来的课程安排，有课时是 [NextClass]。 */

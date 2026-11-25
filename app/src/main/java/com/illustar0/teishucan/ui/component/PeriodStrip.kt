@@ -15,15 +15,10 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-private val PeriodGroups = listOf(1..4, 5..8, 9..10)
-private val TotalPeriods = PeriodGroups.sumOf { it.count() }
-private val SeparatorCount = PeriodGroups.size - 1
-
-/**
- * 分段可视化条
- */
+/** 按 [groups] 分段画出连续的节次，段与段之间用圆点隔开，每一节的颜色由 [periodColor] 决定。 */
 @Composable
 fun PeriodStrip(
+    groups: List<IntRange>,
     periodColor: (period: Int) -> Color,
     modifier: Modifier = Modifier,
     segmentHeight: Dp = PeriodStripDefaults.SegmentHeight,
@@ -49,11 +44,12 @@ fun PeriodStrip(
         val centerY = size.height / 2f
 
         val separatorWidth = dotSizePx + 2 * sepGapPx
-        val groupsTotalWidth = (size.width - SeparatorCount * separatorWidth).coerceAtLeast(0f)
+        val groupsTotalWidth = (size.width - (groups.size - 1) * separatorWidth).coerceAtLeast(0f)
+        val totalPeriods = groups.sumOf { it.count() }
         val isRtl = layoutDirection == LayoutDirection.Rtl
 
         var cursorX = 0f
-        PeriodGroups.forEachIndexed { groupIndex, range ->
+        groups.forEachIndexed { groupIndex, range ->
             if (groupIndex > 0) {
                 cursorX += sepGapPx
                 val dotCenterX = if (isRtl) size.width - cursorX - dotRadiusPx else cursorX + dotRadiusPx
@@ -65,8 +61,8 @@ fun PeriodStrip(
                 cursorX += dotSizePx + sepGapPx
             }
 
-            val groupSize = range.last - range.first + 1
-            val groupWidth = groupsTotalWidth * (groupSize.toFloat() / TotalPeriods)
+            val groupSize = range.count()
+            val groupWidth = groupsTotalWidth * (groupSize.toFloat() / totalPeriods)
             val segWidth = ((groupWidth - (groupSize - 1) * segGapPx) / groupSize).coerceAtLeast(0f)
 
             var segX = cursorX

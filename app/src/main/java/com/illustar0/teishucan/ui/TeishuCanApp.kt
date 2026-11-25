@@ -296,7 +296,7 @@ private fun MainScreen(
     val isWide = isWideWindow()
     // 只有底栏采样这一层；侧边导航在内容旁边，不在内容之上。
     val isBarBlurEnabled = LocalIsBlurEnabled.current || (isFloatingNavigationBar && LocalIsLiquidGlassEnabled.current)
-    val backdrop = rememberBlurBackdrop(isBarBlurEnabled).takeUnless { isWide }
+    val backdrop = rememberBlurBackdrop(isBarBlurEnabled && !isWide)
 
     Scaffold(
         bottomBar = {

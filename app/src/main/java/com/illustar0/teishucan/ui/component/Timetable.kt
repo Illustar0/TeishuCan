@@ -48,7 +48,8 @@ import top.yukonga.miuix.kmp.utils.PressFeedbackType
  * 周课表网格。
  *
  * 起始节次在网格之外的课程不显示，超出最后一节的部分被截断；同日时段冲突的课程按「右下在前、左上露边」叠放：
- * 完全重叠的课程以等尺寸叠卡向右下步进（最多展示 3 层），部分重叠或错位交叉的课程按节次阶梯错位叠放。
+ * 完全重叠的课程以等尺寸叠卡向右下步进（层数上限见 [TimetableDefaults.MaxStackBackLayers]），
+ * 部分重叠或错位交叉的课程按节次阶梯错位叠放。
  * 表头显示这一周的日期，并在 [today] 落在这一周时突出显示。
  */
 @Composable
@@ -409,7 +410,7 @@ private fun expandClusterCards(
 
 /**
  * 完全重叠采用「右下在前、左上露边」：所有层共享同一缩减尺寸，从左上 (0, 0) 向右下步进，
- * 确保 2 门露出 2 张、3 门及以上露出 3 张互不遮死。
+ * 前卡之下最多露出 [maxStackBackLayers] 张，每张都留出可见的边，互不遮死。
  */
 private fun expandExactStack(
     cluster: List<VisibleEntry>,
@@ -565,7 +566,7 @@ object TimetableDefaults {
     val StackStep = 4.dp
     val CascadeIndent = 5.dp
 
-    /** 冲突叠卡最多在底层额外露出 2 张（总计最多 3 张），避免前卡在窄列被过度挤压。 */
+    /** 冲突叠卡在前卡之下最多露出的张数，避免前卡在窄列被过度挤压。 */
     const val MaxStackBackLayers = 2
 
     /** 叠层缩进上限占单列宽度的比例，确保极窄屏幕下前卡仍保留足够可读宽度。 */

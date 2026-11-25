@@ -9,11 +9,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntSize
-import com.illustar0.teishucan.TeishuCanApplication
+import com.illustar0.teishucan.memory.FairMemory
 import com.illustar0.teishucan.platform.PlatformCapabilities
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurDefaults
@@ -31,6 +30,9 @@ val LocalIsBlurEnabled = staticCompositionLocalOf { false }
 
 val LocalIsLiquidGlassEnabled = staticCompositionLocalOf { false }
 
+/** 内存紧张时负责释放图层的 [FairMemory]；预览中没有它，图层只随组合释放。 */
+internal val LocalFairMemory = staticCompositionLocalOf<FairMemory?> { null }
+
 @Composable
 fun rememberBlurBackdrop(isEnabled: Boolean = LocalIsBlurEnabled.current): LayerBackdrop? {
     if (!isEnabled || !PlatformCapabilities.isShaderEffectSupported) return null
@@ -44,7 +46,7 @@ fun rememberBlurBackdrop(isEnabled: Boolean = LocalIsBlurEnabled.current): Layer
 @Composable
 internal fun rememberReleasableBackdrop(onDraw: ContentDrawScope.() -> Unit = { drawContent() }): LayerBackdrop {
     val backdrop = rememberLayerBackdrop(onDraw = onDraw)
-    val fairMemory = (LocalContext.current.applicationContext as? TeishuCanApplication)?.fairMemory
+    val fairMemory = LocalFairMemory.current
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
     DisposableEffect(fairMemory, backdrop, density, layoutDirection) {

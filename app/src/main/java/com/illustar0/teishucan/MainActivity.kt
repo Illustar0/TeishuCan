@@ -22,6 +22,7 @@ import com.illustar0.teishucan.ui.MainViewModel
 import com.illustar0.teishucan.ui.StartupState
 import com.illustar0.teishucan.ui.TeishuCanApp
 import com.illustar0.teishucan.ui.component.CustomTabsUriHandler
+import com.illustar0.teishucan.ui.theme.LocalFairMemory
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -61,7 +62,7 @@ class MainActivity : AppCompatActivity() {
                 isDark = isDark,
                 areHeavyEffectsEnabled = fairMemory.areHeavyEffectsEnabled,
             ) {
-                CompositionLocalProvider(LocalUriHandler provides uriHandler) {
+                CompositionLocalProvider(LocalUriHandler provides uriHandler, LocalFairMemory provides fairMemory) {
                     TeishuCanApp(
                         themeSettings = ready.themeSettings,
                         onThemeSettingsUpdate = viewModel::updateTheme,
@@ -72,10 +73,5 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        fairMemory.resumeEffects()
     }
 }

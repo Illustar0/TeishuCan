@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -74,6 +76,7 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
@@ -128,7 +131,7 @@ fun TimetablePage(
     val density = LocalDensity.current
     var weekSwitcherHeight by remember { mutableStateOf(0.dp) }
     // 关闭后保留，让弹层滑走时内容不变。
-    var detailEntry by remember { mutableStateOf<TimetableEntry?>(null) }
+    var detailEntries by remember { mutableStateOf<List<TimetableEntry>>(emptyList()) }
     var isDetailVisible by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -193,8 +196,8 @@ fun TimetablePage(
                                 WeekPager(
                                     term = readyTerm,
                                     pagerState = pagerState,
-                                    onEntryClick = { entry ->
-                                        detailEntry = entry
+                                    onEntriesClick = { entries ->
+                                        detailEntries = entries
                                         isDetailVisible = true
                                     },
                                     today = today,
@@ -221,7 +224,7 @@ fun TimetablePage(
             }
         }
         EntryDetailSheet(
-            entry = detailEntry,
+            entries = detailEntries,
             show = isDetailVisible,
             onDismissRequest = { isDetailVisible = false },
         )
@@ -264,7 +267,7 @@ private fun TimetableStatusMessage(
 private fun WeekPager(
     term: TimetableTerm,
     pagerState: PagerState,
-    onEntryClick: (TimetableEntry) -> Unit,
+    onEntriesClick: (List<TimetableEntry>) -> Unit,
     today: LocalDate,
 ) {
     HorizontalPager(
@@ -276,7 +279,7 @@ private fun WeekPager(
         Timetable(
             week = week,
             today = today,
-            onEntryClick = onEntryClick,
+            onEntriesClick = onEntriesClick,
             modifier = Modifier.padding(TimetablePadding),
         )
     }
@@ -284,39 +287,76 @@ private fun WeekPager(
 
 @Composable
 private fun EntryDetailSheet(
-    entry: TimetableEntry?,
+    entries: List<TimetableEntry>,
     show: Boolean,
     onDismissRequest: () -> Unit,
 ) {
+    val sheetTitle = when (entries.size) {
+        0 -> null
+        1 -> entries.single().title
+        else -> stringResource(R.string.timetable_conflict_sheet_title, entries.size)
+    }
     OverlayBottomSheet(
         show = show,
-        title = entry?.title,
+        title = sheetTitle,
         onDismissRequest = onDismissRequest,
     ) {
-        if (entry == null) return@OverlayBottomSheet
-        Card(
+        if (entries.isEmpty()) return@OverlayBottomSheet
+        if (entries.size == 1) {
+            EntryDetailCard(
+                entry = entries.single(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(bottom = 12.dp),
+            )
+            return@OverlayBottomSheet
+        }
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(bottom = 12.dp),
-            colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer),
+                .padding(bottom = 12.dp)
+                .verticalScroll(rememberScrollState()),
         ) {
-            LongPressCopyRow(
-                title = stringResource(R.string.timetable_detail_time),
-                value = entryScheduleText(entry),
+            entries.forEachIndexed { index, entry ->
+                SmallTitle(
+                    text = entry.title,
+                    modifier = if (index > 0) Modifier.padding(top = 12.dp) else Modifier,
+                )
+                EntryDetailCard(
+                    entry = entry,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EntryDetailCard(
+    entry: TimetableEntry,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer),
+    ) {
+        LongPressCopyRow(
+            title = stringResource(R.string.timetable_detail_time),
+            value = entryScheduleText(entry),
+        )
+        if (entry.location != null) {
+            CopyButtonRow(
+                title = stringResource(R.string.timetable_detail_location),
+                value = entry.location,
             )
-            if (entry.location != null) {
-                CopyButtonRow(
-                    title = stringResource(R.string.timetable_detail_location),
-                    value = entry.location,
-                )
-            }
-            if (entry.teacher.isNotBlank()) {
-                LongPressCopyRow(
-                    title = stringResource(R.string.timetable_detail_teacher),
-                    value = entry.teacher,
-                )
-            }
+        }
+        if (entry.teacher.isNotBlank()) {
+            LongPressCopyRow(
+                title = stringResource(R.string.timetable_detail_teacher),
+                value = entry.teacher,
+            )
         }
     }
 }
@@ -572,7 +612,31 @@ private fun previewTerm(id: String, number: String, firstMonday: LocalDate): Tim
             dates = List(7) { monday.plusDays(it.toLong()) },
             entries = listOf(
                 previewEntry(monday, startPeriod = 1, title = "Sample A", location = "R101", periodSpan = 2),
-                previewEntry(monday.plusDays(2), startPeriod = 3, title = "Sample B", location = "R202"),
+                previewEntry(
+                    monday.plusDays(1),
+                    startPeriod = 3,
+                    title = "Conflict A",
+                    location = "R201",
+                    periodSpan = 2,
+                ),
+                previewEntry(
+                    monday.plusDays(1),
+                    startPeriod = 3,
+                    title = "Conflict B",
+                    location = "R202",
+                    periodSpan = 2,
+                ),
+                previewEntry(monday.plusDays(2), startPeriod = 1, title = "Lab", location = "B402", periodSpan = 4),
+                previewEntry(
+                    monday.plusDays(2),
+                    startPeriod = 3,
+                    title = "Elective",
+                    location = "R105",
+                    periodSpan = 2,
+                ),
+                previewEntry(monday.plusDays(3), startPeriod = 5, title = "Dense 1", location = "R301", periodSpan = 2),
+                previewEntry(monday.plusDays(3), startPeriod = 5, title = "Dense 2", location = "R302", periodSpan = 2),
+                previewEntry(monday.plusDays(3), startPeriod = 5, title = "Dense 3", location = "R303", periodSpan = 2),
                 previewEntry(monday.plusDays(4), startPeriod = 6, title = "Sample C", location = null, periodSpan = 3),
             ),
         )

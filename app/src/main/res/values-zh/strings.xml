@@ -78,8 +78,10 @@
     <string name="home_next_class_none">暂无。享受生活吧~</string>
 
     <string name="timetable_entry_position">%1$s第 %2$d 节</string>
+    <string name="timetable_entry_conflict_position">%1$s第 %2$d 节，共 %3$d 门冲突课程</string>
     <string name="timetable_entry_period_range">%1$s第 %2$d–%3$d 节</string>
     <string name="timetable_entry_schedule">%1$s · %2$s – %3$s</string>
+    <string name="timetable_conflict_sheet_title">%1$d 门冲突课程</string>
     <string name="timetable_detail_time">时间</string>
     <string name="timetable_detail_location">地点</string>
     <string name="timetable_detail_teacher">老师</string>

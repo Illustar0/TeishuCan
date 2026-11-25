@@ -82,7 +82,6 @@ import com.illustar0.teishucan.ui.component.animation.DampedDragAnimation
 import com.illustar0.teishucan.ui.component.animation.InteractiveHighlight
 import com.illustar0.teishucan.ui.theme.LocalIsDarkTheme
 import com.illustar0.teishucan.ui.theme.floatingBarBlur
-import com.illustar0.teishucan.ui.theme.rememberReleasableBackdrop
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BadgedBox
 import top.yukonga.miuix.kmp.basic.Icon
@@ -93,6 +92,7 @@ import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.material.EdgeLightSource
 import top.yukonga.miuix.kmp.material.EdgePeak
 import top.yukonga.miuix.kmp.material.EdgeStroke
@@ -213,7 +213,7 @@ private class GlassPill(
 /** 药丸的标签图层要占一块显存，描边要一直监听重力传感器，所以只在画液态玻璃时调用。 */
 @Composable
 private fun rememberGlassPill(background: LayerBackdrop): GlassPill {
-    val tabs = rememberReleasableBackdrop()
+    val tabs = rememberLayerBackdrop()
     val backdrop = rememberCombinedBackdrop(background, tabs)
     // Read .value only inside draw-phase lambdas, never in composition.
     val stroke = rememberGravityRotatedStroke(iosIndicatorSpecular, extraDegrees = 90f)

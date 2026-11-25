@@ -2,18 +2,11 @@ package com.illustar0.teishucan.ui.theme
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.drawscope.ContentDrawScope
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.IntSize
-import com.illustar0.teishucan.memory.FairMemory
 import com.illustar0.teishucan.platform.PlatformCapabilities
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurDefaults
@@ -27,40 +20,19 @@ private const val BarBlurRadius = 25f
 private const val BarTintAlpha = 0.8f
 private const val FloatingBarTintAlpha = 0.6f
 
-// 两个开关随设置和内存回收翻转，只让读取它们的地方重组，不连带整棵界面。
+// 两个开关随设置翻转，只让读取它们的地方重组，不连带整棵界面。
 val LocalIsBlurEnabled = compositionLocalOf { false }
 
 val LocalIsLiquidGlassEnabled = compositionLocalOf { false }
-
-/** 内存紧张时负责释放图层的 [FairMemory]；预览中没有它，图层只随组合释放。 */
-internal val LocalFairMemory = staticCompositionLocalOf<FairMemory?> { null }
 
 @Composable
 fun rememberBlurBackdrop(isEnabled: Boolean = LocalIsBlurEnabled.current): LayerBackdrop? {
     if (!isEnabled || !PlatformCapabilities.isShaderEffectSupported) return null
     val surfaceColor = MiuixTheme.colorScheme.surface
-    return rememberReleasableBackdrop {
+    return rememberLayerBackdrop {
         drawRect(surfaceColor)
         drawContent()
     }
-}
-
-@Composable
-internal fun rememberReleasableBackdrop(onDraw: ContentDrawScope.() -> Unit = { drawContent() }): LayerBackdrop {
-    val backdrop = rememberLayerBackdrop(onDraw = onDraw)
-    val fairMemory = LocalFairMemory.current
-    val density = LocalDensity.current
-    val layoutDirection = LocalLayoutDirection.current
-    DisposableEffect(fairMemory, backdrop, density, layoutDirection) {
-        val layer = backdrop.graphicsLayer
-        val release: () -> Unit = {
-            // 后台可能没有下一帧，立即清空录制的内容，避免继续持有子图层。
-            if (!layer.isReleased) layer.record(density, layoutDirection, IntSize.Zero) {}
-        }
-        fairMemory?.addReleaseCallback(release)
-        onDispose { fairMemory?.removeReleaseCallback(release) }
-    }
-    return backdrop
 }
 
 /** 把此内容录入 [backdrop]，让上层的栏可以模糊它。 */

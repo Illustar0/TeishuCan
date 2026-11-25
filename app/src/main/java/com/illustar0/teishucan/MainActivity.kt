@@ -17,21 +17,15 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.illustar0.teishucan.domain.AccountState
-import com.illustar0.teishucan.memory.FairMemory
 import com.illustar0.teishucan.ui.MainViewModel
 import com.illustar0.teishucan.ui.StartupState
 import com.illustar0.teishucan.ui.TeishuCanApp
 import com.illustar0.teishucan.ui.component.CustomTabsUriHandler
-import com.illustar0.teishucan.ui.theme.LocalFairMemory
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
-    @Inject
-    internal lateinit var fairMemory: FairMemory
-
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,12 +51,8 @@ class MainActivity : AppCompatActivity() {
                 window.isNavigationBarContrastEnforced = false
             }
 
-            TeishuCanTheme(
-                settings = ready.themeSettings,
-                isDark = isDark,
-                areHeavyEffectsEnabled = fairMemory.areHeavyEffectsEnabled,
-            ) {
-                CompositionLocalProvider(LocalUriHandler provides uriHandler, LocalFairMemory provides fairMemory) {
+            TeishuCanTheme(settings = ready.themeSettings, isDark = isDark) {
+                CompositionLocalProvider(LocalUriHandler provides uriHandler) {
                     TeishuCanApp(
                         themeSettings = ready.themeSettings,
                         onThemeSettingsUpdate = viewModel::updateTheme,

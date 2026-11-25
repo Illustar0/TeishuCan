@@ -50,6 +50,7 @@ import com.illustar0.teishucan.ui.component.formatKilowattHours
 import com.illustar0.teishucan.ui.component.formatYuan
 import com.illustar0.teishucan.ui.component.rememberClassTimeFormatter
 import com.illustar0.teishucan.ui.theme.BlurredBar
+import com.illustar0.teishucan.ui.theme.CardSpacing
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
@@ -195,7 +196,7 @@ private fun HomeScaffold(
     ) { innerPadding ->
         val contentPadding = PaddingValues(
             top = innerPadding.calculateTopPadding(),
-            bottom = bottomPadding + 12.dp,
+            bottom = bottomPadding + CardSpacing,
         )
         val list = @Composable {
             LazyColumn(
@@ -235,7 +236,7 @@ private fun LeadCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 12.dp, end = 12.dp, top = 12.dp)
+            .padding(start = CardSpacing, end = CardSpacing, top = CardSpacing)
             .semantics(mergeDescendants = true) {},
         colors = CardDefaults.defaultColors(
             color = MiuixTheme.colorScheme.primary.copy(alpha = LeadCardTintAlpha),
@@ -422,15 +423,15 @@ private fun valueWithUnit(value: String, unit: String): AnnotatedString {
 @Composable
 private fun StatGrid(stats: List<HomeStat>) {
     Column(
-        modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.padding(start = CardSpacing, end = CardSpacing, top = CardSpacing),
+        verticalArrangement = Arrangement.spacedBy(CardSpacing),
     ) {
         stats.chunked(StatColumnCount).forEach { rowStats ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(CardSpacing),
             ) {
                 rowStats.forEach { stat ->
                     StatCard(
@@ -509,7 +510,7 @@ private fun ProfileCard(profile: StudentProfile?) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 12.dp, end = 12.dp, top = 12.dp),
+            .padding(start = CardSpacing, end = CardSpacing, top = CardSpacing),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             ProfileRow(
@@ -580,7 +581,7 @@ private fun LinksCard() {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 12.dp, end = 12.dp, top = 12.dp),
+            .padding(start = CardSpacing, end = CardSpacing, top = CardSpacing),
     ) {
         LinkRow(
             icon = MiuixIcons.Favorites,

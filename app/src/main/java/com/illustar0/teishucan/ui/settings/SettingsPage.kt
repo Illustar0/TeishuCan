@@ -26,6 +26,7 @@ import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.StudentProfile
 import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.ui.theme.BlurredBar
+import com.illustar0.teishucan.ui.theme.CardSpacing
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
@@ -112,7 +113,7 @@ fun SettingsPage(
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
-                bottom = bottomPadding + 12.dp,
+                bottom = bottomPadding + CardSpacing,
             ),
             overscrollEffect = null,
         ) {
@@ -120,7 +121,7 @@ fun SettingsPage(
                 AccountCard(student = student, onLoginClick = onLoginClick)
             }
             item(key = "general") {
-                Card(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp)) {
+                Card(modifier = Modifier.padding(start = CardSpacing, end = CardSpacing, top = CardSpacing)) {
                     ArrowPreference(
                         title = stringResource(R.string.settings_theme),
                         summary = stringResource(R.string.settings_theme_summary),
@@ -145,7 +146,7 @@ fun SettingsPage(
                 }
             }
             item(key = "about") {
-                Card(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp)) {
+                Card(modifier = Modifier.padding(start = CardSpacing, end = CardSpacing, top = CardSpacing)) {
                     ArrowPreference(
                         title = stringResource(R.string.settings_about),
                         summary = stringResource(R.string.settings_about_summary),
@@ -170,7 +171,7 @@ fun SettingsPage(
 
 @Composable
 private fun AccountCard(student: StudentProfile?, onLoginClick: () -> Unit) {
-    Card(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp)) {
+    Card(modifier = Modifier.padding(start = CardSpacing, end = CardSpacing, top = CardSpacing)) {
         if (student == null) {
             ArrowPreference(
                 title = stringResource(R.string.settings_login),
@@ -190,7 +191,7 @@ private fun AccountCard(student: StudentProfile?, onLoginClick: () -> Unit) {
 
 @Composable
 private fun LogoutCard(onClick: () -> Unit) {
-    Card(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp)) {
+    Card(modifier = Modifier.padding(start = CardSpacing, end = CardSpacing, top = CardSpacing)) {
         BasicComponent(
             title = stringResource(R.string.settings_logout),
             titleColor = BasicComponentDefaults.titleColor(color = MiuixTheme.colorScheme.error),

@@ -39,6 +39,7 @@ import com.illustar0.teishucan.domain.ThemeMode
 import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.platform.PlatformCapabilities
 import com.illustar0.teishucan.ui.theme.BlurredBar
+import com.illustar0.teishucan.ui.theme.CardSpacing
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.color
@@ -117,8 +118,8 @@ private fun ThemeSettingsContent(
     settings: ThemeSettings,
     onUpdate: ((ThemeSettings) -> ThemeSettings) -> Unit,
 ) {
-    Column(modifier = Modifier.padding(bottom = 12.dp)) {
-        Card(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp)) {
+    Column(modifier = Modifier.padding(bottom = CardSpacing)) {
+        Card(modifier = Modifier.padding(start = CardSpacing, end = CardSpacing, top = CardSpacing)) {
             OverlayDropdownPreference(
                 title = stringResource(R.string.settings_theme_mode),
                 items = ThemeMode.entries.map { stringResource(it.labelRes) },
@@ -136,7 +137,7 @@ private fun ThemeSettingsContent(
                     text = stringResource(R.string.settings_theme_seed_color),
                     modifier = Modifier.padding(top = 12.dp),
                 )
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                Card(modifier = Modifier.padding(horizontal = CardSpacing)) {
                     SeedColorPicker(
                         selectedColor = settings.seedColor,
                         onColorSelect = { color -> onUpdate { it.copy(seedColor = color) } },
@@ -144,7 +145,7 @@ private fun ThemeSettingsContent(
                 }
             }
         }
-        Card(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp)) {
+        Card(modifier = Modifier.padding(start = CardSpacing, end = CardSpacing, top = CardSpacing)) {
             if (PlatformCapabilities.isShaderEffectSupported) {
                 SwitchPreference(
                     title = stringResource(R.string.settings_theme_blur),

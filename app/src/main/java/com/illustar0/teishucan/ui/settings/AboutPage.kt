@@ -48,6 +48,7 @@ import com.illustar0.teishucan.BuildConfig
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.ui.component.effect.BgEffectBackground
 import com.illustar0.teishucan.ui.theme.BlurredBar
+import com.illustar0.teishucan.ui.theme.CardSpacing
 import com.illustar0.teishucan.ui.theme.LocalIsDarkTheme
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
@@ -248,7 +249,7 @@ private fun AboutContent(
                             onClick = onOpenOpenSourceLicenses,
                         )
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(CardSpacing))
                 }
             }
         }
@@ -353,7 +354,7 @@ private fun AboutCard(backdrop: LayerBackdrop?, content: @Composable () -> Unit)
     val blendColors = if (LocalIsDarkTheme.current) OverlayExtraThinDark else PuredRegularLight
     Card(
         modifier = Modifier
-            .padding(horizontal = 12.dp)
+            .padding(horizontal = CardSpacing)
             .then(
                 if (backdrop != null) {
                     Modifier.textureBlur(

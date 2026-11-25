@@ -22,6 +22,7 @@ import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.ui.component.RefreshContainer
 import com.illustar0.teishucan.ui.component.formatKilowattHours
 import com.illustar0.teishucan.ui.theme.BlurredBar
+import com.illustar0.teishucan.ui.theme.CardSpacing
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
@@ -112,7 +113,9 @@ fun ElectricitySettingsPage(
                     when {
                         meters == null -> Unit
                         meters.isEmpty() -> MeterListEmptyState()
-                        else -> Card(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp)) {
+                        else -> Card(
+                            modifier = Modifier.padding(start = CardSpacing, end = CardSpacing, top = CardSpacing),
+                        ) {
                             meters.forEach { (meter, kilowattHours) ->
                                 ArrowPreference(
                                     title = meter.name,

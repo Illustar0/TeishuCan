@@ -36,6 +36,7 @@ import com.illustar0.teishucan.ui.component.SearchBarTrigger
 import com.illustar0.teishucan.ui.component.SearchPager
 import com.illustar0.teishucan.ui.component.SearchStatus
 import com.illustar0.teishucan.ui.theme.BlurredBar
+import com.illustar0.teishucan.ui.theme.CardSpacing
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
@@ -157,7 +158,7 @@ fun ServicesPage(
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
-                bottom = bottomPadding + 12.dp,
+                bottom = bottomPadding + CardSpacing,
             ),
             overscrollEffect = null,
         ) {
@@ -166,7 +167,7 @@ fun ServicesPage(
                     text = stringResource(R.string.services_academic),
                     modifier = Modifier.padding(top = 12.dp),
                 )
-                Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+                Card(modifier = Modifier.padding(horizontal = CardSpacing)) {
                     UndergradEasRow(onClick = onOpenUndergradEas)
                 }
             }
@@ -212,12 +213,12 @@ private fun ServiceSearchResults(
             .overScrollVertical(),
         contentPadding = PaddingValues(
             top = SearchResultsTopPadding,
-            bottom = maxOf(imeBottomPadding, bottomPadding) + 12.dp,
+            bottom = maxOf(imeBottomPadding, bottomPadding) + CardSpacing,
         ),
         overscrollEffect = null,
     ) {
         item(key = "results") {
-            Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+            Card(modifier = Modifier.padding(horizontal = CardSpacing)) {
                 hits.forEach { hit ->
                     when (hit) {
                         ServiceSearchHit.UndergradEas -> UndergradEasRow(onClick = onOpenUndergradEas)

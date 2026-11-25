@@ -11,6 +11,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.CampusService
+import com.illustar0.teishucan.ui.theme.CardSpacing
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -39,7 +40,7 @@ internal fun ServiceGroupSection(
             text = stringResource(group.titleRes),
             modifier = Modifier.padding(top = 12.dp),
         )
-        Card(modifier = Modifier.padding(horizontal = 12.dp)) {
+        Card(modifier = Modifier.padding(horizontal = CardSpacing)) {
             group.services.forEach { service ->
                 ServiceRow(
                     service = service,

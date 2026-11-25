@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.ui.component.rememberShownContent
 import com.illustar0.teishucan.ui.theme.BlurredBar
+import com.illustar0.teishucan.ui.theme.CardSpacing
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
 import com.mikepenz.aboutlibraries.Libs
@@ -131,7 +132,7 @@ fun OpenSourceLicensesPage(onBack: () -> Unit) {
 @Composable
 private fun LibraryCard(library: Library, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+        modifier = Modifier.padding(start = CardSpacing, end = CardSpacing, bottom = CardSpacing),
         pressFeedbackType = PressFeedbackType.Sink,
         onClick = onClick,
     ) {

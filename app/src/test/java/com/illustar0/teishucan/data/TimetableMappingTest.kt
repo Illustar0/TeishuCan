@@ -30,7 +30,7 @@ class TimetableMappingTest {
     private val semester = Semester(
         id = SemesterId(194),
         code = "2026-2027-1",
-        nameZh = "2026-2027-1",
+        nameZh = "2026-2027学年第一学期",
         schoolYear = "2026-2027",
         season = SemesterSeason.AUTUMN,
         startDate = LocalDate(2026, 9, 7),

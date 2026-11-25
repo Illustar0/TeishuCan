@@ -115,8 +115,8 @@ internal fun Semester.toTerm(timetable: Timetable? = null): TimetableTerm {
     return TimetableTerm(
         id = id.value.toString(),
         schoolYear = schoolYear,
-        // 教务系统的学期名形如 2026-2027-1，末段是学期序号。
-        number = nameZh.substringAfterLast('-'),
+        // 学期代码形如 2026-2027-1，末段是学期序号。
+        number = code.substringAfterLast('-'),
         startDate = start,
         endDate = endDate.toJavaLocalDate(),
         weeks = numbers.map { number ->

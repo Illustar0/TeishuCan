@@ -73,6 +73,8 @@ import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.preference.CheckboxPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
+private const val Tag = "TeishuCan.Account"
+
 private val MfaResendInterval = 60.seconds
 
 private val MfaCodeInput = InputTransformation.byValue { _, proposed ->
@@ -110,7 +112,7 @@ fun LoginSheet(
                 } catch (_: CreateCredentialCancellationException) {
                     return@collect
                 } catch (cause: CreateCredentialException) {
-                    Log.w("TeishuCan.Account", "Could not save password: ${cause.javaClass.simpleName}")
+                    Log.w(Tag, "Could not save password: ${cause.javaClass.simpleName}")
                 }
             }
         }

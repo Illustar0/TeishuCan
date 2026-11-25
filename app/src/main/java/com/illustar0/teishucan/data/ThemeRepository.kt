@@ -10,6 +10,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 
+private const val Tag = "TeishuCan.Theme"
+
 @Singleton
 class ThemeRepository @Inject constructor(@ApplicationContext context: Context) {
     private val store = JsonDataStore(
@@ -25,7 +27,7 @@ class ThemeRepository @Inject constructor(@ApplicationContext context: Context) 
         try {
             store.update(transform)
         } catch (cause: IOException) {
-            Log.w("TeishuCan.Theme", "Could not save the theme settings", cause)
+            Log.w(Tag,"Could not save the theme settings", cause)
         }
     }
 }

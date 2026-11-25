@@ -27,6 +27,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlin.time.Instant
 
+private const val Tag = "TeishuCan.Session"
+
 @Serializable
 internal data class StoredSession(
     val signInId: String,
@@ -75,7 +77,7 @@ class EncryptedSessionStore @Inject constructor(
         try {
             file.delete()
         } catch (cause: SecurityException) {
-            Log.w("TeishuCan.Session", "Could not remove the revoked session file", cause)
+            Log.w(Tag,"Could not remove the revoked session file", cause)
         }
     }
 

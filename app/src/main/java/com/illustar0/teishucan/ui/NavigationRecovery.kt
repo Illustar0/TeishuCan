@@ -22,7 +22,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 
-private const val Tag = "NavigationRecovery"
+private const val Tag = "TeishuCan.Navigation"
 
 /** MemoryLimiter 结束进程时，退出原因描述里带着的标记。 */
 private const val MemoryLimiterExitMarker = "MemoryLimiter:AnonSwap"

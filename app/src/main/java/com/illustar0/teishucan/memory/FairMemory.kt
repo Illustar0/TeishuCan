@@ -32,7 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.seconds
 
-private const val Tag = "FairMemory"
+private const val Tag = "TeishuCan.FairMemory"
 private const val TrimAction = "itgsa.intent.action.TRIM"
 private const val KillAction = "itgsa.intent.action.KILL"
 private const val NoticeExtra = "common"

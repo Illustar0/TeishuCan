@@ -36,6 +36,8 @@ import kotlinx.coroutines.launch
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
+private const val Tag = "TeishuCan.Account"
+
 enum class LoginAction { Login, SavedPasswordLogin, SendCode, VerifyCode }
 
 /**
@@ -188,7 +190,7 @@ class AccountViewModel @Inject constructor(
                     try {
                         CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest())
                     } catch (cause: ClearCredentialException) {
-                        Log.w("TeishuCan.Account", "Could not clear credential state: ${cause.javaClass.simpleName}")
+                        Log.w(Tag, "Could not clear credential state: ${cause.javaClass.simpleName}")
                     }
                 }
             }
@@ -225,7 +227,7 @@ class AccountViewModel @Inject constructor(
             } catch (cause: CancellationException) {
                 throw cause
             } catch (cause: Exception) {
-                Log.w("TeishuCan.Account", "$action failed", cause)
+                Log.w(Tag, "$action failed", cause)
                 onFailure()
                 attempt.failure = LoginFailure(failureMessage, cause.campusReason)
                 outcomes.trySend(ActionOutcome.Failed)

@@ -47,6 +47,7 @@ import com.illustar0.teishucan.ui.component.PeriodStripDefaults
 import com.illustar0.teishucan.ui.component.RefreshContainer
 import com.illustar0.teishucan.ui.component.formatKilowattHours
 import com.illustar0.teishucan.ui.component.formatYuan
+import com.illustar0.teishucan.ui.component.rememberClassTimeFormatter
 import com.illustar0.teishucan.ui.theme.BlurredBar
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import com.illustar0.teishucan.ui.theme.blurSource
@@ -283,8 +284,7 @@ private fun NextClassCard(upcomingClass: UpcomingClass) {
                 LeadDescription(
                     stringResource(
                         R.string.home_next_class_time,
-                        upcomingClass.startTime.hour,
-                        upcomingClass.startTime.minute,
+                        upcomingClass.startTime.format(rememberClassTimeFormatter()),
                     ),
                 )
                 Spacer(modifier = Modifier.height(36.dp))

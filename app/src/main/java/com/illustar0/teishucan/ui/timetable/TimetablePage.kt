@@ -51,8 +51,12 @@ import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.TimetableWeek
+import com.illustar0.teishucan.ui.component.DateSkeleton
+import com.illustar0.teishucan.ui.component.DateWithYearSkeleton
 import com.illustar0.teishucan.ui.component.RefreshContainer
 import com.illustar0.teishucan.ui.component.Timetable
+import com.illustar0.teishucan.ui.component.rememberClassTimeFormatter
+import com.illustar0.teishucan.ui.component.rememberLocalizedFormatter
 import com.illustar0.teishucan.ui.component.liquid.LiquidGlassFloatingToolbar
 import com.illustar0.teishucan.ui.theme.BlurredBar
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
@@ -444,7 +448,7 @@ private fun entryScheduleText(entry: TimetableEntry): String {
     } else {
         stringResource(R.string.timetable_entry_position, dayName, entry.startPeriod)
     }
-    val formatter = DateTimeFormatter.ofPattern(ClassTimePattern)
+    val formatter = rememberClassTimeFormatter()
     return stringResource(
         R.string.timetable_entry_schedule,
         position,
@@ -463,6 +467,7 @@ private fun TermMenu(
     selectedTerm: TimetableTerm,
     onTermSelect: (TimetableTerm) -> Unit,
 ) {
+    val dateFormatter = rememberLocalizedFormatter(DateWithYearSkeleton)
     OverlayIconDropdownMenu(
         entry = DropdownEntry(
             items = terms.sortedByDescending { it.startDate }.map { term ->
@@ -470,7 +475,7 @@ private fun TermMenu(
                     text = termName(term),
                     selected = term == selectedTerm,
                     onClick = { onTermSelect(term) },
-                    summary = formatDateRange(term.startDate, term.endDate, TermDatePattern),
+                    summary = formatDateRange(term.startDate, term.endDate, dateFormatter),
                 )
             },
         ),
@@ -493,6 +498,7 @@ private fun WeekSwitcher(
     modifier: Modifier = Modifier,
 ) {
     val selectedIndex = weeks.indexOf(selectedWeek)
+    val dateFormatter = rememberLocalizedFormatter(DateSkeleton)
     LiquidGlassFloatingToolbar(backdrop = backdrop, modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -522,7 +528,7 @@ private fun WeekSwitcher(
                     color = MiuixTheme.colorScheme.onSurfaceContainer,
                 )
                 Text(
-                    text = formatDateRange(selectedWeek.dates.first(), selectedWeek.dates.last(), WeekDatePattern),
+                    text = formatDateRange(selectedWeek.dates.first(), selectedWeek.dates.last(), dateFormatter),
                     style = MiuixTheme.textStyles.footnote1,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
@@ -560,17 +566,12 @@ private fun WeekStepButton(
     }
 }
 
-private const val TermDatePattern = "yyyy/M/d"
-private const val WeekDatePattern = "M/d"
-private const val ClassTimePattern = "H:mm"
 private const val CopiedIndicatorMillis = 2000L
 
 private val TimetablePadding = PaddingValues(start = 4.dp, end = 8.dp, bottom = 8.dp)
 
-private fun formatDateRange(start: LocalDate, end: LocalDate, pattern: String): String {
-    val formatter = DateTimeFormatter.ofPattern(pattern)
-    return "${start.format(formatter)} – ${end.format(formatter)}"
-}
+private fun formatDateRange(start: LocalDate, end: LocalDate, formatter: DateTimeFormatter): String =
+    "${start.format(formatter)} – ${end.format(formatter)}"
 
 @get:StringRes
 private val TimetableStatus.messageRes: Int?

@@ -14,13 +14,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntSize
 import com.illustar0.teishucan.TeishuCanApplication
+import com.illustar0.teishucan.platform.PlatformCapabilities
 import top.yukonga.miuix.kmp.blur.BlendColorEntry
 import top.yukonga.miuix.kmp.blur.BlurDefaults
 import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.textureBlur
-import top.yukonga.miuix.kmp.material.isRuntimeShaderSupported
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private const val BarBlurRadius = 25f
@@ -31,12 +31,9 @@ val LocalIsBlurEnabled = staticCompositionLocalOf { false }
 
 val LocalIsLiquidGlassEnabled = staticCompositionLocalOf { false }
 
-val isBlurSupported: Boolean
-    get() = isRuntimeShaderSupported()
-
 @Composable
 fun rememberBlurBackdrop(isEnabled: Boolean = LocalIsBlurEnabled.current): LayerBackdrop? {
-    if (!isEnabled || !isBlurSupported) return null
+    if (!isEnabled || !PlatformCapabilities.isShaderEffectSupported) return null
     val surfaceColor = MiuixTheme.colorScheme.surface
     return rememberReleasableBackdrop {
         drawRect(surfaceColor)

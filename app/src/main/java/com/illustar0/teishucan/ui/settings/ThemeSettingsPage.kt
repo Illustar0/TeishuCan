@@ -37,13 +37,11 @@ import com.illustar0.teishucan.domain.PredictiveBackExitDirection
 import com.illustar0.teishucan.domain.SeedColor
 import com.illustar0.teishucan.domain.ThemeMode
 import com.illustar0.teishucan.domain.ThemeSettings
+import com.illustar0.teishucan.platform.PlatformCapabilities
 import com.illustar0.teishucan.ui.theme.BlurredBar
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.color
-import com.illustar0.teishucan.ui.theme.isBlurSupported
-import com.illustar0.teishucan.ui.theme.isPredictiveBackSupported
-import com.illustar0.teishucan.ui.theme.isWallpaperColorSupported
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
@@ -124,7 +122,8 @@ private fun ThemeSettingsContent(
             MonetPreferences(settings = settings, onUpdate = onUpdate)
         }
         AnimatedVisibility(
-            visible = settings.isMonetEnabled && !settings.usesWallpaperColor(isWallpaperColorSupported),
+            visible = settings.isMonetEnabled &&
+                !settings.usesWallpaperColor(PlatformCapabilities.isWallpaperColorSupported),
         ) {
             Column {
                 SmallTitle(
@@ -140,7 +139,7 @@ private fun ThemeSettingsContent(
             }
         }
         Card(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 12.dp)) {
-            if (isBlurSupported) {
+            if (PlatformCapabilities.isShaderEffectSupported) {
                 SwitchPreference(
                     title = stringResource(R.string.settings_theme_blur),
                     summary = stringResource(R.string.settings_theme_blur_summary),
@@ -154,7 +153,7 @@ private fun ThemeSettingsContent(
                 checked = settings.isFloatingNavigationBarEnabled,
                 onCheckedChange = { isEnabled -> onUpdate { it.copy(isFloatingNavigationBarEnabled = isEnabled) } },
             )
-            if (isBlurSupported) {
+            if (PlatformCapabilities.isShaderEffectSupported) {
                 SwitchPreference(
                     title = stringResource(R.string.settings_theme_liquid_glass),
                     summary = stringResource(R.string.settings_theme_liquid_glass_summary),
@@ -162,7 +161,7 @@ private fun ThemeSettingsContent(
                     onCheckedChange = { isEnabled -> onUpdate { it.copy(isLiquidGlassEnabled = isEnabled) } },
                 )
             }
-            if (isPredictiveBackSupported) {
+            if (PlatformCapabilities.isPredictiveBackSupported) {
                 PredictiveBackPreferences(settings = settings, onUpdate = onUpdate)
             }
         }
@@ -207,7 +206,7 @@ private fun ColumnScope.MonetPreferences(
     )
     AnimatedVisibility(visible = settings.isMonetEnabled) {
         Column {
-            if (isWallpaperColorSupported) {
+            if (PlatformCapabilities.isWallpaperColorSupported) {
                 SwitchPreference(
                     title = stringResource(R.string.settings_theme_wallpaper_color),
                     summary = stringResource(R.string.settings_theme_wallpaper_color_summary),

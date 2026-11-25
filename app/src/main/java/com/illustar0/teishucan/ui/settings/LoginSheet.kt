@@ -50,6 +50,7 @@ import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.withResumed
 import com.illustar0.teishucan.R
+import com.illustar0.teishucan.platform.PlatformCapabilities
 import com.illustar0.teishucan.ui.component.LoadingButton
 import com.illustar0.teishucan.ui.component.SheetActionButton
 import com.illustar0.teishucan.ui.component.pageSlide
@@ -92,7 +93,11 @@ fun LoginSheet(
     val autofillManager = LocalAutofillManager.current
     val activity = LocalActivity.current
     val credentialContext = remember(activity) {
-        if (supportsSystemPasswordManager && activity != null) MutableContextWrapper(activity) else null
+        if (PlatformCapabilities.isSystemPasswordManagerSupported && activity != null) {
+            MutableContextWrapper(activity)
+        } else {
+            null
+        }
     }
     val credentialManager = remember(credentialContext) {
         credentialContext?.let { CredentialManager.create(it.applicationContext) }

@@ -1,7 +1,6 @@
 package com.illustar0.teishucan.ui.settings
 
 import android.content.Context
-import android.os.Build
 import android.util.Log
 import androidx.annotation.StringRes
 import androidx.compose.foundation.text.input.TextFieldState
@@ -24,6 +23,7 @@ import com.illustar0.teishucan.data.ZzuSession
 import com.illustar0.teishucan.domain.AccountState
 import com.illustar0.teishucan.domain.LoginResult
 import com.illustar0.teishucan.domain.campusReason
+import com.illustar0.teishucan.platform.PlatformCapabilities
 import com.illustar0.teishucan.ui.component.ActionOutcome
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -77,9 +77,6 @@ class MfaVerification(
 data class LoginFailure(@param:StringRes val fallbackMessage: Int, val reason: String?)
 
 data class PasswordManagerFeedback(@param:StringRes val messageRes: Int, val isError: Boolean)
-
-internal val supportsSystemPasswordManager: Boolean
-    get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
 @HiltViewModel
 class AccountViewModel @Inject constructor(
@@ -140,7 +137,8 @@ class AccountViewModel @Inject constructor(
             return
         }
         attempt.account.setTextAndPlaceCursorAtEnd(account)
-        val shouldOfferPasswordSave = action == LoginAction.Login && supportsSystemPasswordManager
+        val shouldOfferPasswordSave =
+            action == LoginAction.Login && PlatformCapabilities.isSystemPasswordManagerSupported
         submit(attempt, action, R.string.login_failed, onFailure = { attempt.password.clearText() }) {
             val passwordSave = if (shouldOfferPasswordSave) CreatePasswordRequest(account, password) else null
             when (val result = session.login(account, password)) {
@@ -182,7 +180,7 @@ class AccountViewModel @Inject constructor(
             pendingLogoutFailure.captureFailure {
                 session.logout()
                 passwordSaveRequests.tryReceive()
-                if (supportsSystemPasswordManager) {
+                if (PlatformCapabilities.isSystemPasswordManagerSupported) {
                     try {
                         CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest())
                     } catch (cause: ClearCredentialException) {

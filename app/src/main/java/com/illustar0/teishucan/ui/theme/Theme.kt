@@ -1,7 +1,6 @@
 package com.illustar0.teishucan.ui.theme
 
 import android.annotation.SuppressLint
-import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -13,6 +12,7 @@ import com.illustar0.teishucan.domain.PaletteStyle
 import com.illustar0.teishucan.domain.SeedColor
 import com.illustar0.teishucan.domain.ThemeMode
 import com.illustar0.teishucan.domain.ThemeSettings
+import com.illustar0.teishucan.platform.PlatformCapabilities
 import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeColorSpec
@@ -20,12 +20,6 @@ import top.yukonga.miuix.kmp.theme.ThemeController
 import top.yukonga.miuix.kmp.theme.ThemePaletteStyle
 
 val LocalIsDarkTheme = staticCompositionLocalOf { false }
-
-val isWallpaperColorSupported: Boolean
-    get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-
-val isPredictiveBackSupported: Boolean
-    get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
 val SeedColor.color: Color
     get() = when (this) {
@@ -63,7 +57,7 @@ private fun ColorSpec.toMiuix(): ThemeColorSpec = when (this) {
     ColorSpec.Spec2025 -> ThemeColorSpec.Spec2025
 }
 
-@SuppressLint("NewApi") // Guarded by isWallpaperColorSupported.
+@SuppressLint("NewApi") // usesWallpaperColor 已检查 PlatformCapabilities.isWallpaperColorSupported。
 @Composable
 fun TeishuCanTheme(
     settings: ThemeSettings,
@@ -72,7 +66,7 @@ fun TeishuCanTheme(
     content: @Composable () -> Unit,
 ) {
     // keyColor 为 null 时 Miuix 会忽略 paletteStyle 和 colorSpec，所以用强调色作种子。
-    val keyColor = if (settings.usesWallpaperColor(isWallpaperColorSupported)) {
+    val keyColor = if (settings.usesWallpaperColor(PlatformCapabilities.isWallpaperColorSupported)) {
         colorResource(android.R.color.system_accent1_500)
     } else {
         settings.seedColor.color

@@ -3,13 +3,13 @@ package com.illustar0.teishucan.ui
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import android.content.Context
-import android.os.Build
 import android.os.Process
 import android.util.AtomicFile
 import android.util.Log
 import androidx.core.util.writeBytes
 import com.illustar0.teishucan.data.StoreJson
 import com.illustar0.teishucan.di.IoDispatcher
+import com.illustar0.teishucan.platform.PlatformCapabilities
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileNotFoundException
@@ -52,7 +52,7 @@ internal class NavigationRecovery @Inject constructor(
 
     suspend fun record(navigation: NavigationSnapshot) {
         latestNavigation = navigation
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+        if (PlatformCapabilities.isMemoryLimiterPresent) {
             withContext(ioDispatcher) {
                 lock.withLock { write(Record(pid, navigation, isKillRequested)) }
             }
@@ -78,7 +78,7 @@ internal class NavigationRecovery @Inject constructor(
     }
 
     private fun wasMemoryLimited(previousPid: Int): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) return false
+        if (!PlatformCapabilities.isMemoryLimiterPresent) return false
         val manager = context.getSystemService(ActivityManager::class.java)
         val exit = manager?.getHistoricalProcessExitReasons(context.packageName, previousPid, 1)?.firstOrNull()
         return exit?.reason == ApplicationExitInfo.REASON_OTHER &&

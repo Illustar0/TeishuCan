@@ -5,6 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.AtomicFile
 import android.util.Log
+import androidx.core.util.writeBytes
 import com.illustar0.teishucan.di.IoDispatcher
 import com.illustar0.teishucan.domain.StudentProfile
 import com.illustar0.zzu.cas.Tokens
@@ -65,15 +66,7 @@ class EncryptedSessionStore @Inject constructor(
     }
 
     internal suspend fun write(session: StoredSession) = withContext(ioDispatcher) {
-        val encrypted = encrypt(session)
-        val output = file.startWrite()
-        try {
-            output.write(encrypted)
-            file.finishWrite(output)
-        } catch (cause: Throwable) {
-            file.failWrite(output)
-            throw cause
-        }
+        file.writeBytes(encrypt(session))
     }
 
     suspend fun clear() = withContext(ioDispatcher) {

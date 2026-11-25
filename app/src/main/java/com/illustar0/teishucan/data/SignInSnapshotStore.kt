@@ -3,6 +3,7 @@ package com.illustar0.teishucan.data
 import android.content.Context
 import android.util.AtomicFile
 import android.util.Log
+import androidx.core.util.writeBytes
 import com.illustar0.teishucan.di.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -82,14 +83,7 @@ class SignInSnapshotStore @Inject constructor(
                 if (!isCurrent()) return@withLock
                 try {
                     directory.mkdirs()
-                    val output = file.startWrite()
-                    try {
-                        output.write(content)
-                        file.finishWrite(output)
-                    } catch (cause: Throwable) {
-                        file.failWrite(output)
-                        throw cause
-                    }
+                    file.writeBytes(content)
                 } catch (cause: IOException) {
                     Log.w(Tag, "Could not write the snapshot", cause)
                 }

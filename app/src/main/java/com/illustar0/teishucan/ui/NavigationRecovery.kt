@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Process
 import android.util.AtomicFile
 import android.util.Log
+import androidx.core.util.writeBytes
 import com.illustar0.teishucan.data.StoreJson
 import com.illustar0.teishucan.di.IoDispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -99,14 +100,7 @@ internal class NavigationRecovery @Inject constructor(
 
     private fun write(record: Record): Boolean = try {
         val content = StoreJson.encodeToString(record).encodeToByteArray()
-        val output = file.startWrite()
-        try {
-            output.write(content)
-            file.finishWrite(output)
-        } catch (cause: Throwable) {
-            file.failWrite(output)
-            throw cause
-        }
+        file.writeBytes(content)
         file.readFully().contentEquals(content)
     } catch (cause: IOException) {
         Log.w(Tag, "Could not save navigation", cause)

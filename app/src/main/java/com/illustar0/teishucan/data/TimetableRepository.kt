@@ -13,6 +13,7 @@ import com.illustar0.zzu.eas.SessionTeacher
 import com.illustar0.zzu.eas.SessionView
 import com.illustar0.zzu.eas.Timetable
 import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.temporal.TemporalAdjusters
 import java.util.concurrent.atomic.AtomicReference
@@ -108,20 +109,16 @@ class TimetableRepository @Inject constructor(
 }
 
 internal fun Semester.toTerm(timetable: Timetable? = null): TimetableTerm {
-    val start = startDate.toJavaLocalDate()
-    val firstDay = if (startsWeekOnSunday) DayOfWeek.SUNDAY else DayOfWeek.MONDAY
-    val firstWeekStart = start.with(TemporalAdjusters.previousOrSame(firstDay))
     val numbers = timetable?.weekIndices() ?: weekIndices
     return TimetableTerm(
         id = id.value.toString(),
         schoolYear = schoolYear,
         // 学期代码形如 2026-2027-1，末段是学期序号。
         number = code.substringAfterLast('-'),
-        startDate = start,
+        startDate = startDate.toJavaLocalDate(),
         endDate = endDate.toJavaLocalDate(),
         weeks = numbers.map { number ->
-            val weekStart = weekDateRange(number)?.start?.toJavaLocalDate()
-                ?: firstWeekStart.plusWeeks(number - 1L)
+            val weekStart = weekStart(number, timetable)
             TimetableWeek(
                 number = number,
                 dates = List(DayOfWeek.entries.size) { weekStart.plusDays(it.toLong()) },
@@ -130,6 +127,17 @@ internal fun Semester.toTerm(timetable: Timetable? = null): TimetableTerm {
         },
         isLoaded = timetable != null,
     )
+}
+
+/**
+ * 第 [number] 周的第一天。校历里的周次由 SDK 换算；校历之外的周次只因 [timetable] 在那周排了课才出现，
+ * 就从那周课程的实际日期推出，而不是按周序号外推。
+ */
+private fun Semester.weekStart(number: Int, timetable: Timetable?): LocalDate {
+    weekDateRange(number)?.let { return it.start.toJavaLocalDate() }
+    val scheduledDate = checkNotNull(timetable).sessions.first { it.weekIndex == number }.date.toJavaLocalDate()
+    val firstDay = if (startsWeekOnSunday) DayOfWeek.SUNDAY else DayOfWeek.MONDAY
+    return scheduledDate.with(TemporalAdjusters.previousOrSame(firstDay))
 }
 
 internal fun SessionView.toEntry() = TimetableEntry(

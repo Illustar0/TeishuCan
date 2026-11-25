@@ -164,4 +164,33 @@ class TimetableMappingTest {
         assertEquals("", entry.teacher)
         assertEquals("物理实验中心 302", entry.location)
     }
+
+    @Test
+    fun semesterToTerm_extraWeekAfterCalendarGap_datesWeekFromItsSessions() {
+        // 第 5 周的课在 10 月 14 日（周三），校历只到第 2 周，按周序号外推会算成 10 月 5 日开始。
+        val gapWeekSession = ClassSession(
+            classId = regularClass.id,
+            scheduleGroupId = 3,
+            weekIndex = 5,
+            date = LocalDate(2026, 10, 14),
+            weekday = DayOfWeek.WEDNESDAY,
+            startTime = Instant.parse("2026-10-14T00:00:00Z"),
+            endTime = Instant.parse("2026-10-14T01:50:00Z"),
+            startUnit = 1,
+            endUnit = 2,
+            teachers = emptyList(),
+            kind = SessionKind.THEORY,
+        )
+        val timetable = Timetable(
+            semester = semester,
+            classes = listOf(regularClass),
+            sessions = listOf(gapWeekSession),
+        )
+
+        val term = semester.toTerm(timetable)
+
+        val gapWeek = term.weeks.single { it.number == 5 }
+        assertEquals(JavaLocalDate.of(2026, 10, 12), gapWeek.dates.first())
+        assertEquals(JavaLocalDate.of(2026, 10, 14), gapWeek.entries.single().date)
+    }
 }

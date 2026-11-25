@@ -10,10 +10,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.illustar0.teishucan.concurrency.RefreshQueue
 import com.illustar0.teishucan.concurrency.captureFailure
+import com.illustar0.teishucan.data.CampusZone
 import com.illustar0.teishucan.data.TimetableRepository
 import com.illustar0.teishucan.data.ZzuSession
 import com.illustar0.teishucan.domain.AccountState
-import com.illustar0.teishucan.domain.CampusZone
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.defaultTerm
 import com.illustar0.teishucan.ui.component.FailureToasts

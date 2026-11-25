@@ -10,11 +10,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.illustar0.teishucan.data.CampusCardRepository
 import com.illustar0.teishucan.data.CampusRefresher
+import com.illustar0.teishucan.data.CampusZone
 import com.illustar0.teishucan.data.ElectricityRepository
 import com.illustar0.teishucan.data.TimetableRepository
 import com.illustar0.teishucan.data.ZzuSession
 import com.illustar0.teishucan.domain.AccountState
-import com.illustar0.teishucan.domain.CampusZone
 import com.illustar0.teishucan.domain.MeterReading
 import com.illustar0.teishucan.domain.UpcomingClass
 import com.illustar0.teishucan.domain.totalKilowattHours

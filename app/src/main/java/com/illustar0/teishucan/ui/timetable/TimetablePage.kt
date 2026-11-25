@@ -46,7 +46,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
-import com.illustar0.teishucan.domain.CampusZone
+import com.illustar0.teishucan.data.CampusZone
 import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableTerm

@@ -6,12 +6,8 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneId
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
-
-/** 课表中所有日期与时刻所在的时区，与设备当前所在地无关。 */
-val CampusZone: ZoneId = ZoneId.of("Asia/Shanghai")
 
 /**
  * 作息表里上午、下午、晚上各自的节次。

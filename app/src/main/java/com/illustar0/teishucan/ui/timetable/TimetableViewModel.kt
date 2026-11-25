@@ -13,12 +13,14 @@ import com.illustar0.teishucan.concurrency.RefreshQueue
 import com.illustar0.teishucan.data.CampusZone
 import com.illustar0.teishucan.data.TimetableRepository
 import com.illustar0.teishucan.data.ZzuSession
+import com.illustar0.teishucan.data.campusTimeTicks
 import com.illustar0.teishucan.domain.AccountState
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.defaultTerm
 import com.illustar0.teishucan.ui.component.FailureToasts
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -61,22 +63,29 @@ class TimetableViewModel @Inject constructor(
         signInScope.launch { failure.capture { refreshPage() } }.join()
     }
 
+    private val isRefreshing = combine(refreshQueue.isRefreshing, timetable.isRefreshing) { page, timetable ->
+        page || timetable
+    }
+
+    /** 默认学期与本周都以今天为准，跨过零点时随之更新。 */
+    private val today = campusTimeTicks(ChronoUnit.DAYS).map { it.toLocalDate() }
+
     val state: StateFlow<TimetableState> = combine(
         timetable.terms,
         selectedTermId,
         termLoads,
-        refreshQueue.isRefreshing,
-        timetable.isRefreshing,
-    ) { terms, selectedId, loads, isPageRefreshing, isTimetableRefreshing ->
-        val term = terms.find { it.id == selectedId } ?: terms.defaultTerm(LocalDate.now(CampusZone))
-        val isRefreshing = isPageRefreshing || isTimetableRefreshing
+        isRefreshing,
+        today,
+    ) { terms, selectedId, loads, isRefreshing, today ->
+        val term = terms.find { it.id == selectedId } ?: terms.defaultTerm(today)
         TimetableState(
+            today = today,
             terms = terms,
             term = term,
             status = statusOf(term, term?.let { loads[it.id] }, isRefreshing),
             isRefreshing = isRefreshing,
         )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, TimetableState())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, TimetableState(today = LocalDate.now(CampusZone)))
 
     init {
         // 无论学期是选中的、恢复的还是默认的，只要正在展示却还没有课程就加载。换过学期再换回来会重试失败的学期。

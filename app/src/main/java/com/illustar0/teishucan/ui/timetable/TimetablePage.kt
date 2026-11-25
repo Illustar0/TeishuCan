@@ -46,7 +46,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
-import com.illustar0.teishucan.data.CampusZone
 import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableTerm
@@ -101,6 +100,7 @@ import top.yukonga.miuix.kmp.utils.springAnimateToPage
 enum class TimetableStatus { Ready, NoLessons, Loading, Failed, NotFetched }
 
 data class TimetableState(
+    val today: LocalDate,
     val terms: List<TimetableTerm> = emptyList(),
     val term: TimetableTerm? = null,
     val status: TimetableStatus = TimetableStatus.NotFetched,
@@ -113,8 +113,8 @@ fun TimetablePage(
     onRefresh: () -> Unit,
     onTermSelect: (TimetableTerm) -> Unit,
     bottomPadding: Dp,
-    today: LocalDate = LocalDate.now(CampusZone),
 ) {
+    val today = state.today
     val scrollBehavior = MiuixScrollBehavior()
     val isBarBlurEnabled = LocalIsBlurEnabled.current
     val isLiquidGlass = LocalIsLiquidGlassEnabled.current
@@ -662,6 +662,7 @@ private fun TimetablePagePreview() {
         val currentTerm = previewTerm("t3", "1", LocalDate.of(2026, 10, 5))
         TimetablePage(
             state = TimetableState(
+                today = LocalDate.of(2026, 10, 30),
                 terms = listOf(currentTerm, previewTerm("t4", "2", LocalDate.of(2026, 12, 7))),
                 term = currentTerm,
                 status = TimetableStatus.Ready,
@@ -669,7 +670,6 @@ private fun TimetablePagePreview() {
             onRefresh = {},
             onTermSelect = {},
             bottomPadding = 0.dp,
-            today = LocalDate.of(2026, 10, 30),
         )
     }
 }

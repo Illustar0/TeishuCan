@@ -64,12 +64,17 @@ import com.illustar0.teishucan.ui.theme.LocalIsBlurEnabled
 import com.illustar0.teishucan.ui.theme.LocalIsLiquidGlassEnabled
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
-import java.time.LocalDate
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
+import kotlinx.datetime.toJavaDayOfWeek
+import kotlinx.datetime.toJavaLocalDate
+import kotlinx.datetime.toJavaLocalTime
 import kotlin.time.Duration.Companion.seconds
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
@@ -450,7 +455,7 @@ private fun CopyButtonRow(title: String, value: String) {
 
 @Composable
 private fun entryScheduleText(entry: TimetableEntry): String {
-    val dayName = entry.day.getDisplayName(TextStyle.FULL, LocalConfiguration.current.locales[0])
+    val dayName = entry.day.toJavaDayOfWeek().getDisplayName(TextStyle.FULL, LocalConfiguration.current.locales[0])
     val position = if (entry.periodSpan > 1) {
         stringResource(R.string.timetable_entry_period_range, dayName, entry.startPeriod, entry.lastPeriod)
     } else {
@@ -460,8 +465,8 @@ private fun entryScheduleText(entry: TimetableEntry): String {
     return stringResource(
         R.string.timetable_entry_schedule,
         position,
-        entry.startTime.format(formatter),
-        entry.endTime.format(formatter),
+        formatter.format(entry.startTime.toJavaLocalTime()),
+        formatter.format(entry.endTime.toJavaLocalTime()),
     )
 }
 
@@ -575,7 +580,7 @@ private fun WeekStepButton(
 }
 
 private fun formatDateRange(start: LocalDate, end: LocalDate, formatter: DateTimeFormatter): String =
-    "${start.format(formatter)} – ${end.format(formatter)}"
+    "${formatter.format(start.toJavaLocalDate())} – ${formatter.format(end.toJavaLocalDate())}"
 
 @get:StringRes
 private val TimetableStatus.messageRes: Int?
@@ -613,38 +618,39 @@ private fun previewEntry(date: LocalDate, startPeriod: Int, title: String, locat
 
 private fun previewTerm(id: String, number: String, firstMonday: LocalDate): TimetableTerm {
     val weeks = List(8) { index ->
-        val monday = firstMonday.plusWeeks(index.toLong())
+        val monday = firstMonday.plus(index, DateTimeUnit.WEEK)
+        val dates = List(7) { monday.plus(it, DateTimeUnit.DAY) }
         TimetableWeek(
             number = index + 1,
-            dates = List(7) { monday.plusDays(it.toLong()) },
+            dates = dates,
             entries = listOf(
-                previewEntry(monday, startPeriod = 1, title = "Sample A", location = "R101", periodSpan = 2),
+                previewEntry(dates[0], startPeriod = 1, title = "Sample A", location = "R101", periodSpan = 2),
                 previewEntry(
-                    monday.plusDays(1),
+                    dates[1],
                     startPeriod = 3,
                     title = "Conflict A",
                     location = "R201",
                     periodSpan = 2,
                 ),
                 previewEntry(
-                    monday.plusDays(1),
+                    dates[1],
                     startPeriod = 3,
                     title = "Conflict B",
                     location = "R202",
                     periodSpan = 2,
                 ),
-                previewEntry(monday.plusDays(2), startPeriod = 1, title = "Lab", location = "B402", periodSpan = 4),
+                previewEntry(dates[2], startPeriod = 1, title = "Lab", location = "B402", periodSpan = 4),
                 previewEntry(
-                    monday.plusDays(2),
+                    dates[2],
                     startPeriod = 3,
                     title = "Elective",
                     location = "R105",
                     periodSpan = 2,
                 ),
-                previewEntry(monday.plusDays(3), startPeriod = 5, title = "Dense 1", location = "R301", periodSpan = 2),
-                previewEntry(monday.plusDays(3), startPeriod = 5, title = "Dense 2", location = "R302", periodSpan = 2),
-                previewEntry(monday.plusDays(3), startPeriod = 5, title = "Dense 3", location = "R303", periodSpan = 2),
-                previewEntry(monday.plusDays(4), startPeriod = 6, title = "Sample C", location = null, periodSpan = 3),
+                previewEntry(dates[3], startPeriod = 5, title = "Dense 1", location = "R301", periodSpan = 2),
+                previewEntry(dates[3], startPeriod = 5, title = "Dense 2", location = "R302", periodSpan = 2),
+                previewEntry(dates[3], startPeriod = 5, title = "Dense 3", location = "R303", periodSpan = 2),
+                previewEntry(dates[4], startPeriod = 6, title = "Sample C", location = null, periodSpan = 3),
             ),
         )
     }
@@ -663,11 +669,11 @@ private fun previewTerm(id: String, number: String, firstMonday: LocalDate): Tim
 @Composable
 private fun TimetablePagePreview() {
     TeishuCanTheme(settings = ThemeSettings(isBlurEnabled = false), isDark = false) {
-        val currentTerm = previewTerm("t3", "1", LocalDate.of(2026, 10, 5))
+        val currentTerm = previewTerm("t3", "1", LocalDate(2026, 10, 5))
         TimetablePage(
             state = TimetableState(
-                today = LocalDate.of(2026, 10, 30),
-                terms = listOf(currentTerm, previewTerm("t4", "2", LocalDate.of(2026, 12, 7))),
+                today = LocalDate(2026, 10, 30),
+                terms = listOf(currentTerm, previewTerm("t4", "2", LocalDate(2026, 12, 7))),
                 term = currentTerm,
                 status = TimetableStatus.Ready,
             ),

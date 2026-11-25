@@ -1,13 +1,13 @@
-@file:UseSerializers(LocalDateAsStringSerializer::class, LocalTimeAsStringSerializer::class)
-
 package com.illustar0.teishucan.domain
 
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.atTime
+import kotlinx.datetime.plus
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.UseSerializers
 
 /**
  * 作息表里上午、下午、晚上各自的节次。
@@ -95,15 +95,15 @@ data class NextClass(
 
 /** 这些学期中今天 [now] 之后和明天全天的第一节课。 */
 fun List<TimetableTerm>.upcomingClassAfter(now: LocalDateTime): UpcomingClass {
-    val today = now.toLocalDate()
-    val tomorrow = today.plusDays(1)
+    val today = now.date
+    val tomorrow = today.plus(1, DateTimeUnit.DAY)
     val days = setOf(today, tomorrow)
     val termsOfDays = filter { term -> term.weeks.any { week -> week.dates.any { it in days } } }
     if (isEmpty() || !termsOfDays.all { it.isLoaded }) return UpcomingClass.NotFetched
 
     val entries = termsOfDays.flatMap { term -> term.weeks.flatMap { it.entries } }
     val upcoming = entries
-        .filter { it.date in days && it.startsAt.isAfter(now) }
+        .filter { it.date in days && it.startsAt > now }
         .minByOrNull { it.startsAt }
         ?: return UpcomingClass.None
     return NextClass(

@@ -12,10 +12,6 @@ import com.illustar0.zzu.eas.SemesterId
 import com.illustar0.zzu.eas.SessionTeacher
 import com.illustar0.zzu.eas.SessionView
 import com.illustar0.zzu.eas.Timetable
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.temporal.TemporalAdjusters
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,9 +21,13 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.datetime.toJavaDayOfWeek
-import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toJavaLocalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.serializer
 import kotlin.time.Duration
@@ -115,13 +115,13 @@ internal fun Semester.toTerm(timetable: Timetable? = null): TimetableTerm {
         schoolYear = schoolYear,
         // 学期代码形如 2026-2027-1，末段是学期序号。
         number = code.substringAfterLast('-'),
-        startDate = startDate.toJavaLocalDate(),
-        endDate = endDate.toJavaLocalDate(),
+        startDate = startDate,
+        endDate = endDate,
         weeks = numbers.map { number ->
             val weekStart = weekStart(number, timetable)
             TimetableWeek(
                 number = number,
-                dates = List(DayOfWeek.entries.size) { weekStart.plusDays(it.toLong()) },
+                dates = List(DayOfWeek.entries.size) { weekStart.plus(it, DateTimeUnit.DAY) },
                 entries = timetable?.week(number)?.sessions().orEmpty().map { it.toEntry() },
             )
         },
@@ -134,15 +134,16 @@ internal fun Semester.toTerm(timetable: Timetable? = null): TimetableTerm {
  * 就从那周课程的实际日期推出，而不是按周序号外推。
  */
 private fun Semester.weekStart(number: Int, timetable: Timetable?): LocalDate {
-    weekDateRange(number)?.let { return it.start.toJavaLocalDate() }
-    val scheduledDate = checkNotNull(timetable).sessions.first { it.weekIndex == number }.date.toJavaLocalDate()
+    weekDateRange(number)?.let { return it.start }
+    val scheduledDate = checkNotNull(timetable).sessions.first { it.weekIndex == number }.date
     val firstDay = if (startsWeekOnSunday) DayOfWeek.SUNDAY else DayOfWeek.MONDAY
-    return scheduledDate.with(TemporalAdjusters.previousOrSame(firstDay))
+    val daysIntoWeek = (scheduledDate.dayOfWeek.isoDayNumber - firstDay.isoDayNumber).mod(DayOfWeek.entries.size)
+    return scheduledDate.minus(daysIntoWeek, DateTimeUnit.DAY)
 }
 
 internal fun SessionView.toEntry() = TimetableEntry(
-    day = session.weekday.toJavaDayOfWeek(),
-    date = session.date.toJavaLocalDate(),
+    day = session.weekday,
+    date = session.date,
     startPeriod = session.startUnit,
     startTime = session.startTime.toCampusTime(),
     endTime = session.endTime.toCampusTime(),
@@ -155,4 +156,4 @@ internal fun SessionView.toEntry() = TimetableEntry(
     periodSpan = session.endUnit - session.startUnit + 1,
 )
 
-private fun Instant.toCampusTime(): LocalTime = toLocalDateTime(ZzuTimeZone).time.toJavaLocalTime()
+private fun Instant.toCampusTime(): LocalTime = toLocalDateTime(ZzuTimeZone).time

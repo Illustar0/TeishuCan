@@ -55,7 +55,8 @@ import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
 import java.math.BigDecimal
-import java.time.LocalTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.toJavaLocalTime
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -291,7 +292,7 @@ private fun NextClassCard(upcomingClass: UpcomingClass) {
                 LeadDescription(
                     stringResource(
                         R.string.home_next_class_time,
-                        upcomingClass.startTime.format(rememberClassTimeFormatter()),
+                        rememberClassTimeFormatter().format(upcomingClass.startTime.toJavaLocalTime()),
                     ),
                 )
                 Spacer(modifier = Modifier.height(NextClassPlaceGap))
@@ -629,7 +630,7 @@ private fun HomePagePreview() {
                 upcomingClass = NextClass(
                     name = "Sample Course",
                     location = "Sample Room",
-                    startTime = LocalTime.of(14, 30),
+                    startTime = LocalTime(14, 30),
                     periods = ClassPeriods(startPeriod = 5, periodSpan = 2),
                     dayClasses = listOf(
                         ClassPeriods(startPeriod = 1, periodSpan = 2),

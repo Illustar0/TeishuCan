@@ -33,10 +33,11 @@ import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableWeek
-import java.time.DayOfWeek
-import java.time.LocalDate
 import java.time.format.TextStyle
 import kotlin.math.roundToInt
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toJavaDayOfWeek
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
@@ -103,7 +104,7 @@ private fun DayHeaderRow(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = day.getDisplayName(TextStyle.SHORT, locale),
+                    text = day.toJavaDayOfWeek().getDisplayName(TextStyle.SHORT, locale),
                     color = color,
                     fontWeight = fontWeight,
                     maxLines = 1,
@@ -111,7 +112,7 @@ private fun DayHeaderRow(
                 )
                 if (date != null) {
                     Text(
-                        text = date.dayOfMonth.toString(),
+                        text = date.day.toString(),
                         color = color,
                         fontWeight = fontWeight,
                         style = MiuixTheme.textStyles.footnote2,
@@ -238,7 +239,7 @@ private fun EntryCell(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dayName = entry.day.getDisplayName(TextStyle.FULL, LocalConfiguration.current.locales[0])
+    val dayName = entry.day.toJavaDayOfWeek().getDisplayName(TextStyle.FULL, LocalConfiguration.current.locales[0])
     val position = if (conflictCount > 1) {
         stringResource(R.string.timetable_entry_conflict_position, dayName, entry.startPeriod, conflictCount)
     } else {

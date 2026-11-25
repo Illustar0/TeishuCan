@@ -13,7 +13,7 @@ import com.illustar0.teishucan.data.CampusZone
 import com.illustar0.teishucan.data.ElectricityRepository
 import com.illustar0.teishucan.data.TimetableRepository
 import com.illustar0.teishucan.data.ZzuSession
-import com.illustar0.teishucan.data.campusTimeTicks
+import com.illustar0.teishucan.data.campusMinuteTicks
 import com.illustar0.teishucan.domain.AccountState
 import com.illustar0.teishucan.domain.MeterReading
 import com.illustar0.teishucan.domain.UpcomingClass
@@ -22,14 +22,14 @@ import com.illustar0.teishucan.domain.upcomingClassAfter
 import com.illustar0.teishucan.ui.component.OutcomeHaptics
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
-import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.WhileSubscribed
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 
 private val StateStopTimeout = 5.seconds
@@ -43,7 +43,7 @@ class HomeViewModel @Inject constructor(
     private val refresher: CampusRefresher,
 ) : ViewModel() {
     /** 每分钟重新挑选下一节课，已经开始的课程随之退场。 */
-    private val upcomingClass = combine(timetable.terms, campusTimeTicks(ChronoUnit.MINUTES)) { terms, now ->
+    private val upcomingClass = combine(timetable.terms, campusMinuteTicks()) { terms, now ->
         terms.upcomingClassAfter(now)
     }
 
@@ -61,7 +61,7 @@ class HomeViewModel @Inject constructor(
         // 只在首页可见时计时；转屏等短暂中断不重启上游。
         SharingStarted.WhileSubscribed(stopTimeout = StateStopTimeout),
         homeState(
-            timetable.terms.value.upcomingClassAfter(LocalDateTime.now(CampusZone)),
+            timetable.terms.value.upcomingClassAfter(Clock.System.now().toLocalDateTime(CampusZone)),
             campusCard.balanceYuan.value,
             electricity.meters.value,
             session.account.value,

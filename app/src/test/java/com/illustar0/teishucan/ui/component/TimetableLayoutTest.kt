@@ -1,16 +1,18 @@
 package com.illustar0.teishucan.ui.component
 
 import com.illustar0.teishucan.domain.TimetableEntry
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TimetableLayoutTest {
-    private val mondayDate = LocalDate.of(2026, 10, 12)
+    private val mondayDate = LocalDate(2026, 10, 12)
 
     private fun entry(
         day: DayOfWeek,
@@ -19,10 +21,10 @@ class TimetableLayoutTest {
         title: String,
     ) = TimetableEntry(
         day = day,
-        date = mondayDate.plusDays(day.ordinal.toLong()),
+        date = mondayDate.plus(day.ordinal, DateTimeUnit.DAY),
         startPeriod = startPeriod,
-        startTime = LocalTime.of(8, 0),
-        endTime = LocalTime.of(9, 40),
+        startTime = LocalTime(8, 0),
+        endTime = LocalTime(9, 40),
         title = title,
         teacher = "Teacher",
         location = "R101",

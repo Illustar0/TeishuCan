@@ -1,20 +1,22 @@
 package com.illustar0.teishucan.domain
 
-import java.time.DayOfWeek
-import java.time.LocalDate
-import java.time.LocalTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class TimetablePeriodsTest {
-    private val monday = LocalDate.of(2026, 9, 7)
+    private val monday = LocalDate(2026, 9, 7)
 
     private fun entry(startPeriod: Int, periodSpan: Int) = TimetableEntry(
         day = DayOfWeek.MONDAY,
         date = monday,
         startPeriod = startPeriod,
-        startTime = LocalTime.of(8, 0),
-        endTime = LocalTime.of(9, 50),
+        startTime = LocalTime(8, 0),
+        endTime = LocalTime(9, 50),
         title = "Course",
         teacher = "",
         periodSpan = periodSpan,
@@ -25,7 +27,7 @@ class TimetablePeriodsTest {
         schoolYear = "2026-2027",
         number = "1",
         startDate = monday,
-        endDate = monday.plusWeeks(1),
+        endDate = monday.plus(1, DateTimeUnit.WEEK),
         weeks = listOf(TimetableWeek(number = 1, dates = listOf(monday), entries = entries.toList())),
         isLoaded = true,
     )

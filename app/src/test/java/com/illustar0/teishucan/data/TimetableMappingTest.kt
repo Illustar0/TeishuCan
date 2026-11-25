@@ -15,12 +15,10 @@ import com.illustar0.zzu.eas.SessionKind
 import com.illustar0.zzu.eas.SessionTeacher
 import com.illustar0.zzu.eas.TeachingClass
 import com.illustar0.zzu.eas.Timetable
-import java.time.DayOfWeek as JavaDayOfWeek
-import java.time.LocalDate as JavaLocalDate
-import java.time.LocalTime as JavaLocalTime
 import kotlin.time.Instant
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -75,9 +73,9 @@ class TimetableMappingTest {
         assertEquals("1", term.number)
         assertFalse(term.isLoaded)
         assertEquals(listOf(1, 2), term.weeks.map { it.number })
-        assertEquals(JavaLocalDate.of(2026, 9, 7), term.weeks[0].dates.first())
-        assertEquals(JavaLocalDate.of(2026, 9, 13), term.weeks[0].dates.last())
-        assertEquals(JavaLocalDate.of(2026, 9, 14), term.weeks[1].dates.first())
+        assertEquals(LocalDate(2026, 9, 7), term.weeks[0].dates.first())
+        assertEquals(LocalDate(2026, 9, 13), term.weeks[0].dates.last())
+        assertEquals(LocalDate(2026, 9, 14), term.weeks[1].dates.first())
         assertTrue(term.weeks.all { it.entries.isEmpty() })
     }
 
@@ -116,12 +114,12 @@ class TimetableMappingTest {
 
         assertTrue(term.isLoaded)
         val entry = term.weeks[0].entries.single()
-        assertEquals(JavaDayOfWeek.MONDAY, entry.day)
-        assertEquals(JavaLocalDate.of(2026, 9, 7), entry.date)
+        assertEquals(DayOfWeek.MONDAY, entry.day)
+        assertEquals(LocalDate(2026, 9, 7), entry.date)
         assertEquals(1, entry.startPeriod)
         assertEquals(2, entry.periodSpan)
-        assertEquals(JavaLocalTime.of(8, 0), entry.startTime)
-        assertEquals(JavaLocalTime.of(9, 50), entry.endTime)
+        assertEquals(LocalTime(8, 0), entry.startTime)
+        assertEquals(LocalTime(9, 50), entry.endTime)
         assertEquals("程序设计", entry.title)
         assertEquals("张老师、李老师", entry.teacher)
         assertEquals("南101", entry.location)
@@ -153,13 +151,13 @@ class TimetableMappingTest {
         val term = semester.toTerm(timetable)
 
         assertEquals(listOf(1, 2, 3), term.weeks.map { it.number })
-        assertEquals(JavaLocalDate.of(2026, 9, 21), term.weeks[2].dates.first())
+        assertEquals(LocalDate(2026, 9, 21), term.weeks[2].dates.first())
         val entry = term.weeks[2].entries.single()
-        assertEquals(JavaDayOfWeek.WEDNESDAY, entry.day)
+        assertEquals(DayOfWeek.WEDNESDAY, entry.day)
         assertEquals(5, entry.startPeriod)
         assertEquals(3, entry.periodSpan)
-        assertEquals(JavaLocalTime.of(14, 30), entry.startTime)
-        assertEquals(JavaLocalTime.of(16, 10), entry.endTime)
+        assertEquals(LocalTime(14, 30), entry.startTime)
+        assertEquals(LocalTime(16, 10), entry.endTime)
         assertEquals("大学物理实验 - 迈克尔逊干涉仪", entry.title)
         assertEquals("", entry.teacher)
         assertEquals("物理实验中心 302", entry.location)
@@ -190,7 +188,7 @@ class TimetableMappingTest {
         val term = semester.toTerm(timetable)
 
         val gapWeek = term.weeks.single { it.number == 5 }
-        assertEquals(JavaLocalDate.of(2026, 10, 12), gapWeek.dates.first())
-        assertEquals(JavaLocalDate.of(2026, 10, 14), gapWeek.entries.single().date)
+        assertEquals(LocalDate(2026, 10, 12), gapWeek.dates.first())
+        assertEquals(LocalDate(2026, 10, 14), gapWeek.entries.single().date)
     }
 }

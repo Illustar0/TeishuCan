@@ -17,7 +17,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationException
 import kotlin.time.Instant
 
 private const val Tag = "TeishuCan.Snapshot"
@@ -71,7 +70,8 @@ class SignInSnapshotStore @Inject constructor(
             } catch (cause: SecurityException) {
                 Log.w(Tag, "Could not read the snapshot", cause)
                 null
-            } catch (_: SerializationException) {
+            } catch (_: IllegalArgumentException) {
+                // 包括 JSON 本身损坏时的 SerializationException，以及日期等字段解析失败。
                 null
             }
         }

@@ -13,14 +13,12 @@ import com.illustar0.teishucan.concurrency.RefreshQueue
 import com.illustar0.teishucan.data.CampusZone
 import com.illustar0.teishucan.data.TimetableRepository
 import com.illustar0.teishucan.data.ZzuSession
-import com.illustar0.teishucan.data.campusTimeTicks
+import com.illustar0.teishucan.data.campusDateTicks
 import com.illustar0.teishucan.domain.AccountState
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.defaultTerm
 import com.illustar0.teishucan.ui.component.FailureToasts
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
@@ -36,6 +34,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 private const val SelectedTermIdKey = "selectedTermId"
 
@@ -62,7 +62,7 @@ class TimetableViewModel @Inject constructor(
     }
 
     /** 默认学期与本周都以今天为准，跨过零点时随之更新。 */
-    private val today = campusTimeTicks(ChronoUnit.DAYS).map { it.toLocalDate() }
+    private val today = campusDateTicks()
 
     val state: StateFlow<TimetableState> = combine(
         timetable.terms,
@@ -79,7 +79,7 @@ class TimetableViewModel @Inject constructor(
             status = statusOf(term, term?.let { loads[it.id] }, isRefreshing),
             isRefreshing = isRefreshing,
         )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, TimetableState(today = LocalDate.now(CampusZone)))
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, TimetableState(today = Clock.System.todayIn(CampusZone)))
 
     init {
         viewModelScope.launch {

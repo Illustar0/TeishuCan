@@ -1,52 +1,55 @@
 package com.illustar0.teishucan.data
 
-import java.time.Clock
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.temporal.ChronoUnit
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.toInstant
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class CampusTimeTicksTest {
     /** 从 [start] 起随虚拟时间前进的时钟，测试不必真的等待。 */
     private fun TestScope.virtualClock(start: LocalDateTime): Clock {
-        val startInstant = start.atZone(CampusZone).toInstant()
-        return object : Clock() {
-            override fun getZone(): ZoneId = CampusZone
-
-            override fun withZone(zone: ZoneId): Clock = throw UnsupportedOperationException()
-
-            override fun instant(): Instant = startInstant.plusMillis(testScheduler.currentTime)
+        val startInstant = start.toInstant(CampusZone)
+        return object : Clock {
+            override fun now(): Instant = startInstant + testScheduler.currentTime.milliseconds
         }
     }
 
     @Test
-    fun campusTimeTicks_minutes_emitsNowThenAtEachMinuteStart() = runTest {
-        val clock = virtualClock(LocalDateTime.of(2026, 9, 7, 8, 59, 30))
+    fun campusMinuteTicks_emitsNowThenAtEachMinuteStart() = runTest {
+        val clock = virtualClock(LocalDateTime(2026, 9, 7, 8, 59, 30))
 
-        val ticks = campusTimeTicks(ChronoUnit.MINUTES, clock).take(3).toList()
+        val ticks = campusMinuteTicks(clock).take(3).toList()
 
         assertEquals(
             listOf(
-                LocalDateTime.of(2026, 9, 7, 8, 59, 30),
-                LocalDateTime.of(2026, 9, 7, 9, 0),
-                LocalDateTime.of(2026, 9, 7, 9, 1),
+                LocalDateTime(2026, 9, 7, 8, 59, 30),
+                LocalDateTime(2026, 9, 7, 9, 0),
+                LocalDateTime(2026, 9, 7, 9, 1),
             ),
             ticks,
         )
     }
 
     @Test
-    fun campusTimeTicks_days_nextTickIsMidnight() = runTest {
-        val clock = virtualClock(LocalDateTime.of(2026, 9, 7, 21, 30, 15))
+    fun campusDateTicks_nextTickIsMidnight() = runTest {
+        val clock = virtualClock(LocalDateTime(2026, 9, 7, 21, 30, 15))
 
-        val ticks = campusTimeTicks(ChronoUnit.DAYS, clock).take(2).toList()
+        val ticks = campusDateTicks(clock).take(2).toList()
 
-        assertEquals(LocalDateTime.of(2026, 9, 8, 0, 0), ticks.last())
+        assertEquals(listOf(LocalDate(2026, 9, 7), LocalDate(2026, 9, 8)), ticks)
+        assertEquals(2.hours + 29.minutes + 45.seconds, testScheduler.currentTime.milliseconds)
     }
 }

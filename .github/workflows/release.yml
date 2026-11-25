@@ -1,0 +1,173 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag name (defaults to git ref name)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Fetch libzzu Android binaries
+        run: dart run tool/fetch_libzzu.dart --target android
+
+      - name: Build Android release APKs
+        run: flutter build apk --release --split-per-abi
+
+      - name: Package Android APKs
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          mkdir -p release-assets
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            src="build/app/outputs/flutter-apk/app-${abi}-release.apk"
+            if [ ! -f "$src" ]; then
+              echo "ERROR: Expected APK missing: $src"
+              exit 1
+            fi
+            cp "$src" "release-assets/TeishuCan-${TAG}-android-${abi}.apk"
+          done
+          ls -lh release-assets
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: release-assets/*.apk
+
+  build-ios:
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Fetch libzzu iOS XCFramework
+        run: dart run tool/fetch_libzzu.dart --target ios
+
+      - name: Build iOS unsigned release app
+        run: flutter build ios --release --no-codesign
+
+      - name: Verify libzzu symbols are linked
+        run: |
+          target=""
+          for candidate in \
+            "build/ios/iphoneos/Runner.app/Frameworks/libzzu_ffi.framework/libzzu_ffi" \
+            "build/ios/iphoneos/Runner.app/Runner"; do
+            if [ -f "$candidate" ] && nm -gU "$candidate" | grep -q "zzu_abi_version"; then
+              target="$candidate"
+              break
+            fi
+          done
+          if [ -z "$target" ]; then
+            echo "ERROR: zzu_abi_version symbol was stripped or missing from Runner.app"
+            exit 1
+          fi
+          echo "Checking required exported symbols in $target"
+          for sym in zzu_abi_version zzu_runtime_new zzu_cas_call zzu_timetable_to_calendar; do
+            if ! nm -gU "$target" | grep -q "$sym"; then
+              echo "ERROR: $sym missing from $target"
+              exit 1
+            fi
+          done
+
+      - name: Package unsigned iOS IPA
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          mkdir -p release-assets Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/Runner.app
+          zip -r -y "release-assets/TeishuCan-${TAG}-ios-unsigned.ipa" Payload
+          ls -lh release-assets
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-ios
+          path: release-assets/*.ipa
+
+  publish:
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums and release notes
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          (cd dist && sha256sum *.apk *.ipa > ../SHA256SUMS.txt && mv ../SHA256SUMS.txt .)
+          python3 - <<'PY'
+          import os, textwrap
+          tag = os.environ["TAG"]
+          notes = textwrap.dedent(f"""\
+          ## TeishuCan {tag} (Flutter)
+
+          基于 [`Illustar0/libzzu`](https://github.com/Illustar0/libzzu) `v0.2.0`（C ABI 2.0 + Dart FFI）构建的跨平台 Flutter 版本。
+
+          ### 产物说明
+
+          - **Android（`*.apk`）**：按 ABI 拆分的 Release 安装包，现代手机推荐安装 `android-arm64-v8a.apk`（另提供 `armeabi-v7a` 与 `x86_64`）。当前为 debug 签名，可直接侧载安装。
+          - **iOS（`*-ios-unsigned.ipa`）**：iOS 15.0+ 未签名 Release 包，可通过巨魔商店（TrollStore）、AltStore、SideStore、Sideloadly 等工具自签名/免签安装，或用自有证书重签安装。
+          - **校验文件**：`SHA256SUMS.txt` 包含所有产物的 SHA-256 校验值，下载后可执行 `sha256sum -c SHA256SUMS.txt` 校验完整性。
+          """)
+          with open("release_notes.md", "w", encoding="utf-8") as f:
+              f.write(notes)
+          PY
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if gh release view "$TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo "${{ github.repository }}" --title "TeishuCan $TAG" --notes-file release_notes.md
+            gh release upload "$TAG" dist/* --repo "${{ github.repository }}" --clobber
+          else
+            gh release create "$TAG" dist/* --repo "${{ github.repository }}" --title "TeishuCan $TAG" --notes-file release_notes.md
+          fi

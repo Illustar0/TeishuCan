@@ -1,5 +1,6 @@
 package com.illustar0.teishucan.data
 
+import androidx.datastore.core.CorruptionException
 import com.illustar0.teishucan.domain.ColorSpec
 import com.illustar0.teishucan.domain.PaletteStyle
 import com.illustar0.teishucan.domain.PredictiveBackAnimation
@@ -8,11 +9,19 @@ import com.illustar0.teishucan.domain.SeedColor
 import com.illustar0.teishucan.domain.ThemeMode
 import com.illustar0.teishucan.domain.ThemeSettings
 import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 class ThemeSettingsStorageTest {
+    @get:Rule
+    val temporaryFolder = TemporaryFolder()
+
     private val serializer = JsonSerializer(ThemeSettings(), ThemeSettings.serializer())
 
     private suspend fun read(json: String): ThemeSettings = serializer.readFrom(json.byteInputStream())
@@ -44,7 +53,18 @@ class ThemeSettingsStorageTest {
     }
 
     @Test
-    fun readFrom_corruptContent_returnsDefaults() = runTest {
-        assertEquals(ThemeSettings(), read("not json"))
+    fun readFrom_corruptContent_reportsCorruption() {
+        assertThrows(CorruptionException::class.java) {
+            runBlocking { read("not json") }
+        }
+    }
+
+    @Test
+    fun data_corruptFile_readsDefaultsAndReplacesFile() = runTest {
+        val file = temporaryFolder.newFile("theme_settings.json").apply { writeText("not json") }
+        val store = JsonDataStore(file, ThemeSettings(), ThemeSettings.serializer(), scope = backgroundScope)
+
+        assertEquals(ThemeSettings(), store.data.first())
+        assertEquals(ThemeSettings(), read(file.readText()))
     }
 }

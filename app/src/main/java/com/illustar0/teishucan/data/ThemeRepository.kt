@@ -2,8 +2,7 @@ package com.illustar0.teishucan.data
 
 import android.content.Context
 import android.util.Log
-import androidx.datastore.core.DataStore
-import androidx.datastore.dataStore
+import androidx.datastore.dataStoreFile
 import com.illustar0.teishucan.domain.ThemeSettings
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
@@ -11,21 +10,20 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 
-private val Context.themeStore: DataStore<ThemeSettings> by dataStore(
-    fileName = "theme_settings.json",
-    serializer = JsonSerializer(ThemeSettings(), ThemeSettings.serializer()),
-)
-
 @Singleton
 class ThemeRepository @Inject constructor(@ApplicationContext context: Context) {
-    private val store = context.themeStore
+    private val store = JsonDataStore(
+        file = context.dataStoreFile("theme_settings.json"),
+        defaultValue = ThemeSettings(),
+        serializer = ThemeSettings.serializer(),
+    )
 
-    val settings: Flow<ThemeSettings> = store.dataOr(ThemeSettings())
+    val settings: Flow<ThemeSettings> = store.data
 
     /** 写入失败时保持原样，主题设置不值得让应用崩溃。 */
     suspend fun update(transform: (ThemeSettings) -> ThemeSettings) {
         try {
-            store.updateData { transform(it) }
+            store.update(transform)
         } catch (cause: IOException) {
             Log.w("TeishuCan.Theme", "Could not save the theme settings", cause)
         }

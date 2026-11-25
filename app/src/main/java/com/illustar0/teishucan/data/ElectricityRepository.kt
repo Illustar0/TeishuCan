@@ -1,8 +1,7 @@
 package com.illustar0.teishucan.data
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.dataStore
+import androidx.datastore.dataStoreFile
 import com.illustar0.teishucan.concurrency.RefreshTracker
 import com.illustar0.teishucan.di.ApplicationScope
 import com.illustar0.teishucan.domain.CampusFeature
@@ -33,11 +32,6 @@ import kotlinx.serialization.serializer
 import kotlin.time.Duration
 import kotlin.time.Instant
 
-private val Context.meterStore: DataStore<List<ElectricityMeter>> by dataStore(
-    fileName = "electricity_meters.json",
-    serializer = JsonSerializer(emptyList(), serializer<List<ElectricityMeter>>()),
-)
-
 /** 用户添加的电表（保存在本机）及校园电控服务。 */
 @Singleton
 class ElectricityRepository @Inject constructor(
@@ -45,8 +39,12 @@ class ElectricityRepository @Inject constructor(
     private val session: ZzuSession,
     @ApplicationScope scope: CoroutineScope,
 ) {
-    private val store = context.meterStore
-    private val savedMeters = store.dataOr(emptyList())
+    private val store = JsonDataStore(
+        file = context.dataStoreFile("electricity_meters.json"),
+        defaultValue = emptyList(),
+        serializer = serializer<List<ElectricityMeter>>(),
+    )
+    private val savedMeters = store.data
 
     /** 各房间的剩余电量，以 [MeterLocation.meterId] 为键。 */
     private val remainingEnergy = session.createSnapshotCache(
@@ -75,7 +73,7 @@ class ElectricityRepository @Inject constructor(
 
     /** 添加 [meter]，或替换 id 相同的电表。 */
     suspend fun saveMeter(meter: ElectricityMeter) {
-        store.updateData { meters ->
+        store.update { meters ->
             if (meters.any { it.id == meter.id }) {
                 meters.map { if (it.id == meter.id) meter else it }
             } else {
@@ -85,7 +83,7 @@ class ElectricityRepository @Inject constructor(
     }
 
     suspend fun deleteMeter(meter: ElectricityMeter) {
-        store.updateData { meters -> meters.filterNot { it.id == meter.id } }
+        store.update { meters -> meters.filterNot { it.id == meter.id } }
     }
 
     /** 电表层级中 [path] 下一级的选项。 */

@@ -34,6 +34,7 @@ import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.AccountState
 import com.illustar0.teishucan.domain.PredictiveBackAnimation
 import com.illustar0.teishucan.domain.ThemeSettings
+import com.illustar0.teishucan.platform.PlatformCapabilities
 import com.illustar0.teishucan.ui.component.FailureToasts
 import com.illustar0.teishucan.ui.component.OutcomeHaptics
 import com.illustar0.teishucan.ui.component.isWideWindow
@@ -149,17 +150,16 @@ internal fun TeishuCanApp(
             navController.push(route)
         }
     }
-    val transition = remember(
-        themeSettings.predictiveBackAnimation,
-        themeSettings.predictiveBackExitDirection,
-    ) {
+    val predictiveBackAnimation =
+        themeSettings.effectivePredictiveBackAnimation(PlatformCapabilities.isPredictiveBackSupported)
+    val transition = remember(predictiveBackAnimation, themeSettings.predictiveBackExitDirection) {
         predictiveBackNavTransition(
-            animation = themeSettings.predictiveBackAnimation,
+            animation = predictiveBackAnimation,
             exitDirection = themeSettings.predictiveBackExitDirection,
         )
     }
     val navCornerRadius = rememberNavSystemCornerRadius()
-    val roundsAllCorners = when (themeSettings.predictiveBackAnimation) {
+    val roundsAllCorners = when (predictiveBackAnimation) {
         PredictiveBackAnimation.Aosp,
         PredictiveBackAnimation.Scale,
         PredictiveBackAnimation.Classic,
@@ -184,7 +184,7 @@ internal fun TeishuCanApp(
             blockInputDuringTransition = false,
         )
     }
-    val isPredictiveBackDisabled = themeSettings.predictiveBackAnimation == PredictiveBackAnimation.None
+    val isPredictiveBackDisabled = predictiveBackAnimation == PredictiveBackAnimation.None
 
     NavDisplay(
         navController = navController,

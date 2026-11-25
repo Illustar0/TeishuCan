@@ -2,6 +2,8 @@ package com.illustar0.teishucan.domain
 
 import kotlinx.serialization.Serializable
 
+private val DefaultPredictiveBackAnimation = PredictiveBackAnimation.Miuix
+
 enum class ThemeMode {
     System,
     Light,
@@ -61,7 +63,7 @@ data class ThemeSettings(
     val isBlurEnabled: Boolean = true,
     val isFloatingNavigationBarEnabled: Boolean = false,
     val isLiquidGlassEnabled: Boolean = false,
-    val predictiveBackAnimation: PredictiveBackAnimation = PredictiveBackAnimation.Miuix,
+    val predictiveBackAnimation: PredictiveBackAnimation = DefaultPredictiveBackAnimation,
     val predictiveBackExitDirection: PredictiveBackExitDirection = PredictiveBackExitDirection.AlwaysRight,
 ) {
     /** 实际采用的规格；切到只支持 2021 的风格再切回来时，保存的选择不会丢。 */
@@ -70,4 +72,11 @@ data class ThemeSettings(
 
     fun usesWallpaperColor(isWallpaperColorSupported: Boolean): Boolean =
         isMonetEnabled && isWallpaperColorEnabled && isWallpaperColorSupported
+
+    /**
+     * 实际采用的返回动画。系统不支持预测性返回时设置页不提供这一项，
+     * 从别的设备恢复来的选择在这里无从改回，所以一律用默认动画。
+     */
+    fun effectivePredictiveBackAnimation(isPredictiveBackSupported: Boolean): PredictiveBackAnimation =
+        if (isPredictiveBackSupported) predictiveBackAnimation else DefaultPredictiveBackAnimation
 }

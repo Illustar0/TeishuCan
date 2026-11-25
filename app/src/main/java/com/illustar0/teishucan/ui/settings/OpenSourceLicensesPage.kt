@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
+import com.illustar0.teishucan.ui.component.rememberShownContent
 import com.illustar0.teishucan.ui.theme.BlurredBar
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
@@ -71,7 +72,6 @@ fun OpenSourceLicensesPage(onBack: () -> Unit) {
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
     var selectedLibrary by remember { mutableStateOf<Library?>(null) }
-    var isLicenseDialogVisible by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -109,20 +109,17 @@ fun OpenSourceLicensesPage(onBack: () -> Unit) {
             items(libraries, key = { it.uniqueId }) { library ->
                 LibraryCard(
                     library = library,
-                    onClick = {
-                        selectedLibrary = library
-                        isLicenseDialogVisible = true
-                    },
+                    onClick = { selectedLibrary = library },
                 )
             }
         }
-        selectedLibrary?.let { library ->
+        val dialog = rememberShownContent(selectedLibrary)
+        dialog.value?.let { library ->
             LicenseDialog(
                 library = library,
-                show = isLicenseDialogVisible,
-                onDismissRequest = { isLicenseDialogVisible = false },
-                // 等关闭动画结束再清空，弹窗退场时内容不会消失。
-                onDismissFinished = { selectedLibrary = null },
+                show = selectedLibrary != null,
+                onDismissRequest = { selectedLibrary = null },
+                onDismissFinished = dialog.release,
             )
         }
     }

@@ -79,6 +79,7 @@ class TimetableRepository @Inject constructor(
     }
 
     private suspend fun fetchCurrentTerm(clients: ZzuClients) {
+        val refreshVersion = cache.nextRefreshVersion()
         val eas = clients.eas()
         val current = eas.currentSemester()
         val (listedSemesters, timetable) = coroutineScope {
@@ -87,7 +88,7 @@ class TimetableRepository @Inject constructor(
             listedSemesters.await() to timetable.await()
         }
         val semesters = (listedSemesters + current).distinctBy { it.id }.sortedBy { it.startDate }
-        cache.update(clients) { terms ->
+        cache.update(clients, refreshVersion) { terms ->
             val loaded = terms.associateBy { it.id }
             semesters.map { semester ->
                 if (semester.id == current.id) {

@@ -63,8 +63,11 @@ internal class SnapshotStore<T>(
 
     fun nextRefreshVersion(): Long = refreshVersions.incrementAndGet()
 
-    /** 写入 [owner] 刷新得到的数据。请求可以并行，写入以请求开始的顺序 [refreshVersion] 为准。 */
-    suspend fun update(owner: ZzuClients, refreshVersion: Long = nextRefreshVersion(), transform: (T) -> T) {
+    /**
+     * 写入 [owner] 刷新得到的数据。请求可以并行，写入以请求开始的顺序 [refreshVersion] 为准，
+     * 它要在发出请求之前由 [nextRefreshVersion] 取得。
+     */
+    suspend fun update(owner: ZzuClients, refreshVersion: Long, transform: (T) -> T) {
         val fetchedAt = Clock.System.now()
         modify(owner) { signInId, current ->
             if (current != null && current.refreshVersion > refreshVersion) {

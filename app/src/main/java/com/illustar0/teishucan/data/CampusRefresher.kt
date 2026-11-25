@@ -40,24 +40,12 @@ class CampusRefresher @Inject constructor(
     electricity: ElectricityRepository,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
-    private val pendingFailure = MutableStateFlow<Exception?>(null)
-    private val manualRefresh = RefreshQueue(scope) {
-        pendingFailure.captureFailure {
-            refreshAll(
-                timetable::refresh,
-                session::refreshProfile,
-                campusCard::refresh,
-                electricity::refresh,
-            )
-        }
-    }
-
-    /** 余额常变，电量下降缓慢，课表与个人资料很少变动。 */
-    private val autoRefreshed = listOf(
-        AutoRefreshSource(maxAge = 5.minutes, campusCard.isRefreshing, campusCard::isStaleAt, campusCard::refresh),
-        AutoRefreshSource(maxAge = 30.minutes, electricity.isRefreshing, electricity::isStaleAt, electricity::refresh),
-        AutoRefreshSource(maxAge = 12.hours, timetable.isRefreshing, timetable::isStaleAt, timetable::refresh),
-        AutoRefreshSource(
+    /** 全部数据域。余额常变，电量下降缓慢，课表与个人资料很少变动。 */
+    private val sources = listOf(
+        RefreshSource(maxAge = 5.minutes, campusCard.isRefreshing, campusCard::isStaleAt, campusCard::refresh),
+        RefreshSource(maxAge = 30.minutes, electricity.isRefreshing, electricity::isStaleAt, electricity::refresh),
+        RefreshSource(maxAge = 12.hours, timetable.isRefreshing, timetable::isStaleAt, timetable::refresh),
+        RefreshSource(
             maxAge = 12.hours,
             isRefreshing = session.isProfileRefreshing,
             isStale = session::isProfileStaleAt,
@@ -65,15 +53,14 @@ class CampusRefresher @Inject constructor(
         ),
     )
 
+    private val pendingFailure = MutableStateFlow<Exception?>(null)
+    private val manualRefresh = RefreshQueue(scope) {
+        pendingFailure.captureFailure { refreshAll(sources.map(RefreshSource::refresh)) }
+    }
+
     val refreshFailure = pendingFailure.asStateFlow()
     val isRefreshing: StateFlow<Boolean> = combine(
-        listOf(
-            manualRefresh.isRefreshing,
-            timetable.isRefreshing,
-            session.isProfileRefreshing,
-            campusCard.isRefreshing,
-            electricity.isRefreshing,
-        ),
+        listOf(manualRefresh.isRefreshing) + sources.map(RefreshSource::isRefreshing),
     ) { states -> states.any { it } }
         .stateIn(scope, SharingStarted.Eagerly, false)
 
@@ -91,7 +78,7 @@ class CampusRefresher @Inject constructor(
                 .distinctUntilChanged()
                 .collect { (foreground, signedIn) ->
                     if (!signedIn) {
-                        autoRefreshed.forEach(AutoRefreshSource::cancel)
+                        sources.forEach(RefreshSource::cancel)
                     } else if (foreground) {
                         refreshStale()
                     }
@@ -102,20 +89,19 @@ class CampusRefresher @Inject constructor(
     /** 只更新已经过期的数据。各自独立并发执行，失败不提示：屏幕上仍有上次的数据，想要最新的用户会自己下拉。 */
     private fun refreshStale() {
         val now = Clock.System.now()
-        autoRefreshed.forEach { it.refreshIfStale(scope, now) }
+        sources.forEach { it.refreshIfStale(scope, now) }
     }
 }
 
 /**
- * 单个数据域的自动刷新调度单元，持有独立的在途任务句柄。
- *
- * 某个后端变慢或失败时不会阻塞其他数据域在下次回到前台时立即触发刷新。
+ * 单个数据域的刷新。手动刷新直接调用 [refresh]；自动刷新经 [refreshIfStale] 只在过期时进行，
+ * 并持有独立的在途任务句柄，某个后端变慢或失败时不会阻塞其他数据域在下次回到前台时立即刷新。
  */
-internal class AutoRefreshSource(
+internal class RefreshSource(
     private val maxAge: Duration,
-    private val isRefreshing: StateFlow<Boolean>,
+    val isRefreshing: StateFlow<Boolean>,
     private val isStale: suspend (now: Instant, maxAge: Duration) -> Boolean,
-    private val refresh: suspend () -> Unit,
+    val refresh: suspend () -> Unit,
 ) {
     private var inFlight: Job? = null
 

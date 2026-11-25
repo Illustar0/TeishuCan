@@ -61,7 +61,7 @@ class ElectricityViewModel @Inject constructor(
         pendingFailure.captureFailure {
             // 这里的余额只服务于电表充值，没有电表就没有要更新的内容。
             if (electricity.meters.filterNotNull().first().isNotEmpty()) {
-                refreshAll(electricity::refresh, campusCard::refresh)
+                refreshAll(listOf(electricity::refresh, campusCard::refresh))
             }
         }
     }

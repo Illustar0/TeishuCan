@@ -13,7 +13,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class AutoRefreshSourceTest {
+class RefreshSourceTest {
     private val t0 = Instant.parse("2026-11-24T10:00:00Z")
 
     @Test
@@ -36,7 +36,7 @@ class AutoRefreshSourceTest {
         var cardCalls = 0
         var mailCalls = 0
 
-        val card = AutoRefreshSource(
+        val card = RefreshSource(
             maxAge = 5.minutes,
             isRefreshing = cardTracker.isRefreshing,
             isStale = { now, maxAge -> isStaleTimestamp(cardFetchedAt, now, maxAge) },
@@ -47,7 +47,7 @@ class AutoRefreshSourceTest {
                 }
             },
         )
-        val mail = AutoRefreshSource(
+        val mail = RefreshSource(
             maxAge = 5.minutes,
             isRefreshing = mailTracker.isRefreshing,
             isStale = { now, maxAge -> isStaleTimestamp(mailFetchedAt, now, maxAge) },
@@ -87,7 +87,7 @@ class AutoRefreshSourceTest {
         var cardCalls = 0
         var mailCalls = 0
 
-        val card = AutoRefreshSource(
+        val card = RefreshSource(
             maxAge = 5.minutes,
             isRefreshing = cardTracker.isRefreshing,
             isStale = { now, maxAge -> isStaleTimestamp(cardFetchedAt, now, maxAge) },
@@ -98,7 +98,7 @@ class AutoRefreshSourceTest {
                 }
             },
         )
-        val mail = AutoRefreshSource(
+        val mail = RefreshSource(
             maxAge = 5.minutes,
             isRefreshing = mailTracker.isRefreshing,
             isStale = { _, _ -> true },
@@ -141,7 +141,7 @@ class AutoRefreshSourceTest {
         val tracker = RefreshTracker()
         var calls = 0
 
-        val source = AutoRefreshSource(
+        val source = RefreshSource(
             maxAge = 5.minutes,
             isRefreshing = tracker.isRefreshing,
             isStale = { _, _ -> true },

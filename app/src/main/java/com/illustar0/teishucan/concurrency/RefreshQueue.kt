@@ -42,7 +42,7 @@ internal class RefreshQueue(scope: CoroutineScope, refresh: suspend () -> Unit) 
 }
 
 /** 同时运行全部 [operations]，互不影响；都结束后抛出第一个失败。 */
-internal suspend fun refreshAll(vararg operations: suspend () -> Unit): Unit = supervisorScope {
+internal suspend fun refreshAll(operations: List<suspend () -> Unit>): Unit = supervisorScope {
     val failures = operations.map { operation ->
         async {
             try {

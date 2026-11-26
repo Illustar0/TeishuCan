@@ -38,6 +38,12 @@ data class TimetableEntry(
 ) {
     val lastPeriod: Int
         get() = startPeriod + periodSpan - 1
+
+    val startsAt: LocalDateTime
+        get() = date.atTime(startTime)
+
+    val endsAt: LocalDateTime
+        get() = date.atTime(endTime)
 }
 
 /**
@@ -149,9 +155,6 @@ fun List<TimetableTerm>.upcomingClassAfter(
         isTomorrow = upcoming.date == tomorrow,
     )
 }
-
-private val TimetableEntry.startsAt: LocalDateTime
-    get() = date.atTime(startTime)
 
 private val TimetableEntry.periods: ClassPeriods
     get() = ClassPeriods(startPeriod, periodSpan)

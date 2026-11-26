@@ -1,5 +1,6 @@
 package com.illustar0.teishucan.ui.component
 
+import android.content.Context
 import android.text.format.DateFormat
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
@@ -8,6 +9,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
+import java.util.Locale
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.toJavaDayOfWeek
 
@@ -21,10 +23,15 @@ const val DateSkeleton = "Md"
 @Composable
 fun rememberLocalizedFormatter(skeleton: String): DateTimeFormatter {
     val locale = LocalConfiguration.current.locales[0]
-    return remember(skeleton, locale) {
-        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
-    }
+    return remember(skeleton, locale) { localizedFormatter(skeleton, locale) }
 }
+
+/** 按 [locale] 的习惯格式化 [skeleton] 所含的字段，用于界面之外，如通知。 */
+fun localizedFormatter(skeleton: String, locale: Locale): DateTimeFormatter =
+    DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+
+/** 课程时刻的 skeleton，跟随 [context] 所在系统的 12/24 小时制设置。 */
+fun classTimeSkeleton(context: Context): String = if (DateFormat.is24HourFormat(context)) "Hm" else "hm"
 
 /** [day] 在当前语言下以 [style] 写出的名称，如「星期一」或「周一」。 */
 @Composable
@@ -36,6 +43,6 @@ fun localizedDayName(day: DayOfWeek, style: TextStyle): String =
 @Composable
 fun rememberClassTimeFormatter(): DateTimeFormatter {
     val context = LocalContext.current
-    val is24Hour = remember(context) { DateFormat.is24HourFormat(context) }
-    return rememberLocalizedFormatter(if (is24Hour) "Hm" else "hm")
+    val skeleton = remember(context) { classTimeSkeleton(context) }
+    return rememberLocalizedFormatter(skeleton)
 }

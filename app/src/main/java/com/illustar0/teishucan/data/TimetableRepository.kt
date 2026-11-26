@@ -21,8 +21,10 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
@@ -63,6 +65,13 @@ class TimetableRepository @Inject constructor(
     /** 冲突课程的置顶选择，按选择的先后排列。尚未读出时为空，课表暂按默认叠放。 */
     val conflictChoices: StateFlow<List<ConflictChoice>> =
         choiceStore.data.stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * 会话恢复、置顶选择也读出之后的 [terms] 与 [conflictChoices]，在那之前不发出。
+     * 应用不在前台时也要据此行动的功能用它，不会把还没读出的课表当成没有课。
+     */
+    val restoredSchedule: Flow<Pair<List<TimetableTerm>, List<ConflictChoice>>> =
+        combine(cache.restoredValue, choiceStore.data, ::Pair)
 
     /** 把 [front] 置顶在 [conflict] 这组冲突课程里。写入失败时抛出 IOException，原有的选择保持不变。 */
     suspend fun putInFront(conflict: List<TimetableEntry>, front: TimetableEntry) {

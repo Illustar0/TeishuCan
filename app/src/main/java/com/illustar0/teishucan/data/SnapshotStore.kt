@@ -4,6 +4,7 @@ import android.util.Log
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -50,6 +51,12 @@ internal class SnapshotStore<T>(
 
     val value: StateFlow<T> = combine(session, store.data) { state, snapshot -> snapshot.valueFor(state) }
         .stateIn(scope, SharingStarted.Eagerly, initial)
+
+    /** 会话恢复之后的 [value]。恢复完成之前不发出，免得把还不知道的数据当成空的。 */
+    val restoredValue: Flow<T> =
+        combine(session.filter { it != SessionState.Restoring }, store.data) { state, snapshot ->
+            snapshot.valueFor(state)
+        }.distinctUntilChanged()
 
     init {
         scope.launch {

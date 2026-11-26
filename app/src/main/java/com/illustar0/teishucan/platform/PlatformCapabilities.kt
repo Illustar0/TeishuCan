@@ -23,6 +23,11 @@ internal object PlatformCapabilities {
     val isPredictiveBackSupported: Boolean
         get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
+    /** 发通知要用户在运行时授予 POST_NOTIFICATIONS。 */
+    @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.TIRAMISU)
+    val isNotificationPermissionRequired: Boolean
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+
     /** 系统密码管理器能通过 Credential Manager 保存和填入密码。 */
     @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     val isSystemPasswordManagerSupported: Boolean

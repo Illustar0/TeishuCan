@@ -148,6 +148,13 @@
     <string name="meter_options_failed">加载失败</string>
     <string name="meter_options_retry">重试</string>
 
+    <string name="class_reminder_channel">上课提醒</string>
+    <string name="class_reminder_channel_description">上课前 30 分钟起以实时动态显示</string>
+    <string name="class_reminder_upcoming">%1$s 上课</string>
+    <string name="class_reminder_imminent">即将上课</string>
+    <string name="class_reminder_started">已上课</string>
+    <string name="class_reminder_status_at">%1$s · %2$s</string>
+
     <string name="settings_about">关于</string>
     <string name="settings_about_summary">版本信息与许可证</string>
     <string name="settings_about_source_code">源代码</string>

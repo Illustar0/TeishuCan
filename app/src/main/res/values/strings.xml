@@ -154,6 +154,13 @@
     <string name="meter_options_failed">読み込めませんでした</string>
     <string name="meter_options_retry">再試行</string>
 
+    <string name="class_reminder_channel">授業リマインダー</string>
+    <string name="class_reminder_channel_description">授業の30分前からライブアップデートで表示します</string>
+    <string name="class_reminder_upcoming">%1$s 開始</string>
+    <string name="class_reminder_imminent">まもなく開始</string>
+    <string name="class_reminder_started">授業が始まりました</string>
+    <string name="class_reminder_status_at">%1$s・%2$s</string>
+
     <string name="settings_about">このアプリについて</string>
     <string name="settings_about_summary">バージョン情報とライセンス</string>
     <string name="settings_about_version" translatable="false">%1$s (%2$d)</string>

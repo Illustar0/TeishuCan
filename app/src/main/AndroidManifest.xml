@@ -5,6 +5,13 @@
     <!-- Blur needs API 33; callers gate it behind isRuntimeShaderSupported(). -->
     <uses-sdk tools:overrideLibrary="top.yukonga.miuix.kmp.blur" />
 
+    <!-- 上课提醒：通知与实时动态，按时刻换阶段的闹钟，以及开机后重新排上闹钟。 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <!-- 提醒是可选功能，按规范用需要用户授予的 SCHEDULE_EXACT_ALARM，而不是 USE_EXACT_ALARM。 -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- Analytics 依赖合并进来的这些权限只用于广告和 Play 安装来源归因，App 都用不上。 -->
     <uses-permission
         android:name="com.google.android.gms.permission.AD_ID"
@@ -44,6 +51,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- 不导出也收得到系统广播；应用自己的闹钟和划掉通知的 Intent 都是显式的。 -->
+        <receiver
+            android:name=".reminder.ClassReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
             android:enabled="false"

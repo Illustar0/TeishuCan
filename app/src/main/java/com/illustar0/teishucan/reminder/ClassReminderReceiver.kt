@@ -18,8 +18,8 @@ private const val ExtraClassId = "classId"
 private const val ExtraStartsAt = "startsAt"
 
 /**
- * 应用进程不在时替 [ClassReminders] 接住时间的推移：闹钟到点、开机、应用更新、用户调了时钟或改了精确闹钟权限时
- * 重新对齐提醒；用户划掉提醒时记下那次课，不再为它提醒。
+ * 应用进程不在时替 [ClassReminders] 接住时间与系统状态的推移：闹钟到点、开机、应用更新、用户调了时钟、切换了语言
+ * 或改了精确闹钟权限时重新对齐提醒；用户划掉提醒时记下那次课，不再为它提醒。
  */
 @AndroidEntryPoint
 class ClassReminderReceiver : BroadcastReceiver() {

@@ -19,7 +19,6 @@ import com.illustar0.teishucan.domain.ClassReminderStage
 import com.illustar0.teishucan.platform.PlatformCapabilities
 import com.illustar0.teishucan.ui.component.classTimeSkeleton
 import com.illustar0.teishucan.ui.component.localizedFormatter
-import java.time.format.DateTimeFormatter
 import kotlin.time.Instant
 import kotlinx.datetime.toJavaLocalTime
 
@@ -52,38 +51,28 @@ internal class ClassReminderNotifications(private val context: Context) {
         ) {
             return
         }
+        val localizedContext = ContextCompat.getContextForLanguage(context)
         // 每次都重建渠道，切换语言后渠道名也跟着更新。
-        manager.createNotificationChannel(channel())
-        val timeFormatter = localizedFormatter(classTimeSkeleton(context), context.resources.configuration.locales[0])
+        manager.createNotificationChannel(channel(localizedContext))
         for (reminder in reminders) {
-            manager.notify(reminder.occurrence.id.tag, NotificationId, build(reminder, now, timeFormatter))
+            val notification = build(localizedContext, reminder, now)
+            manager.notify(reminder.occurrence.id.tag, NotificationId, notification)
         }
     }
 
-    private fun channel(): NotificationChannelCompat =
+    private fun channel(localizedContext: Context): NotificationChannelCompat =
         NotificationChannelCompat.Builder(ChannelId, NotificationManagerCompat.IMPORTANCE_DEFAULT)
-            .setName(context.getString(R.string.class_reminder_channel))
-            .setDescription(context.getString(R.string.class_reminder_channel_description))
+            .setName(localizedContext.getString(R.string.class_reminder_channel))
+            .setDescription(localizedContext.getString(R.string.class_reminder_channel_description))
             .build()
 
-    private fun build(reminder: ClassReminder, now: Instant, timeFormatter: DateTimeFormatter): Notification {
+    private fun build(localizedContext: Context, reminder: ClassReminder, now: Instant): Notification {
         val occurrence = reminder.occurrence
-        val entry = occurrence.entry
         val isLiveUpdate = reminder.stage != ClassReminderStage.Started
-        val status = when (reminder.stage) {
-            ClassReminderStage.Upcoming -> {
-                val startTime = timeFormatter.format(entry.startTime.toJavaLocalTime())
-                context.getString(R.string.class_reminder_upcoming, startTime)
-            }
-            ClassReminderStage.Imminent -> context.getString(R.string.class_reminder_imminent)
-            ClassReminderStage.Started -> context.getString(R.string.class_reminder_started)
-        }
-        val location = entry.location?.takeIf(String::isNotBlank)
-        val text = location?.let { context.getString(R.string.class_reminder_status_at, status, it) } ?: status
-        return NotificationCompat.Builder(context, ChannelId)
+        return NotificationCompat.Builder(localizedContext, ChannelId)
             .setSmallIcon(R.drawable.ic_lucide_calendar_clock)
-            .setContentTitle(entry.title)
-            .setContentText(text)
+            .setContentTitle(occurrence.entry.title)
+            .setContentText(reminder.contentText(localizedContext))
             .setCategory(NotificationCompat.CATEGORY_EVENT)
             .setWhen(occurrence.startsAt.toEpochMilliseconds())
             .setShowWhen(true)
@@ -107,6 +96,22 @@ internal class ClassReminderNotifications(private val context: Context) {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
         return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
     }
+}
+
+private fun ClassReminder.contentText(localizedContext: Context): String {
+    val entry = occurrence.entry
+    val status = when (stage) {
+        ClassReminderStage.Upcoming -> {
+            val locale = localizedContext.resources.configuration.locales[0]
+            val startTime = localizedFormatter(classTimeSkeleton(localizedContext), locale)
+                .format(entry.startTime.toJavaLocalTime())
+            localizedContext.getString(R.string.class_reminder_upcoming, startTime)
+        }
+        ClassReminderStage.Imminent -> localizedContext.getString(R.string.class_reminder_imminent)
+        ClassReminderStage.Started -> localizedContext.getString(R.string.class_reminder_started)
+    }
+    val location = entry.location?.takeIf(String::isNotBlank)
+    return location?.let { localizedContext.getString(R.string.class_reminder_status_at, status, it) } ?: status
 }
 
 /** 这次课在通知与 PendingIntent 里的标识。 */

@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -78,13 +79,18 @@ fun SettingsRoute(
     val classReminderViewModel = hiltViewModel<ClassReminderViewModel>()
     val classReminder by classReminderViewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val checkReminderAccess = { classReminderViewModel.onAccessChecked(missingClassReminderAccess(context)) }
-    // 用户可能从系统设置改完权限回来。
-    LifecycleResumeEffect(classReminderViewModel, context) {
-        checkReminderAccess()
+    val locale = LocalConfiguration.current.locales[0]
+    val checkReminderEnvironment = {
+        classReminderViewModel.onEnvironmentChecked(missingClassReminderAccess(context), locale)
+    }
+    // 用户可能从系统设置改完权限回来，或刚切换了应用语言。
+    LifecycleResumeEffect(classReminderViewModel, context, locale) {
+        checkReminderEnvironment()
         onPauseOrDispose {}
     }
-    val notificationPermission = rememberLauncherForActivityResult(RequestPermission()) { checkReminderAccess() }
+    val notificationPermission = rememberLauncherForActivityResult(RequestPermission()) {
+        checkReminderEnvironment()
+    }
 
     SettingsPage(
         student = student,

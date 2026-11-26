@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.illustar0.teishucan.reminder.ClassReminderAccess
 import com.illustar0.teishucan.reminder.ClassReminders
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.Locale
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +28,7 @@ data class ClassReminderSettingsState(val isEnabled: Boolean, val missingAccess:
 class ClassReminderViewModel @Inject constructor(private val reminders: ClassReminders) : ViewModel() {
     /** 系统设置只能在页面上读，读到之前为 null。 */
     private val missingAccess = MutableStateFlow<List<ClassReminderAccess>?>(null)
+    private var lastLocale: Locale? = null
 
     /** 开关和系统设置都读出之前为 null，免得开关先关后开地闪一下。 */
     val state: StateFlow<ClassReminderSettingsState?> =
@@ -38,13 +40,17 @@ class ClassReminderViewModel @Inject constructor(private val reminders: ClassRem
     }
 
     /**
-     * 页面读到的系统设置。用户刚在系统设置里改过的话立即对齐一次：比如刚允许了通知，
-     * 正在进行的提醒不必等到下一个闹钟才出现。
+     * 页面读到的系统设置 [missing] 与当前语言 [locale]。用户刚改过系统权限或切换过应用语言的话立即对齐一次：
+     * 比如刚允许了通知，正在进行的提醒不必等到下一个闹钟才出现；刚切了语言，在显通知与渠道名也立即跟着更新。
      */
-    fun onAccessChecked(missing: List<ClassReminderAccess>) {
-        val previous = missingAccess.value
+    fun onEnvironmentChecked(missing: List<ClassReminderAccess>, locale: Locale) {
+        val previousMissing = missingAccess.value
+        val previousLocale = lastLocale
         missingAccess.value = missing
-        if (previous != null && previous != missing) {
+        lastLocale = locale
+        val hasAccessChanged = previousMissing != null && previousMissing != missing
+        val hasLocaleChanged = previousLocale != null && previousLocale != locale
+        if (hasAccessChanged || hasLocaleChanged) {
             viewModelScope.launch { reminders.sync() }
         }
     }

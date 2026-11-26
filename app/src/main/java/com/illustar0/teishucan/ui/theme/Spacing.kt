@@ -4,3 +4,6 @@ import androidx.compose.ui.unit.dp
 
 /** 页面上卡片与屏幕边缘、卡片与卡片之间的间距，列表末尾也在最后一张卡片下留出这么多。 */
 val CardSpacing = 12.dp
+
+/** 弹窗与底部弹层里并排的操作按钮之间的间距，与 Miuix 文档示例一致。 */
+val ActionButtonSpacing = 20.dp

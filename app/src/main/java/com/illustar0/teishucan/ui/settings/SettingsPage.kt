@@ -1,13 +1,12 @@
 package com.illustar0.teishucan.ui.settings
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.StudentProfile
 import com.illustar0.teishucan.domain.ThemeSettings
+import com.illustar0.teishucan.ui.theme.ActionButtonSpacing
 import com.illustar0.teishucan.ui.theme.BlurredBar
 import com.illustar0.teishucan.ui.theme.CardSpacing
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
@@ -212,13 +212,15 @@ private fun LogoutDialog(
         summary = stringResource(R.string.logout_summary),
         onDismissRequest = onDismissRequest,
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(ActionButtonSpacing),
+        ) {
             TextButton(
                 text = stringResource(R.string.logout_cancel),
                 onClick = onDismissRequest,
                 modifier = Modifier.weight(1f),
             )
-            Spacer(modifier = Modifier.width(20.dp))
             TextButton(
                 text = stringResource(R.string.settings_logout),
                 onClick = {

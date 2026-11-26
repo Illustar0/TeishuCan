@@ -55,6 +55,7 @@ import com.illustar0.teishucan.ui.component.LoadingButton
 import com.illustar0.teishucan.ui.component.SheetActionButton
 import com.illustar0.teishucan.ui.component.pageSlide
 import com.illustar0.teishucan.ui.component.rememberShownContent
+import com.illustar0.teishucan.ui.theme.ActionButtonSpacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
@@ -341,7 +342,7 @@ private fun MfaCodePage(
         }
         Row(
             modifier = Modifier.padding(top = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(ActionButtonSpacing),
         ) {
             LoadingButton(
                 text = when {

@@ -47,6 +47,7 @@ import com.illustar0.teishucan.ui.component.SheetActionButton
 import com.illustar0.teishucan.ui.component.formatYuan
 import com.illustar0.teishucan.ui.component.pageSlide
 import com.illustar0.teishucan.ui.component.rememberShownContent
+import com.illustar0.teishucan.ui.theme.ActionButtonSpacing
 import java.math.BigDecimal
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.BreadcrumbBar
@@ -276,7 +277,7 @@ private fun MeterDetail(
         }
         Row(
             modifier = Modifier.padding(top = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(ActionButtonSpacing),
         ) {
             TextButton(
                 text = stringResource(R.string.electricity_meter_edit_action),

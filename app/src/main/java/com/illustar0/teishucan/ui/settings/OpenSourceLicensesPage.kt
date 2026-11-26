@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.ui.component.rememberShownContent
+import com.illustar0.teishucan.ui.theme.ActionButtonSpacing
 import com.illustar0.teishucan.ui.theme.BlurredBar
 import com.illustar0.teishucan.ui.theme.CardSpacing
 import com.illustar0.teishucan.ui.theme.blurSource
@@ -260,7 +261,7 @@ private fun LicenseDialog(
             Spacer(modifier = Modifier.height(24.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(ActionButtonSpacing),
             ) {
                 library.website?.takeIf { it.isNotBlank() }?.let { website ->
                     TextButton(

@@ -1,5 +1,6 @@
 package com.illustar0.teishucan.ui.component
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,12 +12,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.Layout
@@ -29,9 +33,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import com.illustar0.teishucan.R
+import com.illustar0.teishucan.domain.ConflictChoice
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableWeek
+import com.illustar0.teishucan.domain.frontIn
+import com.illustar0.teishucan.ui.component.animation.CalmMotion
+import com.illustar0.teishucan.ui.component.animation.FrameTransition
+import com.illustar0.teishucan.ui.component.animation.rememberFrameTransition
 import java.time.format.TextStyle
 import kotlin.math.roundToInt
 import kotlinx.datetime.DayOfWeek
@@ -47,7 +57,7 @@ import top.yukonga.miuix.kmp.utils.PressFeedbackType
  *
  * 起始节次在网格之外的课程不显示，超出最后一节的部分被截断；同日时段冲突的课程按「右下在前、左上露边」叠放：
  * 完全重叠的课程以等尺寸叠卡向右下步进（层数上限见 [TimetableDefaults.MaxStackBackLayers]），
- * 部分重叠或错位交叉的课程按节次阶梯错位叠放。
+ * 部分重叠或错位交叉的课程按节次阶梯错位叠放。用户在 [conflictChoices] 里置顶的课程放在最上层。
  * 表头显示这一周的日期，并在 [today] 落在这一周时突出显示。
  */
 @Composable
@@ -55,7 +65,8 @@ fun Timetable(
     week: TimetableWeek,
     today: LocalDate,
     periodCount: Int,
-    onEntriesClick: (List<TimetableEntry>) -> Unit,
+    conflictChoices: List<ConflictChoice>,
+    onEntriesClick: (EntryStack) -> Unit,
     modifier: Modifier = Modifier,
     periodHeight: Dp = TimetableDefaults.PeriodHeight,
     colors: TimetableColors = TimetableDefaults.timetableColors(),
@@ -70,6 +81,7 @@ fun Timetable(
             )
             EntryGrid(
                 entries = week.entries,
+                conflictChoices = conflictChoices,
                 onEntriesClick = onEntriesClick,
                 periodCount = periodCount,
                 periodHeight = periodHeight,
@@ -146,29 +158,29 @@ private fun PeriodLabelColumn(
 @Composable
 private fun EntryGrid(
     entries: List<TimetableEntry>,
-    onEntriesClick: (List<TimetableEntry>) -> Unit,
+    conflictChoices: List<ConflictChoice>,
+    onEntriesClick: (EntryStack) -> Unit,
     periodCount: Int,
     periodHeight: Dp,
     colors: TimetableColors,
     modifier: Modifier = Modifier,
 ) {
-    val cards = remember(entries, periodCount) {
-        buildTimetableCards(entries = entries, periodCount = periodCount)
+    val cards = remember(entries, periodCount, conflictChoices) {
+        buildTimetableCards(entries = entries, periodCount = periodCount, conflictChoices = conflictChoices)
     }
+    // 叠放一变（例如换了置顶），每张卡就从此刻画着的样子走到新位置，见 restackFrame；底色的过渡在 EntryCell 里。
+    val restack = rememberFrameTransition<TimetableEntry, CardFrame>(trigger = cards, interpolate = ::restackFrame)
     Layout(
         content = {
             cards.forEach { card ->
-                val surfaceColor = colors.stackSurfaceColor(card.depthFromFront)
-                if (card.showsContent) {
+                // 每门课一张卡、始终是同一个节点，换层时才能从原来的位置过渡过去。
+                key(card.entry) {
                     EntryCell(
-                        entry = card.entry,
-                        conflictCount = card.clickEntries.size,
-                        surfaceColor = surfaceColor,
+                        card = card,
+                        contentAlpha = { restack.contentAlphaOf(card) },
                         colors = colors,
-                        onClick = { onEntriesClick(card.clickEntries) },
+                        onClick = { onEntriesClick(card.stack) },
                     )
-                } else {
-                    DecorativeStackLayer(surfaceColor = surfaceColor)
                 }
             }
         },
@@ -192,7 +204,7 @@ private fun EntryGrid(
         val gap = TimetableDefaults.EntryGap.roundToPx()
         val stackStep = TimetableDefaults.StackStep.roundToPx()
         val cascadeIndent = TimetableDefaults.CascadeIndent.roundToPx()
-        val rects = layoutTimetableCards(
+        val targets = layoutTimetableCards(
             cards = cards,
             dayWidthPx = dayWidth,
             rowHeightPx = rowHeight,
@@ -200,46 +212,70 @@ private fun EntryGrid(
             stackStepPx = stackStep,
             cascadeIndentPx = cascadeIndent,
         )
+        val frames = restack.nextFrames(
+            cards.indices.associate { drawIndex ->
+                val card = cards[drawIndex]
+                card.entry to CardFrame(targets[drawIndex], zIndex = drawIndex.toFloat(), card.targetContentAlpha)
+            },
+        )
         val placeables = measurables.mapIndexed { index, measurable ->
-            val rect = rects[index]
+            val rect = frames.getValue(cards[index].entry).rect
             measurable.measure(Constraints.fixed(width = rect.width, height = rect.height))
         }
         layout(constraints.maxWidth, constraints.maxHeight) {
             placeables.forEachIndexed { index, placeable ->
-                val rect = rects[index]
-                placeable.placeRelative(x = rect.x, y = rect.y)
+                val frame = frames.getValue(cards[index].entry)
+                placeable.placeRelative(x = frame.rect.x, y = frame.rect.y, zIndex = frame.zIndex)
             }
         }
     }
 }
 
+/**
+ * 课表上的一张卡。只露边的背卡（[TimetableCardSpec.showsContent] 为假）不能点，读屏也跳过它。
+ * 它的文字照常排版，只是由 [contentAlpha] 隐去，换层时才能淡入淡出。
+ */
 @Composable
 private fun EntryCell(
-    entry: TimetableEntry,
-    conflictCount: Int,
-    surfaceColor: Color,
+    card: TimetableCardSpec,
+    contentAlpha: () -> Float,
     colors: TimetableColors,
     onClick: () -> Unit,
 ) {
-    val dayName = localizedDayName(entry.day, TextStyle.FULL)
-    val position = if (conflictCount > 1) {
-        stringResource(R.string.timetable_entry_conflict_position, dayName, entry.startPeriod, conflictCount)
+    val entry = card.entry
+    // 底色随叠放深度变化，与卡片移动用同一条弹簧。
+    val surfaceColor by animateColorAsState(
+        targetValue = colors.stackSurfaceColor(card.depthFromFront),
+        animationSpec = CalmMotion.spring(),
+    )
+    val semantics = if (card.showsContent) {
+        val dayName = localizedDayName(entry.day, TextStyle.FULL)
+        val conflictCount = card.stack.entries.size
+        val position = if (conflictCount > 1) {
+            stringResource(R.string.timetable_entry_conflict_position, dayName, entry.startPeriod, conflictCount)
+        } else {
+            stringResource(R.string.timetable_entry_position, dayName, entry.startPeriod)
+        }
+        Modifier.semantics(mergeDescendants = true) { stateDescription = position }
     } else {
-        stringResource(R.string.timetable_entry_position, dayName, entry.startPeriod)
+        Modifier.clearAndSetSemantics {}
     }
+    val textAlpha = Modifier.graphicsLayer { alpha = contentAlpha() }
     Card(
-        modifier = Modifier.semantics(mergeDescendants = true) { stateDescription = position },
+        modifier = semantics,
         cornerRadius = TimetableDefaults.EntryCornerRadius,
         insideMargin = PaddingValues(TimetableDefaults.EntryPadding),
         colors = CardDefaults.defaultColors(color = surfaceColor, contentColor = colors.entryContentColor),
-        pressFeedbackType = PressFeedbackType.Sink,
-        showIndication = true,
-        onClick = onClick,
+        pressFeedbackType = if (card.showsContent) PressFeedbackType.Sink else PressFeedbackType.None,
+        showIndication = card.showsContent,
+        onClick = onClick.takeIf { card.showsContent },
     ) {
         // 标题占满剩余高度，把地点压到卡片底部；空间不足时先截断标题，保住门牌号。
         Text(
             text = entry.title,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .then(textAlpha),
             color = colors.entryContentColor,
             fontWeight = FontWeight.Medium,
             overflow = TextOverflow.Ellipsis,
@@ -248,6 +284,7 @@ private fun EntryCell(
         if (entry.location != null) {
             Text(
                 text = entry.location,
+                modifier = textAlpha,
                 color = colors.entryLocationColor,
                 overflow = TextOverflow.Ellipsis,
                 maxLines = TimetableDefaults.LocationMaxLines,
@@ -257,21 +294,57 @@ private fun EntryCell(
     }
 }
 
-@Composable
-private fun DecorativeStackLayer(surfaceColor: Color) {
-    Card(
-        modifier = Modifier.clearAndSetSemantics {},
-        cornerRadius = TimetableDefaults.EntryCornerRadius,
-        insideMargin = PaddingValues(0.dp),
-        colors = CardDefaults.defaultColors(color = surfaceColor, contentColor = Color.Transparent),
-    ) {}
+/** 只露边的背卡不显示文字。 */
+private val TimetableCardSpec.targetContentAlpha: Float
+    get() = if (showsContent) 1f else 0f
+
+/** 换层途中 [card] 上文字此刻的不透明度，与 [restackFrame] 算出的一致。 */
+private fun FrameTransition<TimetableEntry, CardFrame>.contentAlphaOf(card: TimetableCardSpec): Float {
+    val start = startOf(card.entry) ?: return card.targetContentAlpha
+    return restackAlpha(start.contentAlpha, card.targetContentAlpha, progress)
+}
+
+/** 一张卡画在 [rect]，层次为 [zIndex]（大的盖住小的），文字的不透明度为 [contentAlpha]。 */
+internal data class CardFrame(val rect: TimetableCardRect, val zIndex: Float, val contentAlpha: Float)
+
+private const val RestackHalfway = 0.5f
+
+/**
+ * 换层走到 [progress] 时一张卡的样子：从 [start] 线性插值到 [target]，过半之前保持原来的层次。
+ * 走到一半时完全重叠的叠卡正好重合，在这时换层，就不会有哪一张突然盖到别的卡上。文字的不透明度见 [restackAlpha]。
+ */
+internal fun restackFrame(start: CardFrame, target: CardFrame, progress: Float): CardFrame = CardFrame(
+    rect = TimetableCardRect(
+        x = lerp(start.rect.x, target.rect.x, progress),
+        y = lerp(start.rect.y, target.rect.y, progress),
+        width = lerp(start.rect.width, target.rect.width, progress),
+        height = lerp(start.rect.height, target.rect.height, progress),
+    ),
+    zIndex = if (progress < RestackHalfway) start.zIndex else target.zIndex,
+    contentAlpha = restackAlpha(start.contentAlpha, target.contentAlpha, progress),
+)
+
+/** 换层走到 [progress] 时卡上文字的不透明度：[target] 比 [start] 淡时在前半程淡出，比它浓时在后半程淡入。 */
+internal fun restackAlpha(start: Float, target: Float, progress: Float): Float {
+    val phase = if (target < start) progress / RestackHalfway else progress / RestackHalfway - 1f
+    return lerp(start, target, phase.coerceIn(0f, 1f))
+}
+
+/**
+ * 课表上点开的一格：[entries] 是这一格所在冲突里的全部课程，点中的那门排在最前；
+ * [defaultFront] 是没有置顶时叠在最上层的那门，没有冲突时就是这门课本身。
+ */
+@Immutable
+data class EntryStack(val entries: List<TimetableEntry>, val defaultFront: TimetableEntry) {
+    val isConflict: Boolean
+        get() = entries.size > 1
 }
 
 /** 网格中需要按顺序绘制的一张卡片（后绘者盖在前绘者之上）。 */
 internal data class TimetableCardSpec(
     val entry: TimetableEntry,
     val clampedSpan: Int,
-    val clickEntries: List<TimetableEntry>,
+    val stack: EntryStack,
     val kind: CardLayerKind,
     val stepIndex: Int,
     val totalSteps: Int,
@@ -302,10 +375,12 @@ private data class VisibleEntry(
 
 /**
  * 将一周课程按天聚类并展开为待绘制的卡片列表，顺序即为从底到顶的绘制层级。
+ * 冲突里有课程在 [conflictChoices] 中置顶时，把它放在这组课的最上层。
  */
 internal fun buildTimetableCards(
     entries: List<TimetableEntry>,
     periodCount: Int,
+    conflictChoices: List<ConflictChoice> = emptyList(),
     maxStackBackLayers: Int = TimetableDefaults.MaxStackBackLayers,
 ): List<TimetableCardSpec> {
     val visibleByDay = entries
@@ -324,7 +399,7 @@ internal fun buildTimetableCards(
         val dayEntries = visibleByDay[day].orEmpty()
         if (dayEntries.isEmpty()) return@forEach
         clusterOverlappingEntries(dayEntries).forEach { cluster ->
-            cards += expandClusterCards(cluster, maxStackBackLayers)
+            cards += expandClusterCards(cluster, conflictChoices, maxStackBackLayers)
         }
     }
     return cards
@@ -358,6 +433,7 @@ private fun clusterOverlappingEntries(dayEntries: List<VisibleEntry>): List<List
 
 private fun expandClusterCards(
     cluster: List<VisibleEntry>,
+    conflictChoices: List<ConflictChoice>,
     maxStackBackLayers: Int,
 ): List<TimetableCardSpec> {
     if (cluster.size == 1) {
@@ -366,7 +442,7 @@ private fun expandClusterCards(
             TimetableCardSpec(
                 entry = single.entry,
                 clampedSpan = single.clampedSpan,
-                clickEntries = listOf(single.entry),
+                stack = EntryStack(entries = listOf(single.entry), defaultFront = single.entry),
                 kind = CardLayerKind.Single,
                 stepIndex = 0,
                 totalSteps = 0,
@@ -381,92 +457,109 @@ private fun expandClusterCards(
         it.entry.startPeriod == first.entry.startPeriod && it.clampedSpan == first.clampedSpan
     }
     if (allSameRange) {
-        return expandExactStack(cluster, maxStackBackLayers)
+        return expandExactStack(cluster, conflictChoices, maxStackBackLayers)
     }
-    return expandPartialCascade(cluster, maxStackBackLayers)
+    return expandPartialCascade(cluster, conflictChoices, maxStackBackLayers)
 }
 
 /**
  * 完全重叠采用「右下在前、左上露边」：所有层共享同一缩减尺寸，从左上 (0, 0) 向右下步进，
  * 前卡之下最多露出 [maxStackBackLayers] 张，每张都留出可见的边，互不遮死。
+ * 前卡是置顶的课程，没有置顶时是排在最前的那门；其余的课按原顺序越排越靠后，超出层数的不画。
+ * 背后的层只露边、不显示内容，但各自对应一门课，换了置顶时每张卡才能从原来的层次过渡过去。
  */
 private fun expandExactStack(
     cluster: List<VisibleEntry>,
+    conflictChoices: List<ConflictChoice>,
     maxStackBackLayers: Int,
 ): List<TimetableCardSpec> {
-    val backLayers = (cluster.size - 1).coerceAtMost(maxStackBackLayers)
-    val front = cluster.first()
     val allEntries = cluster.map(VisibleEntry::entry)
-    val result = ArrayList<TimetableCardSpec>(backLayers + 1)
+    val defaultFront = allEntries.first()
+    val front = conflictChoices.frontIn(allEntries) ?: defaultFront
+    // 只有前卡能点，详情从这门课列起。
+    val stack = EntryStack(entries = withFirst(front, allEntries), defaultFront = defaultFront)
+    val backEntries = stack.entries.drop(1).take(maxStackBackLayers)
+    val clampedSpan = cluster.first().clampedSpan
 
-    for (stepIndex in 0 until backLayers) {
-        result += TimetableCardSpec(
-            entry = front.entry,
-            clampedSpan = front.clampedSpan,
-            clickEntries = allEntries,
+    // 从最底层画起；紧挨前卡的一层，是排在前卡之后的第一门课。
+    return (backEntries.reversed() + front).mapIndexed { stepIndex, entry ->
+        TimetableCardSpec(
+            entry = entry,
+            clampedSpan = clampedSpan,
+            stack = stack,
             kind = CardLayerKind.ExactStack,
             stepIndex = stepIndex,
-            totalSteps = backLayers,
-            depthFromFront = backLayers - stepIndex,
-            showsContent = false,
+            totalSteps = backEntries.size,
+            depthFromFront = backEntries.size - stepIndex,
+            showsContent = entry === front,
         )
     }
-    result += TimetableCardSpec(
-        entry = front.entry,
-        clampedSpan = front.clampedSpan,
-        clickEntries = allEntries,
-        kind = CardLayerKind.ExactStack,
-        stepIndex = backLayers,
-        totalSteps = backLayers,
-        depthFromFront = 0,
-        showsContent = true,
-    )
-    return result
 }
 
 /**
  * 部分重叠或错位交叉按区间贪心分层：早/长的课贴左铺底，晚/短的课向右缩进叠在前方，
  * 保持每门课真实的起止节次边界，并与完全重叠保持「左上在后、右下在前」的统一景深。
+ *
+ * 有课程置顶时，其余课程照常分层；置顶的那门排在它们之上的一层，最后绘制，它盖住的课从左边露出。
  */
 private fun expandPartialCascade(
     cluster: List<VisibleEntry>,
+    conflictChoices: List<ConflictChoice>,
     maxStackBackLayers: Int,
 ): List<TimetableCardSpec> {
-    val laneEnds = mutableListOf<Int>()
-    val assigned = cluster.map { item ->
-        val lane = laneEnds.indexOfFirst { it <= item.entry.startPeriod }
-        val resolvedLane = if (lane >= 0) {
-            laneEnds[lane] = item.endExclusive
-            lane
-        } else {
-            laneEnds.add(item.endExclusive)
-            laneEnds.lastIndex
-        }
-        item to resolvedLane.coerceAtMost(maxStackBackLayers)
-    }
-    val maxLane = assigned.maxOf { it.second }
     val allEntries = cluster.map(VisibleEntry::entry)
+    val defaultLayers = assignCascadeLanes(cluster, maxStackBackLayers)
+    val front = conflictChoices.frontIn(allEntries)
+    val layers = if (front == null) {
+        defaultLayers
+    } else {
+        val (pinned, others) = cluster.partition { it.entry === front }
+        val otherLayers = assignCascadeLanes(others, maxStackBackLayers)
+        val frontLane = (otherLayers.maxOf { it.second } + 1).coerceAtMost(maxStackBackLayers)
+        otherLayers + (pinned.single() to frontLane)
+    }
+    val maxLane = layers.maxOf { it.second }
+    val defaultFront = defaultLayers.last().first.entry
 
-    return assigned
-        .sortedWith(compareBy<Pair<VisibleEntry, Int>> { it.second }.thenBy { it.first.entry.startPeriod })
-        .map { (item, lane) ->
+    return layers.map { (item, lane) ->
+        TimetableCardSpec(
+            entry = item.entry,
+            clampedSpan = item.clampedSpan,
             // 点哪张卡就把哪门课放在详情首位，同时保留同冲突组的其余课程。
-            val orderedClick = buildList(allEntries.size) {
-                add(item.entry)
-                allEntries.forEach { other -> if (other !== item.entry) add(other) }
-            }
-            TimetableCardSpec(
-                entry = item.entry,
-                clampedSpan = item.clampedSpan,
-                clickEntries = orderedClick,
-                kind = CardLayerKind.PartialCascade,
-                stepIndex = lane,
-                totalSteps = maxLane,
-                depthFromFront = maxLane - lane,
-                showsContent = true,
-            )
-        }
+            stack = EntryStack(entries = withFirst(item.entry, allEntries), defaultFront = defaultFront),
+            kind = CardLayerKind.PartialCascade,
+            stepIndex = lane,
+            totalSteps = maxLane,
+            depthFromFront = maxLane - lane,
+            showsContent = true,
+        )
+    }
 }
+
+/** 按起始节次贪心地为 [items] 分配缩进层次（不超过 [maxStackBackLayers]），按绘制顺序返回：层次低的先画，同层按起始节次。 */
+private fun assignCascadeLanes(
+    items: List<VisibleEntry>,
+    maxStackBackLayers: Int,
+): List<Pair<VisibleEntry, Int>> {
+    val laneEnds = mutableListOf<Int>()
+    return items
+        .map { item ->
+            val lane = laneEnds.indexOfFirst { it <= item.entry.startPeriod }
+            val resolvedLane = if (lane >= 0) {
+                laneEnds[lane] = item.endExclusive
+                lane
+            } else {
+                laneEnds.add(item.endExclusive)
+                laneEnds.lastIndex
+            }
+            item to resolvedLane.coerceAtMost(maxStackBackLayers)
+        }
+        .sortedWith(compareBy<Pair<VisibleEntry, Int>> { it.second }.thenBy { it.first.entry.startPeriod })
+}
+
+/** 把 [entries] 里的 [first] 挪到最前，其余保持原顺序。 */
+private fun withFirst(first: TimetableEntry, entries: List<TimetableEntry>): List<TimetableEntry> =
+    listOf(first) + entries.filter { it !== first }
 
 /** 将卡片规格换算为网格内的像素矩形。 */
 internal fun layoutTimetableCards(

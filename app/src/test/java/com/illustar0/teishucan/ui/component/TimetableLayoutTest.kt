@@ -1,5 +1,6 @@
 package com.illustar0.teishucan.ui.component
 
+import com.illustar0.teishucan.domain.ConflictChoice
 import com.illustar0.teishucan.domain.TimetableEntry
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
@@ -94,7 +95,7 @@ class TimetableLayoutTest {
         assertTrue(cards[1].showsContent)
         assertEquals(1, cards[0].depthFromFront)
         assertEquals(0, cards[1].depthFromFront)
-        assertEquals(listOf(courseA, courseB), cards[1].clickEntries)
+        assertEquals(listOf(courseA, courseB), cards[1].stack.entries)
 
         // 背卡贴左上 (102, 122)，前卡向右下步进 8px (110, 130)，两张共享缩减尺寸 88x108。
         assertEquals(TimetableCardRect(x = 102, y = 122, width = 88, height = 108), rects[0])
@@ -136,7 +137,7 @@ class TimetableLayoutTest {
         val cards = buildTimetableCards(courses, periodCount = 10)
 
         assertEquals(3, cards.size)
-        assertEquals(courses, cards.last().clickEntries)
+        assertEquals(courses, cards.last().stack.entries)
     }
 
     @Test
@@ -159,10 +160,83 @@ class TimetableLayoutTest {
         assertEquals(listOf(1, 0), cards.map { it.depthFromFront })
         assertEquals("大学物理实验", cards[0].entry.title)
         assertEquals("形势与政策", cards[1].entry.title)
-        assertEquals(listOf(longLab, shortElective), cards[0].clickEntries)
-        assertEquals(listOf(shortElective, longLab), cards[1].clickEntries)
+        assertEquals(listOf(longLab, shortElective), cards[0].stack.entries)
+        assertEquals(listOf(shortElective, longLab), cards[1].stack.entries)
         assertEquals(TimetableCardRect(x = 202, y = 2, width = 96, height = 236), rects[0])
         assertEquals(TimetableCardRect(x = 214, y = 122, width = 84, height = 116), rects[1])
+    }
+
+    @Test
+    fun exactOverlapWithChoice_putsChosenCourseOnFrontCard() {
+        val courseA = entry(DayOfWeek.TUESDAY, startPeriod = 3, periodSpan = 2, title = "操作系统")
+        val courseB = entry(DayOfWeek.TUESDAY, startPeriod = 3, periodSpan = 2, title = "数据结构")
+        val conflict = listOf(courseA, courseB)
+
+        val cards = buildTimetableCards(
+            conflict,
+            periodCount = 10,
+            conflictChoices = listOf(ConflictChoice(setOf(courseA.classId, courseB.classId), courseB.classId)),
+        )
+
+        assertEquals(courseB, cards.last().entry)
+        assertTrue(cards.last().showsContent)
+        assertEquals(listOf(courseB, courseA), cards.last().stack.entries)
+        assertEquals(courseA, cards.last().stack.defaultFront)
+    }
+
+    @Test
+    fun exactOverlapWithChoice_eachBackLayerCarriesItsOwnCourseNearestFirst() {
+        val c1 = entry(DayOfWeek.THURSDAY, startPeriod = 5, periodSpan = 2, title = "计算机网络")
+        val c2 = entry(DayOfWeek.THURSDAY, startPeriod = 5, periodSpan = 2, title = "创新创业导论")
+        val c3 = entry(DayOfWeek.THURSDAY, startPeriod = 5, periodSpan = 2, title = "ACM 集训")
+
+        val cards = buildTimetableCards(
+            listOf(c1, c2, c3),
+            periodCount = 10,
+            conflictChoices = listOf(ConflictChoice(setOf(c1.classId, c2.classId, c3.classId), c2.classId)),
+        )
+
+        // 从底到顶：排在置顶之后越靠前的课离前卡越近。每层画的都是自己那门课，换层时才能从原来的位置过渡。
+        assertEquals(listOf(c3, c1, c2), cards.map { it.entry })
+        assertEquals(listOf(false, false, true), cards.map { it.showsContent })
+    }
+
+    @Test
+    fun nestedPartialOverlapWithChoice_indentsChosenLongCourseInFrontOfTheShortOne() {
+        val longLab = entry(DayOfWeek.WEDNESDAY, startPeriod = 1, periodSpan = 4, title = "大学物理实验")
+        val shortElective = entry(DayOfWeek.WEDNESDAY, startPeriod = 3, periodSpan = 2, title = "形势与政策")
+
+        val cards = buildTimetableCards(
+            listOf(shortElective, longLab),
+            periodCount = 10,
+            conflictChoices = listOf(
+                ConflictChoice(setOf(longLab.classId, shortElective.classId), longLab.classId),
+            ),
+        )
+
+        assertEquals(listOf("形势与政策", "大学物理实验"), cards.map { it.entry.title })
+        assertEquals(listOf(0, 1), cards.map { it.stepIndex })
+        assertEquals(listOf(1, 0), cards.map { it.depthFromFront })
+        // 默认叠在最上层的仍是短课；没有置顶时，详情据此给它标上「置顶」。
+        assertTrue(cards.all { it.stack.defaultFront == shortElective })
+    }
+
+    @Test
+    fun partialOverlapWithChoiceAtLayerCap_drawsChosenCourseLast() {
+        val longCourse = entry(DayOfWeek.WEDNESDAY, startPeriod = 1, periodSpan = 4, title = "长实验")
+        val middle = entry(DayOfWeek.WEDNESDAY, startPeriod = 2, periodSpan = 3, title = "中间课")
+        val late = entry(DayOfWeek.WEDNESDAY, startPeriod = 3, periodSpan = 2, title = "后两节")
+        val conflict = listOf(longCourse, middle, late)
+
+        val cards = buildTimetableCards(
+            conflict,
+            periodCount = 10,
+            conflictChoices = listOf(ConflictChoice(conflict.map { it.classId }.toSet(), middle.classId)),
+            maxStackBackLayers = 1,
+        )
+
+        assertEquals(middle, cards.last().entry)
+        assertEquals(0, cards.last().depthFromFront)
     }
 
     @Test

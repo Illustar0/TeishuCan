@@ -45,12 +45,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
+import com.illustar0.teishucan.domain.ConflictChoice
 import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.TimetableWeek
 import com.illustar0.teishucan.ui.component.DateSkeleton
 import com.illustar0.teishucan.ui.component.DateWithYearSkeleton
+import com.illustar0.teishucan.ui.component.EntryStack
 import com.illustar0.teishucan.ui.component.RefreshContainer
 import com.illustar0.teishucan.ui.component.Timetable
 import com.illustar0.teishucan.ui.component.localizedDayName
@@ -115,6 +117,7 @@ data class TimetableState(
     val term: TimetableTerm? = null,
     val status: TimetableStatus = TimetableStatus.NotFetched,
     val isRefreshing: Boolean = false,
+    val conflictChoices: List<ConflictChoice> = emptyList(),
 )
 
 @Composable
@@ -212,8 +215,9 @@ fun TimetablePage(
                                 WeekPager(
                                     term = readyTerm,
                                     pagerState = pagerState,
-                                    onEntriesClick = { entries ->
-                                        detailEntries = entries
+                                    conflictChoices = state.conflictChoices,
+                                    onEntriesClick = { stack ->
+                                        detailEntries = stack.entries
                                         isDetailVisible = true
                                     },
                                     today = today,
@@ -283,7 +287,8 @@ private fun TimetableStatusMessage(
 private fun WeekPager(
     term: TimetableTerm,
     pagerState: PagerState,
-    onEntriesClick: (List<TimetableEntry>) -> Unit,
+    conflictChoices: List<ConflictChoice>,
+    onEntriesClick: (EntryStack) -> Unit,
     today: LocalDate,
 ) {
     // 整个学期共用一个高度，翻周时网格不会伸缩。
@@ -298,6 +303,7 @@ private fun WeekPager(
             week = week,
             today = today,
             periodCount = periodCount,
+            conflictChoices = conflictChoices,
             onEntriesClick = onEntriesClick,
             modifier = Modifier.padding(TimetablePadding),
         )

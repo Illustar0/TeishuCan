@@ -83,6 +83,8 @@ class TimetableViewModel @Inject constructor(
             status = statusOf(term, term?.let { loads[it.id] }, isRefreshing),
             isRefreshing = isRefreshing,
         )
+    }.combine(timetable.conflictChoices) { state, choices ->
+        state.copy(conflictChoices = choices)
     }.stateIn(
         viewModelScope,
         // 只在有人收集时计时：页面可见时，以及登录期间 runSignedIn 跟随展示的学期时。转屏等短暂中断不重启上游。

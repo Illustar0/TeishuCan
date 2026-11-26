@@ -43,8 +43,12 @@ class HomeViewModel @Inject constructor(
     private val refresher: CampusRefresher,
 ) : ViewModel() {
     /** 每分钟重新挑选下一节课，已经开始的课程随之退场。 */
-    private val upcomingClass = combine(timetable.terms, campusMinuteTicks()) { terms, now ->
-        terms.upcomingClassAfter(now)
+    private val upcomingClass = combine(
+        timetable.terms,
+        timetable.conflictChoices,
+        campusMinuteTicks(),
+    ) { terms, choices, now ->
+        terms.upcomingClassAfter(now, choices)
     }
 
     val isRefreshing: StateFlow<Boolean> = refresher.isRefreshing
@@ -61,7 +65,10 @@ class HomeViewModel @Inject constructor(
         // 只在首页可见时计时；转屏等短暂中断不重启上游。
         SharingStarted.WhileSubscribed(stopTimeout = StateStopTimeout),
         homeState(
-            timetable.terms.value.upcomingClassAfter(Clock.System.now().toLocalDateTime(CampusZone)),
+            timetable.terms.value.upcomingClassAfter(
+                Clock.System.now().toLocalDateTime(CampusZone),
+                timetable.conflictChoices.value,
+            ),
             campusCard.balanceYuan.value,
             electricity.meters.value,
             session.account.value,

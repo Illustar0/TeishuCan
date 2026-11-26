@@ -114,6 +114,7 @@ class TimetableMappingTest {
 
         assertTrue(term.isLoaded)
         val entry = term.weeks[0].entries.single()
+        assertEquals(regularClass.id, entry.classId)
         assertEquals(DayOfWeek.MONDAY, entry.day)
         assertEquals(LocalDate(2026, 9, 7), entry.date)
         assertEquals(1, entry.startPeriod)

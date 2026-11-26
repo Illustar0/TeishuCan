@@ -604,6 +604,8 @@ private fun currentWeek(weeks: List<TimetableWeek>, today: LocalDate): Timetable
 
 private fun previewEntry(date: LocalDate, startPeriod: Int, title: String, location: String?, periodSpan: Int = 1) =
     TimetableEntry(
+        // 预览里每门课的标题都不同，正好用来区分教学班。
+        classId = title.hashCode().toLong(),
         day = date.dayOfWeek,
         date = date,
         startPeriod = startPeriod,

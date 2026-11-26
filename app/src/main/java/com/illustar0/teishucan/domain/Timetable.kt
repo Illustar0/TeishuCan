@@ -22,9 +22,10 @@ fun dayPartsThrough(lastPeriod: Int): List<IntRange> {
     return DayParts.dropLast(1) + listOf(evening.first..maxOf(evening.last, lastPeriod))
 }
 
-/** [date] 当天的一节课，从第 [startPeriod] 节（从 1 开始）起连续占用 [periodSpan] 节。 */
+/** [date] 当天的一节课，属于教学班 [classId]，从第 [startPeriod] 节起连续占用 [periodSpan] 节（节次从 1 数起）。 */
 @Serializable
 data class TimetableEntry(
+    val classId: Long,
     val day: DayOfWeek,
     val date: LocalDate,
     val startPeriod: Int,
@@ -37,6 +38,33 @@ data class TimetableEntry(
 ) {
     val lastPeriod: Int
         get() = startPeriod + periodSpan - 1
+}
+
+/**
+ * 用户在一组时段冲突的课程里选定放在最上层的那门：[classIds] 是这组课的教学班，[frontClassId] 是其中置顶的那个。
+ *
+ * 选择按教学班记录，不按某一周记录，所以同一组课每周冲突时都沿用它。教学班只属于一个学期，换学期后自然不再匹配。
+ */
+@Serializable
+data class ConflictChoice(val classIds: Set<Long>, val frontClassId: Long)
+
+/**
+ * [conflict] 这组冲突课程里置顶的那门，没有适用的选择时为 null。
+ *
+ * 一个选择要适用于这组课，须涵盖这组课的全部教学班，且它置顶的那门就在这组课里。同一组课在不同的周
+ * 可能与更多课程冲突，按这条规则，在更大的冲突里做的选择也覆盖较小的那组。几个选择都适用时，以最后做的为准。
+ */
+fun List<ConflictChoice>.frontIn(conflict: List<TimetableEntry>): TimetableEntry? {
+    val classIds = conflict.mapTo(HashSet()) { it.classId }
+    val choice = lastOrNull { it.frontClassId in classIds && it.classIds.containsAll(classIds) } ?: return null
+    return conflict.first { it.classId == choice.frontClassId }
+}
+
+/** 把 [front] 置顶在 [conflict] 这组课里：替换这组课原有的选择，新选择排在末尾，成为最后做的那个。 */
+fun List<ConflictChoice>.withFront(conflict: List<TimetableEntry>, front: TimetableEntry): List<ConflictChoice> {
+    val classIds = conflict.mapTo(HashSet()) { it.classId }
+    require(front.classId in classIds) { "The front entry must belong to the conflict" }
+    return filterNot { it.classIds == classIds } + ConflictChoice(classIds, front.classId)
 }
 
 @Serializable
@@ -93,8 +121,14 @@ data class NextClass(
     val isTomorrow: Boolean,
 ) : UpcomingClass
 
-/** 这些学期中今天 [now] 之后和明天全天的第一节课。 */
-fun List<TimetableTerm>.upcomingClassAfter(now: LocalDateTime): UpcomingClass {
+/**
+ * 这些学期中今天 [now] 之后和明天全天的第一节课。几门课同时开始时，取用户在 [conflictChoices] 里置顶的那门；
+ * 没有置顶，就取教务数据里排在前面的那门。
+ */
+fun List<TimetableTerm>.upcomingClassAfter(
+    now: LocalDateTime,
+    conflictChoices: List<ConflictChoice>,
+): UpcomingClass {
     val today = now.date
     val tomorrow = today.plus(1, DateTimeUnit.DAY)
     val days = setOf(today, tomorrow)
@@ -102,10 +136,10 @@ fun List<TimetableTerm>.upcomingClassAfter(now: LocalDateTime): UpcomingClass {
     if (isEmpty() || !termsOfDays.all { it.isLoaded }) return UpcomingClass.NotFetched
 
     val entries = termsOfDays.flatMap { term -> term.weeks.flatMap { it.entries } }
-    val upcoming = entries
-        .filter { it.date in days && it.startsAt > now }
-        .minByOrNull { it.startsAt }
-        ?: return UpcomingClass.None
+    val laterEntries = entries.filter { it.date in days && it.startsAt > now }
+    val firstStart = laterEntries.minOfOrNull { it.startsAt } ?: return UpcomingClass.None
+    val firstEntries = laterEntries.filter { it.startsAt == firstStart }
+    val upcoming = conflictChoices.frontIn(firstEntries) ?: firstEntries.first()
     return NextClass(
         name = upcoming.title,
         location = upcoming.location.orEmpty(),

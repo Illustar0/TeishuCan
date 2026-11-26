@@ -3,9 +3,11 @@ package com.illustar0.teishucan.data
 import com.illustar0.teishucan.concurrency.RefreshTracker
 import com.illustar0.teishucan.di.ApplicationScope
 import com.illustar0.teishucan.domain.CampusFeature
+import com.illustar0.teishucan.domain.ConflictChoice
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.TimetableWeek
+import com.illustar0.teishucan.domain.withFront
 import com.illustar0.zzu.eas.Semester
 import com.illustar0.zzu.eas.SemesterId
 import com.illustar0.zzu.eas.SessionTeacher
@@ -19,7 +21,9 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
@@ -46,8 +50,24 @@ class TimetableRepository @Inject constructor(
     )
     private val refreshTracker = RefreshTracker()
 
+    /** 用户的置顶选择和电表一样只保存在本机，与登录无关，退出登录后也保留。 */
+    private val choiceStore = stores.create(
+        name = "timetable_conflict_choices.json",
+        defaultValue = emptyList(),
+        serializer = serializer<List<ConflictChoice>>(),
+    )
+
     val terms: StateFlow<List<TimetableTerm>> = cache.value
     val isRefreshing: StateFlow<Boolean> = refreshTracker.isRefreshing
+
+    /** 冲突课程的置顶选择，按选择的先后排列。尚未读出时为空，课表暂按默认叠放。 */
+    val conflictChoices: StateFlow<List<ConflictChoice>> =
+        choiceStore.data.stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    /** 把 [front] 置顶在 [conflict] 这组冲突课程里。写入失败时抛出 IOException，原有的选择保持不变。 */
+    suspend fun putInFront(conflict: List<TimetableEntry>, front: TimetableEntry) {
+        choiceStore.update { choices -> choices.withFront(conflict, front) }
+    }
 
     suspend fun isStaleAt(now: Instant, maxAge: Duration): Boolean = cache.isStaleAt(now, maxAge)
 
@@ -144,6 +164,7 @@ private fun Semester.weekStart(number: Int, timetable: Timetable?): LocalDate {
 }
 
 internal fun SessionView.toEntry() = TimetableEntry(
+    classId = teachingClass.id,
     day = session.weekday,
     date = session.date,
     startPeriod = session.startUnit,

@@ -20,6 +20,8 @@ class TimetableLayoutTest {
         periodSpan: Int,
         title: String,
     ) = TimetableEntry(
+        // 每个用例里的课程标题各不相同，足以区分教学班。
+        classId = title.hashCode().toLong(),
         day = day,
         date = mondayDate.plus(day.ordinal, DateTimeUnit.DAY),
         startPeriod = startPeriod,

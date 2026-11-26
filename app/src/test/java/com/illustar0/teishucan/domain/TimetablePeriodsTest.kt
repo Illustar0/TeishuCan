@@ -12,6 +12,7 @@ class TimetablePeriodsTest {
     private val monday = LocalDate(2026, 9, 7)
 
     private fun entry(startPeriod: Int, periodSpan: Int) = TimetableEntry(
+        classId = 1,
         day = DayOfWeek.MONDAY,
         date = monday,
         startPeriod = startPeriod,

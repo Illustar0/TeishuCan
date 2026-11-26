@@ -94,8 +94,8 @@ internal class ClassReminderNotifications(private val context: Context) {
             .setRequestPromotedOngoing(isLiveUpdate)
             // 只在第一次出现时提示，之后换阶段、补发都静默更新。
             .setOnlyAlertOnce(true)
-            // 闹钟迟到或没能触发时，通知也不会留到下课以后。
-            .setTimeoutAfter((occurrence.endsAt - now).inWholeMilliseconds)
+            // 闹钟迟到或没能触发时，通知也不会留到下课以后；至少留 1 毫秒，避免 0 被系统当成不设超时。
+            .setTimeoutAfter((occurrence.endsAt - now).inWholeMilliseconds.coerceAtLeast(1))
             .setContentIntent(openAppIntent())
             .setDeleteIntent(ClassReminderReceiver.dismissIntent(context, occurrence.id))
             .build()

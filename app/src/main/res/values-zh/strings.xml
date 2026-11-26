@@ -167,6 +167,14 @@
     <string name="settings_about_open_source_licenses_no_text">没有许可证正文</string>
     <string name="settings_about_open_source_licenses_website">访问主页</string>
     <string name="settings_about_open_source_licenses_close">关闭</string>
+    <string name="settings_class_reminder">上课提醒</string>
+    <string name="settings_class_reminder_summary">上课前 30 分钟起在状态栏显示实时动态</string>
+    <string name="settings_class_reminder_notifications">允许通知</string>
+    <string name="settings_class_reminder_notifications_summary">通知已关闭，收不到上课提醒</string>
+    <string name="settings_class_reminder_live_updates">允许实时动态</string>
+    <string name="settings_class_reminder_live_updates_summary">未允许时只显示为普通通知</string>
+    <string name="settings_class_reminder_exact_alarms">允许设置闹钟和提醒</string>
+    <string name="settings_class_reminder_exact_alarms_summary">未允许时提醒可能推迟几分钟</string>
     <string name="settings_electricity">电表</string>
     <string name="settings_electricity_summary">添加和管理电表</string>
     <string name="settings_language">语言</string>

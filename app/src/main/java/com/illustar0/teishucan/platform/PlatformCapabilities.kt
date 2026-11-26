@@ -28,6 +28,11 @@ internal object PlatformCapabilities {
     val isNotificationPermissionRequired: Boolean
         get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
+    /** 常驻通知能提升为实时动态（Live Update），用户也能按应用关闭它。 */
+    @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.BAKLAVA)
+    val isLiveUpdateSupported: Boolean
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA
+
     /** 系统密码管理器能通过 Credential Manager 保存和填入密码。 */
     @get:ChecksSdkIntAtLeast(api = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     val isSystemPasswordManagerSupported: Boolean

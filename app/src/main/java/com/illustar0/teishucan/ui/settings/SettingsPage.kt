@@ -1,5 +1,8 @@
 package com.illustar0.teishucan.ui.settings
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,14 +19,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.StudentProfile
 import com.illustar0.teishucan.domain.ThemeSettings
+import com.illustar0.teishucan.platform.PlatformCapabilities
+import com.illustar0.teishucan.reminder.ClassReminderAccess
+import com.illustar0.teishucan.reminder.missingClassReminderAccess
+import com.illustar0.teishucan.reminder.openSettings
 import com.illustar0.teishucan.ui.theme.ActionButtonSpacing
 import com.illustar0.teishucan.ui.theme.BlurredBar
 import com.illustar0.teishucan.ui.theme.CardSpacing
@@ -47,6 +58,7 @@ import top.yukonga.miuix.kmp.icon.extended.Translate
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
@@ -63,6 +75,16 @@ fun SettingsRoute(
 ) {
     // 切换语言会重建 Activity，因此每个组合周期读取一次就够了。
     val appLanguage = remember { currentAppLanguage() }
+    val classReminderViewModel = hiltViewModel<ClassReminderViewModel>()
+    val classReminder by classReminderViewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val checkReminderAccess = { classReminderViewModel.onAccessChecked(missingClassReminderAccess(context)) }
+    // 用户可能从系统设置改完权限回来。
+    LifecycleResumeEffect(classReminderViewModel, context) {
+        checkReminderAccess()
+        onPauseOrDispose {}
+    }
+    val notificationPermission = rememberLauncherForActivityResult(RequestPermission()) { checkReminderAccess() }
 
     SettingsPage(
         student = student,
@@ -72,6 +94,16 @@ fun SettingsRoute(
         onAppLanguageChange = ::applyAppLanguage,
         onOpenThemeSettings = onOpenThemeSettings,
         onOpenElectricitySettings = onOpenElectricitySettings,
+        classReminder = classReminder,
+        onClassReminderEnabledChange = { isEnabled ->
+            classReminderViewModel.setEnabled(isEnabled)
+            val canRequestNotifications = PlatformCapabilities.isNotificationPermissionRequired &&
+                classReminder?.missingAccess.orEmpty().contains(ClassReminderAccess.Notifications)
+            if (isEnabled && canRequestNotifications) {
+                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        },
+        onFixClassReminderAccess = { access -> access.openSettings(context) },
         onOpenAbout = onOpenAbout,
         bottomPadding = bottomPadding,
     )
@@ -86,6 +118,9 @@ fun SettingsPage(
     onAppLanguageChange: (AppLanguage) -> Unit,
     onOpenThemeSettings: () -> Unit,
     onOpenElectricitySettings: () -> Unit,
+    classReminder: ClassReminderSettingsState?,
+    onClassReminderEnabledChange: (Boolean) -> Unit,
+    onFixClassReminderAccess: (ClassReminderAccess) -> Unit,
     onOpenAbout: () -> Unit,
     bottomPadding: Dp,
 ) {
@@ -145,6 +180,16 @@ fun SettingsPage(
                     )
                 }
             }
+            // 提醒来自课表，只在登录期间有意义。
+            if (student != null && classReminder != null) {
+                item(key = "class_reminder") {
+                    ClassReminderCard(
+                        state = classReminder,
+                        onEnabledChange = onClassReminderEnabledChange,
+                        onFixAccess = onFixClassReminderAccess,
+                    )
+                }
+            }
             item(key = "about") {
                 Card(modifier = Modifier.padding(start = CardSpacing, end = CardSpacing, top = CardSpacing)) {
                     ArrowPreference(
@@ -188,6 +233,51 @@ private fun AccountCard(student: StudentProfile?, onLoginClick: () -> Unit) {
         }
     }
 }
+
+/** 上课提醒的开关。开着时，用户在系统设置里关掉的能力各占一行，点开就去系统设置里允许。 */
+@Composable
+private fun ClassReminderCard(
+    state: ClassReminderSettingsState,
+    onEnabledChange: (Boolean) -> Unit,
+    onFixAccess: (ClassReminderAccess) -> Unit,
+) {
+    Card(modifier = Modifier.padding(start = CardSpacing, end = CardSpacing, top = CardSpacing)) {
+        SwitchPreference(
+            checked = state.isEnabled,
+            onCheckedChange = onEnabledChange,
+            title = stringResource(R.string.settings_class_reminder),
+            summary = stringResource(R.string.settings_class_reminder_summary),
+            startAction = {
+                SettingsRowIcon(ImageVector.vectorResource(R.drawable.ic_lucide_calendar_clock))
+            },
+        )
+        if (state.isEnabled) {
+            for (access in state.missingAccess) {
+                ArrowPreference(
+                    title = stringResource(access.titleRes),
+                    summary = stringResource(access.summaryRes),
+                    onClick = { onFixAccess(access) },
+                )
+            }
+        }
+    }
+}
+
+@get:StringRes
+private val ClassReminderAccess.titleRes: Int
+    get() = when (this) {
+        ClassReminderAccess.Notifications -> R.string.settings_class_reminder_notifications
+        ClassReminderAccess.LiveUpdates -> R.string.settings_class_reminder_live_updates
+        ClassReminderAccess.ExactAlarms -> R.string.settings_class_reminder_exact_alarms
+    }
+
+@get:StringRes
+private val ClassReminderAccess.summaryRes: Int
+    get() = when (this) {
+        ClassReminderAccess.Notifications -> R.string.settings_class_reminder_notifications_summary
+        ClassReminderAccess.LiveUpdates -> R.string.settings_class_reminder_live_updates_summary
+        ClassReminderAccess.ExactAlarms -> R.string.settings_class_reminder_exact_alarms_summary
+    }
 
 @Composable
 private fun LogoutCard(onClick: () -> Unit) {
@@ -264,6 +354,9 @@ private fun SettingsPagePreview() {
             onAppLanguageChange = {},
             onOpenThemeSettings = {},
             onOpenElectricitySettings = {},
+            classReminder = null,
+            onClassReminderEnabledChange = {},
+            onFixClassReminderAccess = {},
             onOpenAbout = {},
             bottomPadding = 0.dp,
         )

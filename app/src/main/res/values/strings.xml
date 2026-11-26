@@ -174,6 +174,14 @@
     <string name="settings_about_open_source_licenses_no_text">ライセンス本文はありません</string>
     <string name="settings_about_open_source_licenses_website">ホームページ</string>
     <string name="settings_about_open_source_licenses_close">閉じる</string>
+    <string name="settings_class_reminder">授業リマインダー</string>
+    <string name="settings_class_reminder_summary">授業の30分前からステータスバーにライブアップデートを表示します</string>
+    <string name="settings_class_reminder_notifications">通知を許可</string>
+    <string name="settings_class_reminder_notifications_summary">通知がオフのため、リマインダーが届きません</string>
+    <string name="settings_class_reminder_live_updates">ライブアップデートを許可</string>
+    <string name="settings_class_reminder_live_updates_summary">許可しない場合は通常の通知として表示されます</string>
+    <string name="settings_class_reminder_exact_alarms">アラームとリマインダーを許可</string>
+    <string name="settings_class_reminder_exact_alarms_summary">許可しない場合、リマインダーが数分遅れることがあります</string>
     <string name="settings_electricity">電力メーター</string>
     <string name="settings_electricity_summary">メーターを追加・管理します</string>
     <string name="settings_language">言語</string>

@@ -1,6 +1,7 @@
 package com.illustar0.teishucan.ui.settings
 
 import android.Manifest
+import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.annotation.StringRes
@@ -26,6 +27,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -103,9 +105,10 @@ fun SettingsRoute(
         classReminder = classReminder,
         onClassReminderEnabledChange = { isEnabled ->
             classReminderViewModel.setEnabled(isEnabled)
-            val canRequestNotifications = PlatformCapabilities.isNotificationPermissionRequired &&
-                classReminder?.missingAccess.orEmpty().contains(ClassReminderAccess.Notifications)
-            if (isEnabled && canRequestNotifications) {
+            val needsPermissionPrompt = PlatformCapabilities.isNotificationPermissionRequired &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
+            if (isEnabled && needsPermissionPrompt) {
                 notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         },

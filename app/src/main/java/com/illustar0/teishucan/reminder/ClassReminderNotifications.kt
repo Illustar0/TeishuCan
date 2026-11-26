@@ -22,7 +22,7 @@ import com.illustar0.teishucan.ui.component.localizedFormatter
 import kotlin.time.Instant
 import kotlinx.datetime.toJavaLocalTime
 
-private const val ChannelId = "class_reminders"
+internal const val ClassReminderChannelId = "class_reminders"
 
 /** 每次课的通知以 [tag] 区分，id 都相同。 */
 private const val NotificationId = 1
@@ -42,7 +42,7 @@ internal class ClassReminderNotifications(private val context: Context) {
     fun show(reminders: List<ClassReminder>, now: Instant) {
         val tags = reminders.mapTo(HashSet()) { it.occurrence.id.tag }
         manager.activeNotifications
-            .filter { it.notification.channelId == ChannelId && it.tag !in tags }
+            .filter { it.notification.channelId == ClassReminderChannelId && it.tag !in tags }
             .forEach { manager.cancel(it.tag, it.id) }
         if (reminders.isEmpty()) return
         if (PlatformCapabilities.isNotificationPermissionRequired &&
@@ -61,7 +61,7 @@ internal class ClassReminderNotifications(private val context: Context) {
     }
 
     private fun channel(localizedContext: Context): NotificationChannelCompat =
-        NotificationChannelCompat.Builder(ChannelId, NotificationManagerCompat.IMPORTANCE_DEFAULT)
+        NotificationChannelCompat.Builder(ClassReminderChannelId, NotificationManagerCompat.IMPORTANCE_DEFAULT)
             .setName(localizedContext.getString(R.string.class_reminder_channel))
             .setDescription(localizedContext.getString(R.string.class_reminder_channel_description))
             .build()
@@ -69,7 +69,7 @@ internal class ClassReminderNotifications(private val context: Context) {
     private fun build(localizedContext: Context, reminder: ClassReminder, now: Instant): Notification {
         val occurrence = reminder.occurrence
         val isLiveUpdate = reminder.stage != ClassReminderStage.Started
-        return NotificationCompat.Builder(localizedContext, ChannelId)
+        return NotificationCompat.Builder(localizedContext, ClassReminderChannelId)
             .setSmallIcon(R.drawable.ic_lucide_calendar_clock)
             .setContentTitle(occurrence.entry.title)
             .setContentText(reminder.contentText(localizedContext))

@@ -32,7 +32,9 @@ fun missingClassReminderAccess(context: Context): List<ClassReminderAccess> {
     val notifications = NotificationManagerCompat.from(context)
     val alarmManager = checkNotNull(context.getSystemService<AlarmManager>())
     return buildList {
-        if (!notifications.areNotificationsEnabled()) add(ClassReminderAccess.Notifications)
+        if (!notifications.areNotificationsEnabled() || notifications.isClassReminderChannelMuted()) {
+            add(ClassReminderAccess.Notifications)
+        }
         if (PlatformCapabilities.isLiveUpdateSupported && !notifications.canPostPromotedNotifications()) {
             add(ClassReminderAccess.LiveUpdates)
         }
@@ -50,18 +52,33 @@ fun ClassReminderAccess.openSettings(context: Context) {
         context.startActivity(settingsIntent(context))
     } catch (cause: ActivityNotFoundException) {
         Log.w(Tag, "No settings page for $this", cause)
-        context.startActivity(ClassReminderAccess.Notifications.settingsIntent(context))
+        context.startActivity(appNotificationSettingsIntent(context))
     }
 }
 
 // 这些常量会内联进代码，只有系统支持这项设置时才会缺少它、走到这里。
 @SuppressLint("InlinedApi")
 private fun ClassReminderAccess.settingsIntent(context: Context): Intent = when (this) {
-    ClassReminderAccess.Notifications ->
-        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    ClassReminderAccess.Notifications -> notificationSettingsIntent(context)
     ClassReminderAccess.LiveUpdates ->
         Intent(Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS)
             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
     ClassReminderAccess.ExactAlarms ->
         Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.fromParts("package", context.packageName, null))
 }
+
+private fun notificationSettingsIntent(context: Context): Intent {
+    val notifications = NotificationManagerCompat.from(context)
+    if (notifications.areNotificationsEnabled() && notifications.isClassReminderChannelMuted()) {
+        return Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            .putExtra(Settings.EXTRA_CHANNEL_ID, ClassReminderChannelId)
+    }
+    return appNotificationSettingsIntent(context)
+}
+
+private fun appNotificationSettingsIntent(context: Context): Intent =
+    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+
+private fun NotificationManagerCompat.isClassReminderChannelMuted(): Boolean =
+    getNotificationChannel(ClassReminderChannelId)?.importance == NotificationManagerCompat.IMPORTANCE_NONE

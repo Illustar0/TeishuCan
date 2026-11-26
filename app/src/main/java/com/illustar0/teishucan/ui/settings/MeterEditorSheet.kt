@@ -327,7 +327,7 @@ private fun MeterRechargeForm(
                 .fillMaxWidth()
                 .padding(top = 12.dp)
                 .semantics { password() },
-            label = stringResource(R.string.electricity_recharge_password),
+            label = stringResource(R.string.electricity_recharge_password, PaymentPasswordLength),
             enabled = !isSubmitting,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             lineLimits = TextFieldLineLimits.SingleLine,

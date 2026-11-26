@@ -131,7 +131,7 @@
     <string name="mfa_code_sent">登録済みの認証用携帯電話に確認コードを送信しました</string>
     <string name="mfa_code_sent_phone">%1$s に確認コードを送信しました</string>
     <string name="electricity_recharge_balance">学生カードの残高：%1$s</string>
-    <string name="electricity_recharge_password">支払いパスワード（数字 6 桁）</string>
+    <string name="electricity_recharge_password">支払いパスワード（数字 %1$d 桁）</string>
     <string name="electricity_recharge_confirm">チャージする</string>
     <string name="electricity_recharge_submitting">処理中…</string>
     <string name="electricity_recharge_success">チャージしました</string>

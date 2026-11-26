@@ -125,7 +125,7 @@
     <string name="mfa_code_sent">验证码已发送至绑定的安全手机</string>
     <string name="mfa_code_sent_phone">验证码已发送至 %1$s</string>
     <string name="electricity_recharge_balance">校园卡余额：%1$s</string>
-    <string name="electricity_recharge_password">支付密码（6 位数字）</string>
+    <string name="electricity_recharge_password">支付密码（%1$d 位数字）</string>
     <string name="electricity_recharge_confirm">确认充值</string>
     <string name="electricity_recharge_submitting">支付中…</string>
     <string name="electricity_recharge_success">充值成功</string>

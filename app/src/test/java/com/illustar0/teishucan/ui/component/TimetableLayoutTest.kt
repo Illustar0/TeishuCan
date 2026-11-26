@@ -48,8 +48,7 @@ class TimetableLayoutTest {
         )
 
         assertEquals(3, cards.size)
-        assertTrue(cards.all { it.kind == CardLayerKind.Single })
-        assertTrue(cards.all { it.showsContent && !it.hasBorder })
+        assertTrue(cards.all { it.kind == CardLayerKind.Single && it.showsContent })
         assertEquals(listOf("高等数学", "大学英语", "线性代数"), cards.map { it.entry.title })
         assertEquals(TimetableCardRect(x = 2, y = 2, width = 96, height = 116), rects[0])
         assertEquals(TimetableCardRect(x = 2, y = 122, width = 96, height = 116), rects[1])
@@ -154,7 +153,8 @@ class TimetableLayoutTest {
         )
 
         assertEquals(2, cards.size)
-        assertTrue(cards.all { it.kind == CardLayerKind.PartialCascade && it.showsContent && it.hasBorder })
+        assertTrue(cards.all { it.kind == CardLayerKind.PartialCascade && it.showsContent })
+        assertEquals(listOf(1, 0), cards.map { it.depthFromFront })
         assertEquals("大学物理实验", cards[0].entry.title)
         assertEquals("形势与政策", cards[1].entry.title)
         assertEquals(listOf(longLab, shortElective), cards[0].clickEntries)

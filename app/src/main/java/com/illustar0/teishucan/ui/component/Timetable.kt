@@ -39,7 +39,6 @@ import kotlinx.datetime.LocalDate
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.squircle.squircleBorder
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
@@ -160,15 +159,6 @@ private fun EntryGrid(
         content = {
             cards.forEach { card ->
                 val surfaceColor = colors.stackSurfaceColor(card.depthFromFront)
-                val borderModifier = if (card.hasBorder) {
-                    Modifier.squircleBorder(
-                        width = TimetableDefaults.EntryBorderWidth,
-                        color = colors.entryBorderColor,
-                        cornerRadius = TimetableDefaults.EntryCornerRadius,
-                    )
-                } else {
-                    Modifier
-                }
                 if (card.showsContent) {
                     EntryCell(
                         entry = card.entry,
@@ -176,13 +166,9 @@ private fun EntryGrid(
                         surfaceColor = surfaceColor,
                         colors = colors,
                         onClick = { onEntriesClick(card.clickEntries) },
-                        modifier = borderModifier,
                     )
                 } else {
-                    DecorativeStackLayer(
-                        surfaceColor = surfaceColor,
-                        modifier = borderModifier,
-                    )
+                    DecorativeStackLayer(surfaceColor = surfaceColor)
                 }
             }
         },
@@ -234,7 +220,6 @@ private fun EntryCell(
     surfaceColor: Color,
     colors: TimetableColors,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val dayName = localizedDayName(entry.day, TextStyle.FULL)
     val position = if (conflictCount > 1) {
@@ -243,7 +228,7 @@ private fun EntryCell(
         stringResource(R.string.timetable_entry_position, dayName, entry.startPeriod)
     }
     Card(
-        modifier = modifier.semantics(mergeDescendants = true) { stateDescription = position },
+        modifier = Modifier.semantics(mergeDescendants = true) { stateDescription = position },
         cornerRadius = TimetableDefaults.EntryCornerRadius,
         insideMargin = PaddingValues(TimetableDefaults.EntryPadding),
         colors = CardDefaults.defaultColors(color = surfaceColor, contentColor = colors.entryContentColor),
@@ -273,12 +258,9 @@ private fun EntryCell(
 }
 
 @Composable
-private fun DecorativeStackLayer(
-    surfaceColor: Color,
-    modifier: Modifier = Modifier,
-) {
+private fun DecorativeStackLayer(surfaceColor: Color) {
     Card(
-        modifier = modifier.clearAndSetSemantics {},
+        modifier = Modifier.clearAndSetSemantics {},
         cornerRadius = TimetableDefaults.EntryCornerRadius,
         insideMargin = PaddingValues(0.dp),
         colors = CardDefaults.defaultColors(color = surfaceColor, contentColor = Color.Transparent),
@@ -295,7 +277,6 @@ internal data class TimetableCardSpec(
     val totalSteps: Int,
     val depthFromFront: Int,
     val showsContent: Boolean,
-    val hasBorder: Boolean,
 )
 
 internal enum class CardLayerKind {
@@ -391,7 +372,6 @@ private fun expandClusterCards(
                 totalSteps = 0,
                 depthFromFront = 0,
                 showsContent = true,
-                hasBorder = false,
             ),
         )
     }
@@ -429,7 +409,6 @@ private fun expandExactStack(
             totalSteps = backLayers,
             depthFromFront = backLayers - stepIndex,
             showsContent = false,
-            hasBorder = true,
         )
     }
     result += TimetableCardSpec(
@@ -441,7 +420,6 @@ private fun expandExactStack(
         totalSteps = backLayers,
         depthFromFront = 0,
         showsContent = true,
-        hasBorder = true,
     )
     return result
 }
@@ -486,7 +464,6 @@ private fun expandPartialCascade(
                 totalSteps = maxLane,
                 depthFromFront = maxLane - lane,
                 showsContent = true,
-                hasBorder = true,
             )
         }
 }
@@ -560,7 +537,6 @@ object TimetableDefaults {
     val EntryGap = 2.dp
     val EntryCornerRadius = 6.dp
     val EntryPadding = 4.dp
-    val EntryBorderWidth = 1.5.dp
     val StackStep = 4.dp
     val CascadeIndent = 5.dp
 
@@ -602,7 +578,6 @@ object TimetableDefaults {
             entryContentColor = entryContentColor,
             isDeep = true,
         ),
-        entryBorderColor: Color = MiuixTheme.colorScheme.surfaceContainer,
         gridLineColor: Color = MiuixTheme.colorScheme.dividerLine,
     ): TimetableColors = remember(
         dayColor,
@@ -613,7 +588,6 @@ object TimetableDefaults {
         entryLocationColor,
         entryStackColor,
         entryDeepStackColor,
-        entryBorderColor,
         gridLineColor,
     ) {
         TimetableColors(
@@ -625,7 +599,6 @@ object TimetableDefaults {
             entryLocationColor = entryLocationColor,
             entryStackColor = entryStackColor,
             entryDeepStackColor = entryDeepStackColor,
-            entryBorderColor = entryBorderColor,
             gridLineColor = gridLineColor,
         )
     }
@@ -653,6 +626,5 @@ data class TimetableColors(
     val entryLocationColor: Color,
     val entryStackColor: Color,
     val entryDeepStackColor: Color,
-    val entryBorderColor: Color,
     val gridLineColor: Color,
 )

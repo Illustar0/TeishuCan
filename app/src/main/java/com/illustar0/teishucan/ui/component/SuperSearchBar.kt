@@ -58,6 +58,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.offset
@@ -81,9 +82,21 @@ private const val SearchOverlayZIndex = 5f
 private val ExpandedTopGap = 5.dp
 private val CapsuleHorizontalPadding = 12.dp
 private val CapsuleBottomPadding = 6.dp
-private val IconBoxSize = 44.dp
+
+/** [SearchClearButton] 把清除图形固定画成 20dp，搜索图标取相同大小。 */
+private val IconGlyphSize = 20.dp
 private val IconOuterPadding = 16.dp
 private val IconInnerPadding = 8.dp
+
+/**
+ * [SearchClearButton] 在传入的 modifier 之后才接 clickable，用 padding 留白会落到可点区域之外，
+ * 所以只给尺寸、让图形居中：两侧各留 [IconOuterPadding]，整块高度与输入框一致。
+ */
+private val ClearButtonSize = DpSize(
+    width = IconOuterPadding + IconGlyphSize + IconOuterPadding,
+    height = SearchBarDefaults.InputFieldMinHeight,
+)
+
 private val CancelStartPadding = 4.dp
 private val CancelEndPadding = 16.dp
 private val CancelVerticalPadding = 8.dp
@@ -328,9 +341,7 @@ private fun ExpandedSearchField(
             ) {
                 SearchClearButton(
                     onClick = { onQueryChange("") },
-                    modifier = Modifier
-                        .size(IconBoxSize)
-                        .padding(start = IconInnerPadding, end = IconOuterPadding),
+                    modifier = Modifier.size(ClearButtonSize),
                     contentDescription = clearDescription,
                 )
             }
@@ -350,8 +361,8 @@ private fun SearchLeadingIcon() {
         imageVector = MiuixIcons.Basic.Search,
         contentDescription = null,
         modifier = Modifier
-            .size(IconBoxSize)
-            .padding(start = IconOuterPadding, end = IconInnerPadding),
+            .padding(start = IconOuterPadding, end = IconInnerPadding)
+            .size(IconGlyphSize),
         tint = MiuixTheme.colorScheme.onSurfaceContainerHigh,
     )
 }

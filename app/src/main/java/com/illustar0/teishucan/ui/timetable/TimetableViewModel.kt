@@ -15,6 +15,7 @@ import com.illustar0.teishucan.data.TimetableRepository
 import com.illustar0.teishucan.data.ZzuSession
 import com.illustar0.teishucan.data.campusDateTicks
 import com.illustar0.teishucan.domain.AccountState
+import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.defaultTerm
 import com.illustar0.teishucan.ui.component.FailureToasts
@@ -110,6 +111,10 @@ class TimetableViewModel @Inject constructor(
 
     fun refresh() = refreshQueue.request()
 
+    fun putInFront(conflict: List<TimetableEntry>, front: TimetableEntry) {
+        viewModelScope.launch { failure.capture { timetable.putInFront(conflict, front) } }
+    }
+
     private suspend fun refreshPage() {
         timetable.refresh()
         val term = state.value.term ?: return
@@ -171,6 +176,7 @@ fun TimetableRoute(bottomPadding: Dp) {
         state = state,
         onRefresh = viewModel::refresh,
         onTermSelect = viewModel::selectTerm,
+        onPutInFront = viewModel::putInFront,
         bottomPadding = bottomPadding,
     )
 }

@@ -91,6 +91,15 @@
     <string name="timetable_detail_location">場所</string>
     <string name="timetable_detail_teacher">担当教員</string>
     <string name="timetable_detail_copy">コピー</string>
+    <string name="timetable_time_range">%1$s – %2$s</string>
+    <string name="timetable_period">%1$d 限</string>
+    <string name="timetable_periods_range">%1$d〜%2$d 限</string>
+    <string name="timetable_conflict_others">同じ時間の他の授業</string>
+    <string name="timetable_conflict_other_summary">%1$s・%2$s</string>
+    <string name="timetable_conflict_show">表示</string>
+    <string name="timetable_front_badge">ピン留め</string>
+    <string name="timetable_put_in_front">%1$sをピン留め</string>
+    <string name="timetable_pass_front_on">ピン留めを次の授業に移す（現在は%1$s）</string>
     <string name="timetable_term">学期</string>
     <string name="timetable_term_name">%1$s 年度第 %2$s 学期</string>
     <string name="timetable_week_number">第 %1$d 週</string>

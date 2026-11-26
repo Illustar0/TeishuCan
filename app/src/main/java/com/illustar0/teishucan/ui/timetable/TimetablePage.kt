@@ -1,10 +1,7 @@
 package com.illustar0.teishucan.ui.timetable
 
-import android.content.ClipData
 import androidx.annotation.StringRes
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,16 +10,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -32,13 +25,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,8 +44,6 @@ import com.illustar0.teishucan.ui.component.DateWithYearSkeleton
 import com.illustar0.teishucan.ui.component.EntryStack
 import com.illustar0.teishucan.ui.component.RefreshContainer
 import com.illustar0.teishucan.ui.component.Timetable
-import com.illustar0.teishucan.ui.component.localizedDayName
-import com.illustar0.teishucan.ui.component.rememberClassTimeFormatter
 import com.illustar0.teishucan.ui.component.rememberLocalizedFormatter
 import com.illustar0.teishucan.ui.component.liquid.LiquidGlassFloatingToolbar
 import com.illustar0.teishucan.ui.theme.BlurredBar
@@ -67,19 +54,13 @@ import com.illustar0.teishucan.ui.theme.LocalIsLiquidGlassEnabled
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
 import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.plus
 import kotlinx.datetime.toJavaLocalDate
-import kotlinx.datetime.toJavaLocalTime
-import kotlin.time.Duration.Companion.seconds
-import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.basic.FloatingToolbarDefaults
@@ -87,7 +68,6 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
@@ -95,17 +75,12 @@ import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
 import top.yukonga.miuix.kmp.icon.extended.ChevronForward
-import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Filter
-import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
-import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.utils.springAnimateToPage
-
-private val CopiedIndicatorDuration = 2.seconds
 
 private val TimetablePadding = PaddingValues(start = 4.dp, end = 8.dp, bottom = 8.dp)
 
@@ -125,6 +100,7 @@ fun TimetablePage(
     state: TimetableState,
     onRefresh: () -> Unit,
     onTermSelect: (TimetableTerm) -> Unit,
+    onPutInFront: (conflict: List<TimetableEntry>, front: TimetableEntry) -> Unit,
     bottomPadding: Dp,
 ) {
     val today = state.today
@@ -147,9 +123,7 @@ fun TimetablePage(
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
     var weekSwitcherHeight by remember { mutableStateOf(0.dp) }
-    // 关闭后保留，让弹层滑走时内容不变。
-    var detailEntries by remember { mutableStateOf<List<TimetableEntry>>(emptyList()) }
-    var isDetailVisible by remember { mutableStateOf(false) }
+    var openedStack by remember { mutableStateOf<EntryStack?>(null) }
 
     Scaffold(
         topBar = {
@@ -216,10 +190,7 @@ fun TimetablePage(
                                     term = readyTerm,
                                     pagerState = pagerState,
                                     conflictChoices = state.conflictChoices,
-                                    onEntriesClick = { stack ->
-                                        detailEntries = stack.entries
-                                        isDetailVisible = true
-                                    },
+                                    onEntriesClick = { stack -> openedStack = stack },
                                     today = today,
                                 )
                             }
@@ -244,9 +215,10 @@ fun TimetablePage(
             }
         }
         EntryDetailSheet(
-            entries = detailEntries,
-            show = isDetailVisible,
-            onDismissRequest = { isDetailVisible = false },
+            stack = openedStack,
+            conflictChoices = state.conflictChoices,
+            onPutInFront = onPutInFront,
+            onDismissRequest = { openedStack = null },
         )
     }
 }
@@ -308,171 +280,6 @@ private fun WeekPager(
             modifier = Modifier.padding(TimetablePadding),
         )
     }
-}
-
-@Composable
-private fun EntryDetailSheet(
-    entries: List<TimetableEntry>,
-    show: Boolean,
-    onDismissRequest: () -> Unit,
-) {
-    val sheetTitle = when (entries.size) {
-        0 -> null
-        1 -> entries.single().title
-        else -> stringResource(R.string.timetable_conflict_sheet_title, entries.size)
-    }
-    OverlayBottomSheet(
-        show = show,
-        title = sheetTitle,
-        onDismissRequest = onDismissRequest,
-    ) {
-        if (entries.isEmpty()) return@OverlayBottomSheet
-        if (entries.size == 1) {
-            EntryDetailCard(
-                entry = entries.single(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(bottom = 12.dp),
-            )
-            return@OverlayBottomSheet
-        }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(bottom = 12.dp)
-                .verticalScroll(rememberScrollState()),
-        ) {
-            entries.forEachIndexed { index, entry ->
-                SmallTitle(
-                    text = entry.title,
-                    modifier = if (index > 0) Modifier.padding(top = 12.dp) else Modifier,
-                )
-                EntryDetailCard(
-                    entry = entry,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EntryDetailCard(
-    entry: TimetableEntry,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.secondaryContainer),
-    ) {
-        LongPressCopyRow(
-            title = stringResource(R.string.timetable_detail_time),
-            value = entryScheduleText(entry),
-        )
-        if (entry.location != null) {
-            CopyButtonRow(
-                title = stringResource(R.string.timetable_detail_location),
-                value = entry.location,
-            )
-        }
-        if (entry.teacher.isNotBlank()) {
-            LongPressCopyRow(
-                title = stringResource(R.string.timetable_detail_teacher),
-                value = entry.teacher,
-            )
-        }
-    }
-}
-
-@Composable
-private fun copyAction(
-    title: String,
-    value: String,
-    onCopy: () -> Unit = {},
-): () -> Unit {
-    val clipboard = LocalClipboard.current
-    val coroutineScope = rememberCoroutineScope()
-    return {
-        coroutineScope.launch {
-            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(title, value)))
-            onCopy()
-        }
-    }
-}
-
-@Composable
-private fun Modifier.longPressToCopy(copy: () -> Unit): Modifier = combinedClickable(
-    onLongClickLabel = stringResource(R.string.timetable_detail_copy),
-    onLongClick = copy,
-    onClick = {},
-)
-
-@Composable
-private fun LongPressCopyRow(title: String, value: String) {
-    BasicComponent(
-        modifier = Modifier.longPressToCopy(copyAction(title, value)),
-        title = title,
-        summary = value,
-    )
-}
-
-@Composable
-private fun CopyButtonRow(title: String, value: String) {
-    val hapticFeedback = LocalHapticFeedback.current
-    var isCopied by remember(value) { mutableStateOf(false) }
-    val copy = copyAction(title, value, onCopy = { isCopied = true })
-
-    LaunchedEffect(isCopied) {
-        if (isCopied) {
-            delay(CopiedIndicatorDuration)
-            isCopied = false
-        }
-    }
-
-    BasicComponent(
-        modifier = Modifier.longPressToCopy(copy),
-        title = title,
-        summary = value,
-        endActions = {
-            IconButton(
-                onClick = {
-                    copy()
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.ContextClick)
-                },
-            ) {
-                Crossfade(targetState = isCopied) { showsCheck ->
-                    Icon(
-                        imageVector = if (showsCheck) MiuixIcons.Ok else MiuixIcons.Copy,
-                        contentDescription = stringResource(R.string.timetable_detail_copy),
-                        tint = if (showsCheck) {
-                            MiuixTheme.colorScheme.primary
-                        } else {
-                            MiuixTheme.colorScheme.onSurfaceVariantActions
-                        },
-                    )
-                }
-            }
-        },
-    )
-}
-
-@Composable
-private fun entryScheduleText(entry: TimetableEntry): String {
-    val dayName = localizedDayName(entry.day, TextStyle.FULL)
-    val position = if (entry.periodSpan > 1) {
-        stringResource(R.string.timetable_entry_period_range, dayName, entry.startPeriod, entry.lastPeriod)
-    } else {
-        stringResource(R.string.timetable_entry_position, dayName, entry.startPeriod)
-    }
-    val formatter = rememberClassTimeFormatter()
-    return stringResource(
-        R.string.timetable_entry_schedule,
-        position,
-        formatter.format(entry.startTime.toJavaLocalTime()),
-        formatter.format(entry.endTime.toJavaLocalTime()),
-    )
 }
 
 @Composable
@@ -686,6 +493,7 @@ private fun TimetablePagePreview() {
             ),
             onRefresh = {},
             onTermSelect = {},
+            onPutInFront = { _, _ -> },
             bottomPadding = 0.dp,
         )
     }

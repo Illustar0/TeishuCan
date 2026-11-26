@@ -87,8 +87,11 @@ private val LeadIconEndOverhang = 50.dp
 private val LeadIconBottomOverhang = 38.dp
 private val LeadIconTextGap = 8.dp
 
-/** 让文字和节次条避开图标留在卡片内的部分，再留出 [LeadIconTextGap]。 */
-private val LeadIconClearance = LeadIconSize - LeadIconEndOverhang - LeadIconTextGap
+/** Miuix 图标在 24dp 画布四周各留 2dp 空白，图形不会画进这一圈。 */
+private val LeadIconGlyphInset = LeadIconSize * (2f / 24f)
+
+/** 让文字和节次条避开图标图形留在卡片内的部分，再留出 [LeadIconTextGap]。 */
+private val LeadIconClearance = LeadIconSize - LeadIconEndOverhang - LeadIconGlyphInset + LeadIconTextGap
 
 /** 足够高，让图标上沿留在卡片内。 */
 private val LeadCardMinHeight = LeadIconSize - LeadIconBottomOverhang

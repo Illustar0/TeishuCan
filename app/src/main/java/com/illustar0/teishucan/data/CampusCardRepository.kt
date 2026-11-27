@@ -5,6 +5,7 @@ import com.illustar0.teishucan.domain.BigDecimalAsStringSerializer
 import com.illustar0.teishucan.domain.CampusFeature
 import com.illustar0.teishucan.domain.PaymentChannel
 import com.illustar0.teishucan.domain.RechargeOrder
+import com.illustar0.zzu.toBigDecimal
 import java.math.BigDecimal
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,7 +36,7 @@ class CampusCardRepository @Inject constructor(
     suspend fun refresh() = refreshTracker.track {
         val refreshVersion = balance.nextRefreshVersion()
         session.request(CampusFeature.CampusCard) {
-            val amount = ecard().balance()
+            val amount = ecard().balance().toBigDecimal()
             balance.update(this, refreshVersion) { amount }
         }
     }

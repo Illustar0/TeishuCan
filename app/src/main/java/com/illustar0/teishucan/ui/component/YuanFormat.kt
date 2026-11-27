@@ -8,6 +8,13 @@ import java.util.Locale
 
 private const val MaxRechargeAmountDigits = 6
 
+/** 只保留不带前导 0 的数字，最多 [maxDigits] 位。 */
+fun positiveIntInput(maxDigits: Int): InputTransformation = InputTransformation.byValue { _, proposed ->
+    proposed.filter { it in '0'..'9' }
+        .dropWhile { it == '0' }
+        .take(maxDigits)
+}
+
 val RechargeAmountInput = InputTransformation.byValue { _, proposed ->
     proposed.filter(Char::isDigit).take(MaxRechargeAmountDigits)
 }

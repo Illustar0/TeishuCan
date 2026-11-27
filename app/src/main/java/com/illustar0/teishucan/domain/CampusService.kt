@@ -1,6 +1,6 @@
 package com.illustar0.teishucan.domain
 
-/** 服务页提供的校园业务系统，都能免登录打开。 */
+/** 通过单点登录在外部浏览器打开的校园网页服务。 */
 enum class CampusService {
     Library,
     LibraryReservation,

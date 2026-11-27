@@ -42,6 +42,7 @@ import com.illustar0.teishucan.ui.component.liquid.LiquidGlassNavigationBar
 import com.illustar0.teishucan.ui.component.predictiveback.predictiveBackNavTransition
 import com.illustar0.teishucan.ui.home.HomeRoute
 import com.illustar0.teishucan.ui.home.SignedOutHomePage
+import com.illustar0.teishucan.ui.services.NativeService
 import com.illustar0.teishucan.ui.services.ServicesRoute
 import com.illustar0.teishucan.ui.services.UndergradEasRoute
 import com.illustar0.teishucan.ui.settings.AboutPage
@@ -112,6 +113,10 @@ internal sealed interface Route : NavKey {
 
     @Serializable
     data object OpenSourceLicenses : Route
+}
+
+private fun NativeService.toRoute(): Route = when (this) {
+    NativeService.UndergradEas -> Route.UndergradEas
 }
 
 internal enum class AppDestination(
@@ -222,7 +227,10 @@ internal fun TeishuCanApp(
                 enabled = isPredictiveBackDisabled,
                 onCommit = { navController.pop() },
             )
-            UndergradEasRoute(onBack = { navController.pop() })
+            UndergradEasRoute(
+                onOpenNative = { service -> navigate(service.toRoute()) },
+                onBack = { navController.pop() },
+            )
         }
         entry<Route.About> {
             CommitOnlyBackHandler(
@@ -345,7 +353,7 @@ private fun MainScreen(
                     AppDestination.Timetable -> TimetableRoute(bottomPadding = bottomPadding)
 
                     AppDestination.Services -> ServicesRoute(
-                        onOpenUndergradEas = { onNavigate(Route.UndergradEas) },
+                        onOpenNative = { service -> onNavigate(service.toRoute()) },
                         bottomPadding = bottomPadding,
                     )
 

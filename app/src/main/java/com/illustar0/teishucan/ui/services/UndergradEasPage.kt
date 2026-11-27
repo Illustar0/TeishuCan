@@ -10,11 +10,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.CampusService
 import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.ui.theme.BlurredBar
+import com.illustar0.teishucan.ui.theme.CardSpacing
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
@@ -34,7 +34,7 @@ private val UndergradEasGroups = ServiceGroup.entries.filter(ServiceGroup::isUnd
 @Composable
 fun UndergradEasPage(
     openingService: CampusService?,
-    onOpenService: (CampusService) -> Unit,
+    onOpen: (ServiceTarget) -> Unit,
     onBack: () -> Unit,
 ) {
     val scrollBehavior = MiuixScrollBehavior()
@@ -74,11 +74,11 @@ fun UndergradEasPage(
                 ServiceGroupSection(
                     group = group,
                     openingService = openingService,
-                    onOpenService = onOpenService,
+                    onOpen = onOpen,
                 )
             }
             item(key = "end") {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(CardSpacing))
             }
         }
     }
@@ -88,6 +88,10 @@ fun UndergradEasPage(
 @Composable
 private fun UndergradEasPagePreview() {
     TeishuCanTheme(settings = ThemeSettings(isBlurEnabled = false), isDark = false) {
-        UndergradEasPage(openingService = null, onOpenService = {}, onBack = {})
+        UndergradEasPage(
+            openingService = null,
+            onOpen = {},
+            onBack = {},
+        )
     }
 }

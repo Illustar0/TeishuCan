@@ -20,7 +20,7 @@ import com.illustar0.teishucan.domain.ClassroomDaySnapshot
 import com.illustar0.teishucan.domain.ClassroomFilter
 import com.illustar0.teishucan.domain.ClassroomItem
 import com.illustar0.teishucan.domain.ClassroomLoadProgress
-import com.illustar0.teishucan.domain.ClassroomTimeFilter
+import com.illustar0.teishucan.domain.ScheduleUnit
 import com.illustar0.teishucan.domain.effectiveUnits
 import com.illustar0.teishucan.domain.filterClassrooms
 import com.illustar0.teishucan.domain.groupClassroomsByBuilding
@@ -46,27 +46,68 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.todayIn
 
 private val StateStopTimeout = 5.seconds
+
+/** 围绕当前选中日期预投影的相邻半径，让跟手左右滑和快甩切日时已缓存邻页零闪烁。 */
+internal const val AdjacentProjectedDaysRadius = 2
+
+data class ClassroomDayPageState(
+    val date: LocalDate,
+    val effectiveFilter: ClassroomFilter = ClassroomFilter(),
+    val filteredRooms: List<ClassroomItem> = emptyList(),
+    val groups: List<ClassroomBuildingGroup> = emptyList(),
+    val status: ClassroomBrowserStatus = ClassroomBrowserStatus.Loading,
+    val isRefreshing: Boolean = false,
+    val loadProgress: ClassroomLoadProgress? = null,
+    val lastUpdatedAt: Instant? = null,
+)
 
 data class AvailableClassroomsState(
     val selectedDate: LocalDate,
     val today: LocalDate,
     val currentTime: LocalTime,
     val catalog: ClassroomCatalogData? = null,
-    val filter: ClassroomFilter = ClassroomFilter(),
-    val filteredRooms: List<ClassroomItem> = emptyList(),
-    val groups: List<ClassroomBuildingGroup> = emptyList(),
+    val rawFilter: ClassroomFilter = ClassroomFilter(),
+    val dayPages: Map<LocalDate, ClassroomDayPageState> = emptyMap(),
     val searchResultGroups: List<ClassroomBuildingGroup> = emptyList(),
-    val status: ClassroomBrowserStatus = ClassroomBrowserStatus.Loading,
-    val isRefreshing: Boolean = false,
-    val loadProgress: ClassroomLoadProgress? = null,
-    val lastUpdatedAt: Instant? = null,
-)
+) {
+    val selectedDay: ClassroomDayPageState
+        get() = pageFor(selectedDate)
+
+    val filter: ClassroomFilter
+        get() = selectedDay.effectiveFilter
+
+    val filteredRooms: List<ClassroomItem>
+        get() = selectedDay.filteredRooms
+
+    val groups: List<ClassroomBuildingGroup>
+        get() = selectedDay.groups
+
+    val status: ClassroomBrowserStatus
+        get() = selectedDay.status
+
+    val isRefreshing: Boolean
+        get() = selectedDay.isRefreshing
+
+    val loadProgress: ClassroomLoadProgress?
+        get() = selectedDay.loadProgress
+
+    val lastUpdatedAt: Instant?
+        get() = selectedDay.lastUpdatedAt
+
+    /** 返回 [date] 的页面状态；未命中投影表时返回对应生效筛选条件的加载占位态。 */
+    fun pageFor(date: LocalDate): ClassroomDayPageState = dayPages[date] ?: ClassroomDayPageState(
+        date = date,
+        effectiveFilter = rawFilter.effectiveFor(isToday = date == today),
+    )
+}
 
 private data class QueryInput(
     val date: LocalDate = Clock.System.todayIn(CampusZone),
@@ -81,7 +122,7 @@ private data class LoadTicket(
     val refreshNonce: Long,
 )
 
-private sealed interface ActiveLoad {
+internal sealed interface ActiveLoad {
     val key: ClassroomRequestKey
 
     data class Loading(
@@ -96,6 +137,15 @@ private sealed interface ActiveLoad {
 
     data class Failed(override val key: ClassroomRequestKey) : ActiveLoad
 }
+
+internal data class DayProjectionContext(
+    val selectedDate: LocalDate,
+    val today: LocalDate,
+    val currentTime: LocalTime,
+    val rawFilter: ClassroomFilter,
+    val units: List<ScheduleUnit>,
+    val activeLoad: ActiveLoad?,
+)
 
 @HiltViewModel
 class AvailableClassroomsViewModel @Inject constructor(
@@ -112,59 +162,31 @@ class AvailableClassroomsViewModel @Inject constructor(
     private val baseState = combine(
         queryInputFlow,
         classrooms.snapshot,
+        classrooms.remoteCacheVersion,
         activeLoadFlow,
         campusMinuteTicks(),
-    ) { input, cacheSnapshot, activeLoad, now ->
-        val today = now.date
-        val currentTime = now.time
-        val isToday = input.date == today
-        val effectiveFilter = if (!isToday && input.filter.timeFilter == ClassroomTimeFilter.Now) {
-            input.filter.copy(timeFilter = ClassroomTimeFilter.Periods())
-        } else {
-            input.filter
-        }
-        val activeKey = classroomRequestKey(input.date, effectiveFilter)
-        val matchingLoad = activeLoad?.takeIf { it.key == activeKey }
-        val isRefreshing = matchingLoad is ActiveLoad.Loading
-        val progress = (matchingLoad as? ActiveLoad.Loading)?.progress
-        val activeDaySnapshot = (matchingLoad as? ActiveLoad.Ready)?.snapshot
-            ?: classrooms.peekCachedDay(input.date, effectiveFilter)
-        val units = cacheSnapshot.catalog.effectiveUnits
-
-        val filtered = if (isRefreshing) {
-            emptyList()
-        } else {
-            activeDaySnapshot?.let { day ->
-                filterClassrooms(
-                    items = day.items,
-                    filter = effectiveFilter,
-                    currentTime = currentTime,
-                    isToday = isToday,
-                    units = units,
-                    isPreSorted = true,
-                )
-            }.orEmpty()
-        }
-        val groups = if (filtered.isEmpty()) emptyList() else groupClassroomsByBuilding(filtered)
-        val status = when {
-            isRefreshing -> ClassroomBrowserStatus.Loading
-            activeDaySnapshot == null && matchingLoad is ActiveLoad.Failed -> ClassroomBrowserStatus.Failed
-            activeDaySnapshot == null -> ClassroomBrowserStatus.Loading
-            filtered.isEmpty() -> ClassroomBrowserStatus.Empty
-            else -> ClassroomBrowserStatus.Ready
-        }
+    ) { input, cacheSnapshot, _, activeLoad, now ->
+        val context = DayProjectionContext(
+            selectedDate = input.date,
+            today = now.date,
+            currentTime = now.time,
+            rawFilter = input.filter,
+            units = cacheSnapshot.catalog.effectiveUnits,
+            activeLoad = activeLoad,
+        )
+        val dayPages = projectClassroomDayPages(
+            context = context,
+            cachedDayLookup = { date, effectiveFilter ->
+                classrooms.peekCachedDay(date, effectiveFilter)
+            },
+        )
         AvailableClassroomsState(
             selectedDate = input.date,
-            today = today,
-            currentTime = currentTime,
+            today = now.date,
+            currentTime = now.time,
             catalog = cacheSnapshot.catalog,
-            filter = effectiveFilter,
-            filteredRooms = filtered,
-            groups = groups,
-            status = status,
-            isRefreshing = isRefreshing,
-            loadProgress = progress,
-            lastUpdatedAt = activeDaySnapshot?.fetchedAt,
+            rawFilter = input.filter,
+            dayPages = dayPages,
         )
     }
 
@@ -199,15 +221,7 @@ class AvailableClassroomsViewModel @Inject constructor(
     }
 
     fun selectDate(date: LocalDate) {
-        val today = Clock.System.todayIn(CampusZone)
-        queryInputFlow.update { current ->
-            val nextFilter = if (date != today && current.filter.timeFilter == ClassroomTimeFilter.Now) {
-                current.filter.copy(timeFilter = ClassroomTimeFilter.Periods())
-            } else {
-                current.filter
-            }
-            current.copy(date = date, filter = nextFilter)
-        }
+        queryInputFlow.update { current -> current.copy(date = date) }
     }
 
     fun updateFilter(filter: ClassroomFilter) {
@@ -279,6 +293,81 @@ private fun initialAvailableClassroomsState(): AvailableClassroomsState {
         selectedDate = now.date,
         today = now.date,
         currentTime = now.time,
+    )
+}
+
+/**
+ * 为当前选中日及前后 [AdjacentProjectedDaysRadius] 天内已有缓存的日期构建页面状态。
+ *
+ * 邻页只读本地缓存且不触发网络请求，避免跟手左右滑时显示上一页内容或误刷教务接口；
+ * 尚未缓存的邻页不写入映射表，由 [AvailableClassroomsState.pageFor] 兜底为加载态。
+ */
+internal fun projectClassroomDayPages(
+    context: DayProjectionContext,
+    cachedDayLookup: (date: LocalDate, effectiveFilter: ClassroomFilter) -> ClassroomDaySnapshot?,
+): Map<LocalDate, ClassroomDayPageState> = buildMap {
+    for (offset in -AdjacentProjectedDaysRadius..AdjacentProjectedDaysRadius) {
+        val date = context.selectedDate.plus(offset, DateTimeUnit.DAY)
+        val isSelected = offset == 0
+        val effectiveFilter = context.rawFilter.effectiveFor(isToday = date == context.today)
+        val requestKey = classroomRequestKey(date, effectiveFilter)
+        val matchingLoad = context.activeLoad?.takeIf { it.key == requestKey }
+        val daySnapshot = (matchingLoad as? ActiveLoad.Ready)?.snapshot
+            ?: cachedDayLookup(date, effectiveFilter)
+        if (!isSelected && daySnapshot == null && matchingLoad == null) continue
+        put(
+            date,
+            projectClassroomDayPage(
+                date = date,
+                context = context,
+                effectiveFilter = effectiveFilter,
+                matchingLoad = matchingLoad,
+                daySnapshot = daySnapshot,
+            ),
+        )
+    }
+}
+
+private fun projectClassroomDayPage(
+    date: LocalDate,
+    context: DayProjectionContext,
+    effectiveFilter: ClassroomFilter,
+    matchingLoad: ActiveLoad?,
+    daySnapshot: ClassroomDaySnapshot?,
+): ClassroomDayPageState {
+    val isRefreshing = matchingLoad is ActiveLoad.Loading
+    val progress = (matchingLoad as? ActiveLoad.Loading)?.progress
+    val filtered = if (isRefreshing) {
+        emptyList()
+    } else {
+        daySnapshot?.let { day ->
+            filterClassrooms(
+                items = day.items,
+                filter = effectiveFilter,
+                currentTime = context.currentTime,
+                isToday = date == context.today,
+                units = context.units,
+                isPreSorted = true,
+            )
+        }.orEmpty()
+    }
+    val groups = if (filtered.isEmpty()) emptyList() else groupClassroomsByBuilding(filtered)
+    val status = when {
+        isRefreshing -> ClassroomBrowserStatus.Loading
+        daySnapshot == null && matchingLoad is ActiveLoad.Failed -> ClassroomBrowserStatus.Failed
+        daySnapshot == null -> ClassroomBrowserStatus.Loading
+        filtered.isEmpty() -> ClassroomBrowserStatus.Empty
+        else -> ClassroomBrowserStatus.Ready
+    }
+    return ClassroomDayPageState(
+        date = date,
+        effectiveFilter = effectiveFilter,
+        filteredRooms = filtered,
+        groups = groups,
+        status = status,
+        isRefreshing = isRefreshing,
+        loadProgress = progress,
+        lastUpdatedAt = daySnapshot?.fetchedAt,
     )
 }
 

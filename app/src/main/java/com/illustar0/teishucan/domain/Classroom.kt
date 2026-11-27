@@ -163,6 +163,14 @@ data class ClassroomFilter(
             timeFilter != ClassroomTimeFilter.Periods(),
             !onlyAvailable,
         ).count { it }
+
+    /** 非今天浏览时把「此刻空闲」降级为全天无占用，保留用户原始筛选意图。 */
+    fun effectiveFor(isToday: Boolean): ClassroomFilter =
+        if (!isToday && timeFilter == ClassroomTimeFilter.Now) {
+            copy(timeFilter = ClassroomTimeFilter.Periods())
+        } else {
+            this
+        }
 }
 
 private const val PercentageScale = 100

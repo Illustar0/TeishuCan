@@ -375,11 +375,12 @@ private fun AvailableClassroomsPagePreview() {
             ),
         ),
     )
+    val previewDate = LocalDate(2026, 11, 24)
     TeishuCanTheme(settings = ThemeSettings(isBlurEnabled = false), isDark = false) {
         AvailableClassroomsPage(
             state = AvailableClassroomsState(
-                selectedDate = LocalDate(2026, 11, 24),
-                today = LocalDate(2026, 11, 24),
+                selectedDate = previewDate,
+                today = previewDate,
                 currentTime = LocalTime(10, 30),
                 catalog = ClassroomCatalogData(
                     campuses = listOf(ClassroomCampus(1, "主校区")),
@@ -387,9 +388,14 @@ private fun AvailableClassroomsPagePreview() {
                     roomTypes = listOf(ClassroomType(1, "多媒体教室")),
                     floors = listOf(1, 2, 3),
                 ),
-                filteredRooms = rooms,
-                groups = groupClassroomsByBuilding(rooms),
-                status = ClassroomBrowserStatus.Ready,
+                dayPages = mapOf(
+                    previewDate to ClassroomDayPageState(
+                        date = previewDate,
+                        filteredRooms = rooms,
+                        groups = groupClassroomsByBuilding(rooms),
+                        status = ClassroomBrowserStatus.Ready,
+                    ),
+                ),
             ),
             onDateSelect = {},
             onFilterChange = {},

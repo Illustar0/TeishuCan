@@ -33,10 +33,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -96,18 +98,25 @@ class ClassroomRepository @Inject constructor(
     )
     private val catalogFetchLock = Mutex()
     private val remoteCache = LruCache<ClassroomRemoteQueryKey, ClassroomDaySnapshot>(MaxRemoteQueryCacheEntries)
+    private val remoteCacheVersionFlow = MutableStateFlow(0L)
 
     /** 限制同时在飞的分页请求数，切日期重拉时新旧请求短暂重叠也不会冲垮教务接口。 */
     private val pageConcurrencyLimiter = Semaphore(ClassroomFetchOptions.DEFAULT_CONCURRENCY)
 
     val snapshot: StateFlow<ClassroomCacheSnapshot> = cache.value
 
+    /** 内存筛选缓存变更版本号，供 ViewModel 在邻页命中服务端筛选缓存时刷新投影。 */
+    internal val remoteCacheVersion: StateFlow<Long> = remoteCacheVersionFlow
+
     init {
         scope.launch {
             session.state
                 .map { it.clients }
                 .distinctUntilChanged()
-                .collect { remoteCache.evictAll() }
+                .collect {
+                    remoteCache.evictAll()
+                    remoteCacheVersionFlow.update { it + 1 }
+                }
         }
     }
 
@@ -172,6 +181,7 @@ class ClassroomRepository @Inject constructor(
             if (remoteKey != null) {
                 if (session.state.value.clients === clients) {
                     remoteCache.put(remoteKey, daySnapshot)
+                    remoteCacheVersionFlow.update { it + 1 }
                 }
             } else {
                 cache.amend(clients) { current ->

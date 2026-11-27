@@ -45,12 +45,9 @@ import com.illustar0.teishucan.ui.component.liquid.floatingPanel
 import com.illustar0.teishucan.ui.component.localizedDayName
 import com.illustar0.teishucan.ui.theme.LocalIsLiquidGlassEnabled
 import java.time.format.TextStyle
-import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
-import kotlinx.datetime.minus
 import kotlinx.datetime.number
-import kotlinx.datetime.plus
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.Text
@@ -69,29 +66,38 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 internal fun ClassroomFloatingHeader(
     selectedDate: LocalDate,
     today: LocalDate,
-    filter: ClassroomFilter,
+    rawFilter: ClassroomFilter,
     catalog: ClassroomCatalogData?,
     backdrop: LayerBackdrop?,
-    onDateSelect: (LocalDate) -> Unit,
+    canGoPrevious: Boolean,
+    canGoNext: Boolean,
+    onPreviousDay: () -> Unit,
+    onNextDay: () -> Unit,
     onOpenDatePicker: () -> Unit,
     onFilterChange: (ClassroomFilter) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val displayedFilter = rawFilter.effectiveFor(isToday = selectedDate == today)
+
     Column(modifier = modifier.fillMaxWidth()) {
         ClassroomDateToolbar(
             selectedDate = selectedDate,
             today = today,
             backdrop = backdrop,
-            onDateSelect = onDateSelect,
+            canGoPrevious = canGoPrevious,
+            canGoNext = canGoNext,
+            onPreviousDay = onPreviousDay,
+            onNextDay = onNextDay,
             onOpenPicker = onOpenDatePicker,
         )
         AnimatedVisibility(
-            visible = filter.hasAnyActiveFilter,
+            visible = displayedFilter.hasAnyActiveFilter,
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically(),
         ) {
             FloatingActiveFilterChipsRow(
-                filter = filter,
+                displayedFilter = displayedFilter,
+                rawFilter = rawFilter,
                 catalog = catalog,
                 backdrop = backdrop,
                 onFilterChange = onFilterChange,
@@ -112,7 +118,10 @@ private fun ClassroomDateToolbar(
     selectedDate: LocalDate,
     today: LocalDate,
     backdrop: LayerBackdrop?,
-    onDateSelect: (LocalDate) -> Unit,
+    canGoPrevious: Boolean,
+    canGoNext: Boolean,
+    onPreviousDay: () -> Unit,
+    onNextDay: () -> Unit,
     onOpenPicker: () -> Unit,
 ) {
     val dayOfWeekText = localizedDayName(selectedDate.dayOfWeek, TextStyle.SHORT)
@@ -129,6 +138,8 @@ private fun ClassroomDateToolbar(
         DayAfterTomorrowOffsetDays -> stringResource(R.string.classrooms_date_day_after_tomorrow)
         else -> stringResource(R.string.classrooms_date_year, selectedDate.year)
     }
+    val activeIconColor = MiuixTheme.colorScheme.onSurfaceContainer
+    val disabledIconColor = MiuixTheme.colorScheme.disabledOnSecondaryVariant
 
     LiquidGlassFloatingToolbar(backdrop = backdrop, modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -137,11 +148,11 @@ private fun ClassroomDateToolbar(
                 .padding(DateToolbarInnerPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = { onDateSelect(selectedDate.minus(1, DateTimeUnit.DAY)) }) {
+            IconButton(onClick = onPreviousDay, enabled = canGoPrevious) {
                 Icon(
                     imageVector = MiuixIcons.ChevronBackward,
                     contentDescription = stringResource(R.string.classrooms_previous_day),
-                    tint = MiuixTheme.colorScheme.onSurfaceContainer,
+                    tint = if (canGoPrevious) activeIconColor else disabledIconColor,
                 )
             }
             Column(
@@ -170,11 +181,11 @@ private fun ClassroomDateToolbar(
                     maxLines = 1,
                 )
             }
-            IconButton(onClick = { onDateSelect(selectedDate.plus(1, DateTimeUnit.DAY)) }) {
+            IconButton(onClick = onNextDay, enabled = canGoNext) {
                 Icon(
                     imageVector = MiuixIcons.ChevronForward,
                     contentDescription = stringResource(R.string.classrooms_next_day),
-                    tint = MiuixTheme.colorScheme.onSurfaceContainer,
+                    tint = if (canGoNext) activeIconColor else disabledIconColor,
                 )
             }
         }
@@ -185,22 +196,23 @@ private val FloatingChipsBottomPadding = 8.dp
 
 @Composable
 private fun FloatingActiveFilterChipsRow(
-    filter: ClassroomFilter,
+    displayedFilter: ClassroomFilter,
+    rawFilter: ClassroomFilter,
     catalog: ClassroomCatalogData?,
     backdrop: LayerBackdrop?,
     onFilterChange: (ClassroomFilter) -> Unit,
 ) {
-    val selectedCampusName = remember(filter.campusId, catalog) {
-        filter.campusId?.let { id -> catalog?.campuses?.find { it.id == id }?.name }
+    val selectedCampusName = remember(displayedFilter.campusId, catalog) {
+        displayedFilter.campusId?.let { id -> catalog?.campuses?.find { it.id == id }?.name }
     }
-    val selectedBuildingLabel = remember(filter.buildingIds, catalog) {
-        filter.buildingIds.singleOrNull()?.let { id -> catalog?.buildings?.find { it.id == id }?.name }
+    val selectedBuildingLabel = remember(displayedFilter.buildingIds, catalog) {
+        displayedFilter.buildingIds.singleOrNull()?.let { id -> catalog?.buildings?.find { it.id == id }?.name }
     }
-    val selectedRoomTypeLabel = remember(filter.roomTypeIds, catalog) {
-        filter.roomTypeIds.singleOrNull()?.let { id -> catalog?.roomTypes?.find { it.id == id }?.name }
+    val selectedRoomTypeLabel = remember(displayedFilter.roomTypeIds, catalog) {
+        displayedFilter.roomTypeIds.singleOrNull()?.let { id -> catalog?.roomTypes?.find { it.id == id }?.name }
     }
-    val timeLabel = activeTimeFilterLabel(filter.timeFilter, catalog.effectiveUnits)
-    val seatsLabel = activeSeatsLabel(filter.minSeats, filter.maxSeats)
+    val timeLabel = activeTimeFilterLabel(displayedFilter.timeFilter, catalog.effectiveUnits)
+    val seatsLabel = activeSeatsLabel(displayedFilter.minSeats, displayedFilter.maxSeats)
 
     // 不加 fillMaxWidth：只有一两枚胶囊时右侧留空，点按和上下滑动都能直接落到底层列表上。
     Row(
@@ -214,61 +226,61 @@ private fun FloatingActiveFilterChipsRow(
         horizontalArrangement = Arrangement.spacedBy(ClassroomBrowserDefaults.ChipSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (!filter.onlyAvailable) {
+        if (!displayedFilter.onlyAvailable) {
             FloatingRemovableFilterChip(
                 label = stringResource(R.string.classrooms_filter_show_all),
                 backdrop = backdrop,
-                onRemove = { onFilterChange(filter.copy(onlyAvailable = true)) },
+                onRemove = { onFilterChange(rawFilter.copy(onlyAvailable = true)) },
             )
         }
         if (timeLabel != null) {
             FloatingRemovableFilterChip(
                 label = timeLabel,
                 backdrop = backdrop,
-                onRemove = { onFilterChange(filter.copy(timeFilter = ClassroomTimeFilter.Periods())) },
+                onRemove = { onFilterChange(rawFilter.copy(timeFilter = ClassroomTimeFilter.Periods())) },
             )
         }
         if (selectedCampusName != null) {
             FloatingRemovableFilterChip(
                 label = selectedCampusName,
                 backdrop = backdrop,
-                onRemove = { onFilterChange(filter.copy(campusId = null)) },
+                onRemove = { onFilterChange(rawFilter.copy(campusId = null)) },
             )
         }
-        if (filter.buildingIds.isNotEmpty()) {
+        if (displayedFilter.buildingIds.isNotEmpty()) {
             FloatingRemovableFilterChip(
                 label = selectedBuildingLabel
-                    ?: stringResource(R.string.classrooms_filter_buildings_count, filter.buildingIds.size),
+                    ?: stringResource(R.string.classrooms_filter_buildings_count, displayedFilter.buildingIds.size),
                 backdrop = backdrop,
-                onRemove = { onFilterChange(filter.copy(buildingIds = emptySet())) },
+                onRemove = { onFilterChange(rawFilter.copy(buildingIds = emptySet())) },
             )
         }
-        if (filter.roomTypeIds.isNotEmpty()) {
+        if (displayedFilter.roomTypeIds.isNotEmpty()) {
             FloatingRemovableFilterChip(
                 label = selectedRoomTypeLabel
-                    ?: stringResource(R.string.classrooms_filter_room_types_count, filter.roomTypeIds.size),
+                    ?: stringResource(R.string.classrooms_filter_room_types_count, displayedFilter.roomTypeIds.size),
                 backdrop = backdrop,
-                onRemove = { onFilterChange(filter.copy(roomTypeIds = emptySet())) },
+                onRemove = { onFilterChange(rawFilter.copy(roomTypeIds = emptySet())) },
             )
         }
-        if (filter.floors.isNotEmpty()) {
-            val singleFloor = filter.floors.singleOrNull()
+        if (displayedFilter.floors.isNotEmpty()) {
+            val singleFloor = displayedFilter.floors.singleOrNull()
             val floorLabel = if (singleFloor != null) {
                 stringResource(R.string.classrooms_floor_label, singleFloor)
             } else {
-                stringResource(R.string.classrooms_filter_floors_count, filter.floors.size)
+                stringResource(R.string.classrooms_filter_floors_count, displayedFilter.floors.size)
             }
             FloatingRemovableFilterChip(
                 label = floorLabel,
                 backdrop = backdrop,
-                onRemove = { onFilterChange(filter.copy(floors = emptySet())) },
+                onRemove = { onFilterChange(rawFilter.copy(floors = emptySet())) },
             )
         }
         if (seatsLabel != null) {
             FloatingRemovableFilterChip(
                 label = seatsLabel,
                 backdrop = backdrop,
-                onRemove = { onFilterChange(filter.copy(minSeats = null, maxSeats = null)) },
+                onRemove = { onFilterChange(rawFilter.copy(minSeats = null, maxSeats = null)) },
             )
         }
     }

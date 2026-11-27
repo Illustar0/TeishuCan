@@ -216,16 +216,7 @@ fun AvailableClassroomsPage(
         },
     ) { innerPadding ->
         ClassroomBrowser(
-            selectedDate = state.selectedDate,
-            today = state.today,
-            currentTime = state.currentTime,
-            catalog = state.catalog,
-            filter = state.filter,
-            groups = state.groups,
-            totalMatchedCount = state.filteredRooms.size,
-            status = state.status,
-            loadProgress = state.loadProgress,
-            lastUpdatedAt = state.lastUpdatedAt,
+            state = state,
             onDateSelect = onDateSelect,
             onOpenDatePicker = { activeSheet = ClassroomSheet.DatePicker },
             onFilterChange = onFilterChange,

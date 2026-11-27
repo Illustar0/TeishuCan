@@ -38,9 +38,14 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -62,7 +67,6 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.offset
-import androidx.compose.ui.zIndex
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
@@ -78,12 +82,12 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private const val ExpandDurationMillis = 300
 private const val SurfaceFadeDurationMillis = 200
-private const val SearchOverlayZIndex = 5f
+
 private val ExpandedTopGap = 5.dp
 private val CapsuleHorizontalPadding = 12.dp
 private val CapsuleBottomPadding = 6.dp
 
-/** [SearchClearButton] 把清除图形固定画成 20dp，搜索图标取相同大小。 */
+/** [SearchClearButton] 把清除图形固定画成 20 dp，搜索图标取相同大小。 */
 private val IconGlyphSize = 20.dp
 private val IconOuterPadding = 16.dp
 private val IconInnerPadding = 8.dp
@@ -125,7 +129,24 @@ data class SearchStatus(
     enum class Phase { Collapsed, Expanding, Expanded, Collapsing }
 }
 
-/** 嵌入顶栏底部的收起态搜索胶囊；点击后由 [SearchPager] 接管并上移展开。 */
+private val SearchStatusSaver: Saver<SearchStatus, Any> = listSaver(
+    save = { status -> listOf(status.query, status.shouldExpand) },
+    restore = { saved ->
+        val query = saved[0] as String
+        val isExpanded = saved[1] as Boolean
+        SearchStatus(
+            query = if (isExpanded) query else "",
+            phase = if (isExpanded) SearchStatus.Phase.Expanded else SearchStatus.Phase.Collapsed,
+        )
+    },
+)
+
+/** 记住搜索栏的展开状态与输入内容，旋转屏幕时不丢失。 */
+@Composable
+fun rememberSearchStatus(): MutableState<SearchStatus> =
+    rememberSaveable(stateSaver = SearchStatusSaver) { mutableStateOf(SearchStatus()) }
+
+/** 顶栏底部的收起态搜索栏，点按后由 [SearchPager] 接手并上移展开。 */
 @Composable
 fun SearchBarTrigger(
     placeholder: String,
@@ -175,7 +196,11 @@ fun SearchBarTrigger(
     }
 }
 
-/** 全屏搜索浮层，放在 `Scaffold` 的 `popupHost` 中，使胶囊从 [collapsedOffsetY] 平滑上移覆盖顶栏。 */
+/**
+ * 放在 `Scaffold` 的 `popupHost` 里的全屏搜索页，展开时搜索栏从 [collapsedOffsetY] 上移盖住顶栏。
+ *
+ * 搜索页保持默认的 `0f` 层级，排在后面的 `MiuixPopupHost`（弹层 `zIndex >= 1f`）会自然叠在它上面。
+ */
 @Composable
 fun SearchPager(
     status: SearchStatus,
@@ -223,7 +248,6 @@ fun SearchPager(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .zIndex(SearchOverlayZIndex)
             .drawBehind { drawRect(surfaceColor.copy(alpha = surfaceAlpha)) }
             .then(
                 if (!status.isCollapsed) {

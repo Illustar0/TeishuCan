@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -33,6 +32,7 @@ import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.ui.component.SearchBarTrigger
 import com.illustar0.teishucan.ui.component.SearchPager
 import com.illustar0.teishucan.ui.component.SearchStatus
+import com.illustar0.teishucan.ui.component.rememberSearchStatus
 import com.illustar0.teishucan.ui.theme.BlurredBar
 import com.illustar0.teishucan.ui.theme.CardSpacing
 import com.illustar0.teishucan.ui.theme.TeishuCanTheme
@@ -64,7 +64,7 @@ fun ServicesPage(
     val density = LocalDensity.current
     val focusManager = LocalFocusManager.current
     val searchPlaceholder = stringResource(R.string.services_search_placeholder)
-    var searchStatus by remember { mutableStateOf(SearchStatus()) }
+    var searchStatus by rememberSearchStatus()
     var scaffoldWindowY by remember { mutableFloatStateOf(0f) }
     var triggerWindowY by remember { mutableFloatStateOf(0f) }
     val searchBarTopPadding = { SearchBarMaxTopPadding * (1f - scrollBehavior.state.collapsedFraction) }

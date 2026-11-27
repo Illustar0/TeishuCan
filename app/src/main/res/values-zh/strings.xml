@@ -108,6 +108,13 @@
     <string name="timetable_retry">重试</string>
     <string name="timetable_no_lessons">本学期没有课程</string>
 
+    <string name="calendar_today">今天</string>
+    <string name="calendar_date_display">%1$d 月 %2$d 日 %3$s</string>
+    <string name="calendar_select_date">选择日期</string>
+    <string name="calendar_previous_month">上个月</string>
+    <string name="calendar_next_month">下个月</string>
+    <string name="calendar_year_month">%1$d 年 %2$d 月</string>
+
     <string name="electricity_meter_empty">还没有电表</string>
     <string name="electricity_meter_empty_hint">点右上角 + 添加</string>
     <string name="electricity_meter_add">添加电表</string>

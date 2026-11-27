@@ -113,6 +113,13 @@
     <string name="timetable_retry">再試行</string>
     <string name="timetable_no_lessons">今学期の授業はありません</string>
 
+    <string name="calendar_today">今日</string>
+    <string name="calendar_date_display">%1$d月%2$d日（%3$s）</string>
+    <string name="calendar_select_date">日付を選択</string>
+    <string name="calendar_previous_month">前の月</string>
+    <string name="calendar_next_month">次の月</string>
+    <string name="calendar_year_month">%1$d 年 %2$d 月</string>
+
     <string name="electricity_meter_empty">メーターはまだありません</string>
     <string name="electricity_meter_empty_hint">右上の + から追加できます</string>
     <string name="electricity_meter_kilowatt_hours" translatable="false">%1$s kWh</string>

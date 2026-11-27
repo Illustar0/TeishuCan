@@ -85,7 +85,7 @@ class ClassroomDayProjectionTest {
             currentTime = LocalTime(10, 30),
             rawFilter = rawFilter,
             units = DefaultScheduleUnits,
-            activeLoad = null,
+            activeLoads = emptyMap(),
         )
 
         val pages = projectClassroomDayPages(context) { date, _ -> cache[date] }
@@ -124,15 +124,18 @@ class ClassroomDayProjectionTest {
         )
         val filter = ClassroomFilter()
         val loadingProgress = ClassroomLoadProgress(loadedPages = 2, totalPages = 5)
+        val tomorrowKey = classroomRequestKey(tomorrow, filter)
         val loadingContext = DayProjectionContext(
             selectedDate = tomorrow,
             today = today,
             currentTime = LocalTime(10, 30),
             rawFilter = filter,
             units = DefaultScheduleUnits,
-            activeLoad = ActiveLoad.Loading(
-                key = classroomRequestKey(tomorrow, filter),
-                progress = loadingProgress,
+            activeLoads = mapOf(
+                tomorrowKey to ActiveLoad.Loading(
+                    key = tomorrowKey,
+                    progress = loadingProgress,
+                ),
             ),
         )
 
@@ -146,8 +149,16 @@ class ClassroomDayProjectionTest {
         assertFalse(loadingPages.getValue(today).isRefreshing)
         assertNull(loadingPages.getValue(today).loadProgress)
 
+        // 滑回今天时，明天仍在后台加载中的进度也会被独立投影出来，方便拖拽时直接预览。
+        val backOnTodayPages = projectClassroomDayPages(
+            loadingContext.copy(selectedDate = today),
+        ) { date, _ -> cache[date] }
+        assertEquals(ClassroomBrowserStatus.Ready, backOnTodayPages.getValue(today).status)
+        assertEquals(ClassroomBrowserStatus.Loading, backOnTodayPages.getValue(tomorrow).status)
+        assertEquals(loadingProgress, backOnTodayPages.getValue(tomorrow).loadProgress)
+
         val failedContext = loadingContext.copy(
-            activeLoad = ActiveLoad.Failed(key = classroomRequestKey(tomorrow, filter)),
+            activeLoads = mapOf(tomorrowKey to ActiveLoad.Failed(key = tomorrowKey)),
         )
         val failedPages = projectClassroomDayPages(failedContext) { date, _ -> cache[date] }
 

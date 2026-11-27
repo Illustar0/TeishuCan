@@ -32,11 +32,16 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.WhileSubscribed
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -57,6 +62,12 @@ private val StateStopTimeout = 5.seconds
 
 /** 围绕当前选中日期预投影的相邻半径，让跟手左右滑和快甩切日时已缓存邻页零闪烁。 */
 internal const val AdjacentProjectedDaysRadius = 2
+
+/** 后台最多同时保活的联网日期加载数，兼顾 A↔B 往返不打断与狂滑时不堵死教务并发限流器。 */
+internal const val MaxConcurrentClassroomLoads = 3
+
+/** 状态表中最多保留的非在飞历史条目数，避免长时间浏览无限累积。 */
+private const val MaxRetainedLoadEntries = 8
 
 data class ClassroomDayPageState(
     val date: LocalDate,
@@ -144,8 +155,210 @@ internal data class DayProjectionContext(
     val currentTime: LocalTime,
     val rawFilter: ClassroomFilter,
     val units: List<ScheduleUnit>,
-    val activeLoad: ActiveLoad?,
+    val activeLoads: Map<ClassroomRequestKey, ActiveLoad>,
 )
+
+/**
+ * 协调多天教室数据的并发加载：滑离正在加载的日期时不打断其拉取，
+ * 同一请求键自动去重复用，联网在飞数超出 [maxConcurrentLoads] 时按 LRU 淘汰最老的非当前任务。
+ */
+internal class ClassroomLoadCoordinator(
+    private val maxConcurrentLoads: Int = MaxConcurrentClassroomLoads,
+    private val currentActiveKey: () -> ClassroomRequestKey,
+    private val loadDay: suspend (
+        date: LocalDate,
+        filter: ClassroomFilter,
+        force: Boolean,
+        onProgress: (ClassroomLoadProgress) -> Unit,
+    ) -> ClassroomDaySnapshot,
+    private val onActiveFailure: suspend (Exception) -> Unit,
+) {
+    private data class InFlightEntry(
+        val generation: Long,
+        val job: Job,
+        val hasStartedNetwork: Boolean = false,
+    )
+
+    private val lock = Any()
+    private var nextGeneration = 0L
+    private val inFlight = LinkedHashMap<ClassroomRequestKey, InFlightEntry>()
+    private val loadsFlow = MutableStateFlow<Map<ClassroomRequestKey, ActiveLoad>>(emptyMap())
+
+    val loads: StateFlow<Map<ClassroomRequestKey, ActiveLoad>> = loadsFlow.asStateFlow()
+
+    /** 提交一次按日加载；若同键已有活跃任务且未要求 [force]，直接复用而不重复发请求。 */
+    fun enqueue(
+        scope: CoroutineScope,
+        date: LocalDate,
+        filter: ClassroomFilter,
+        force: Boolean,
+    ) {
+        val key = classroomRequestKey(date, filter)
+        var jobToCancel: Job? = null
+        var jobToStart: Job? = null
+
+        synchronized(lock) {
+            val existing = inFlight[key]
+            if (!force && existing != null && existing.job.isActive) {
+                // 移到链表尾部，刷新最近活跃顺序，避免滑回后被 LRU 误淘汰。
+                inFlight.remove(key)
+                inFlight[key] = existing
+                return
+            }
+            if (existing != null) {
+                inFlight.remove(key)
+                jobToCancel = existing.job
+            }
+            val generation = ++nextGeneration
+            // LAZY 注册后再锁外启动，即使调度器同线程立即执行，也能先看到当前代数占位。
+            val job = scope.launch(start = CoroutineStart.LAZY) {
+                runLoad(
+                    key = key,
+                    generation = generation,
+                    date = date,
+                    filter = filter,
+                    force = force,
+                )
+            }
+            inFlight[key] = InFlightEntry(generation = generation, job = job)
+            jobToStart = job
+        }
+        jobToCancel?.cancel()
+        jobToStart?.start()
+    }
+
+    /** 退出登录时清空全部在飞记录与状态表；实际协程由调用方作用域取消。 */
+    fun clear() {
+        val jobsToCancel = synchronized(lock) {
+            val jobs = inFlight.values.map(InFlightEntry::job)
+            inFlight.clear()
+            nextGeneration++
+            loadsFlow.value = emptyMap()
+            jobs
+        }
+        jobsToCancel.forEach(Job::cancel)
+    }
+
+    private suspend fun runLoad(
+        key: ClassroomRequestKey,
+        generation: Long,
+        date: LocalDate,
+        filter: ClassroomFilter,
+        force: Boolean,
+    ) {
+        try {
+            val loaded = loadDay(date, filter, force) { progress ->
+                onNetworkProgress(key, generation, progress)
+            }
+            finishReady(key, generation, loaded)
+        } catch (cause: CancellationException) {
+            throw cause
+        } catch (cause: Exception) {
+            finishFailed(key, generation, cause)
+        } finally {
+            synchronized(lock) {
+                if (inFlight[key]?.generation == generation) {
+                    inFlight.remove(key)
+                }
+            }
+        }
+    }
+
+    private fun onNetworkProgress(
+        key: ClassroomRequestKey,
+        generation: Long,
+        progress: ClassroomLoadProgress,
+    ) {
+        val evictedJobs = mutableListOf<Job>()
+        synchronized(lock) {
+            val current = inFlight[key]
+            if (current == null || current.generation != generation) return
+            if (!current.hasStartedNetwork) {
+                inFlight.remove(key)
+                inFlight[key] = current.copy(hasStartedNetwork = true)
+                evictOverflowNetworkLoadsLocked(protectedKey = key, evictedJobs = evictedJobs)
+            }
+            loadsFlow.update { map ->
+                pruneRetainedLoadsLocked(map + (key to ActiveLoad.Loading(key = key, progress = progress)))
+            }
+        }
+        evictedJobs.forEach(Job::cancel)
+    }
+
+    private fun finishReady(
+        key: ClassroomRequestKey,
+        generation: Long,
+        snapshot: ClassroomDaySnapshot,
+    ) {
+        synchronized(lock) {
+            if (inFlight[key]?.generation != generation) return
+            inFlight.remove(key)
+            loadsFlow.update { map ->
+                pruneRetainedLoadsLocked(map + (key to ActiveLoad.Ready(key = key, snapshot = snapshot)))
+            }
+        }
+    }
+
+    private suspend fun finishFailed(
+        key: ClassroomRequestKey,
+        generation: Long,
+        cause: Exception,
+    ) {
+        val isCurrentActive = synchronized(lock) {
+            if (inFlight[key]?.generation != generation) return
+            inFlight.remove(key)
+            val active = currentActiveKey() == key
+            loadsFlow.update { map ->
+                if (active) {
+                    pruneRetainedLoadsLocked(map + (key to ActiveLoad.Failed(key = key)))
+                } else {
+                    // 用户已滑离该日期：静默清除加载态且不弹 Toast，下次滑回时自动重新拉取。
+                    map - key
+                }
+            }
+            active
+        }
+        if (isCurrentActive) {
+            onActiveFailure(cause)
+        }
+    }
+
+    private fun evictOverflowNetworkLoadsLocked(
+        protectedKey: ClassroomRequestKey,
+        evictedJobs: MutableList<Job>,
+    ) {
+        var activeNetworkCount = inFlight.values.count { it.hasStartedNetwork && it.job.isActive }
+        if (activeNetworkCount <= maxConcurrentLoads) return
+
+        val activeKey = currentActiveKey()
+        val iterator = inFlight.entries.iterator()
+        while (activeNetworkCount > maxConcurrentLoads && iterator.hasNext()) {
+            val (candidateKey, entry) = iterator.next()
+            if (!entry.hasStartedNetwork || candidateKey == protectedKey || candidateKey == activeKey) continue
+            iterator.remove()
+            evictedJobs += entry.job
+            loadsFlow.update { map ->
+                if (map[candidateKey] is ActiveLoad.Loading) map - candidateKey else map
+            }
+            activeNetworkCount--
+        }
+    }
+
+    private fun pruneRetainedLoadsLocked(
+        map: Map<ClassroomRequestKey, ActiveLoad>,
+    ): Map<ClassroomRequestKey, ActiveLoad> {
+        if (map.size <= MaxRetainedLoadEntries) return map
+        val activeKey = currentActiveKey()
+        val retained = LinkedHashMap(map)
+        val iterator = retained.entries.iterator()
+        while (retained.size > MaxRetainedLoadEntries && iterator.hasNext()) {
+            val (candidateKey, _) = iterator.next()
+            if (candidateKey == activeKey || candidateKey in inFlight) continue
+            iterator.remove()
+        }
+        return retained
+    }
+}
 
 @HiltViewModel
 class AvailableClassroomsViewModel @Inject constructor(
@@ -154,25 +367,42 @@ class AvailableClassroomsViewModel @Inject constructor(
 ) : ViewModel() {
     private val queryInputFlow = MutableStateFlow(QueryInput())
     private val searchQueryFlow = MutableStateFlow("")
-    private val activeLoadFlow = MutableStateFlow<ActiveLoad?>(null)
     private var consumedRefreshNonce = 0L
 
     val failure = PendingFailure()
+
+    private val loadCoordinator = ClassroomLoadCoordinator(
+        currentActiveKey = {
+            val input = queryInputFlow.value
+            classroomRequestKey(input.date, input.filter)
+        },
+        loadDay = { date, filter, force, onProgress ->
+            classrooms.loadDay(
+                date = date,
+                filter = filter,
+                force = force,
+                onProgress = onProgress,
+            )
+        },
+        onActiveFailure = { cause ->
+            failure.capture { throw cause }
+        },
+    )
 
     private val baseState = combine(
         queryInputFlow,
         classrooms.snapshot,
         classrooms.remoteCacheVersion,
-        activeLoadFlow,
+        loadCoordinator.loads,
         campusMinuteTicks(),
-    ) { input, cacheSnapshot, _, activeLoad, now ->
+    ) { input, cacheSnapshot, _, activeLoads, now ->
         val context = DayProjectionContext(
             selectedDate = input.date,
             today = now.date,
             currentTime = now.time,
             rawFilter = input.filter,
             units = cacheSnapshot.catalog.effectiveUnits,
-            activeLoad = activeLoad,
+            activeLoads = activeLoads,
         )
         val dayPages = projectClassroomDayPages(
             context = context,
@@ -236,8 +466,8 @@ class AvailableClassroomsViewModel @Inject constructor(
         queryInputFlow.update { it.copy(refreshNonce = it.refreshNonce + 1) }
     }
 
-    /** 切日期、改服务端筛选条件或退出登录时，collectLatest 会自动取消上一轮还没拉完的分页请求。 */
-    private suspend fun runSignedIn() {
+    /** 切日期时保留最近在飞的加载任务不被打断，退出登录时由外层取消整个作用域统一收尾。 */
+    private suspend fun runSignedIn() = coroutineScope {
         queryInputFlow
             .map { input ->
                 val serverFilter = if (input.filter.hasServerAttributes) input.filter else ClassroomFilter()
@@ -249,10 +479,15 @@ class AvailableClassroomsViewModel @Inject constructor(
                 )
             }
             .distinctUntilChanged()
-            .collectLatest { ticket ->
+            .collect { ticket ->
                 val force = ticket.refreshNonce > consumedRefreshNonce
                 consumedRefreshNonce = ticket.refreshNonce
-                runLoad(ticket = ticket, force = force)
+                loadCoordinator.enqueue(
+                    scope = this,
+                    date = ticket.date,
+                    filter = ticket.filter,
+                    force = force,
+                )
             }
     }
 
@@ -260,30 +495,8 @@ class AvailableClassroomsViewModel @Inject constructor(
         consumedRefreshNonce = 0L
         queryInputFlow.value = QueryInput()
         searchQueryFlow.value = ""
-        activeLoadFlow.value = null
+        loadCoordinator.clear()
         failure.clear()
-    }
-
-    private suspend fun runLoad(ticket: LoadTicket, force: Boolean) {
-        try {
-            val loaded = classrooms.loadDay(
-                date = ticket.date,
-                filter = ticket.filter,
-                force = force,
-                onProgress = { progress ->
-                    activeLoadFlow.value = ActiveLoad.Loading(key = ticket.key, progress = progress)
-                },
-            )
-            activeLoadFlow.value = ActiveLoad.Ready(key = ticket.key, snapshot = loaded)
-        } catch (cause: CancellationException) {
-            throw cause
-        } catch (cause: Exception) {
-            val activeKey = classroomRequestKey(queryInputFlow.value.date, queryInputFlow.value.filter)
-            if (activeKey == ticket.key) {
-                activeLoadFlow.value = ActiveLoad.Failed(key = ticket.key)
-                failure.capture { throw cause }
-            }
-        }
     }
 }
 
@@ -311,7 +524,7 @@ internal fun projectClassroomDayPages(
         val isSelected = offset == 0
         val effectiveFilter = context.rawFilter.effectiveFor(isToday = date == context.today)
         val requestKey = classroomRequestKey(date, effectiveFilter)
-        val matchingLoad = context.activeLoad?.takeIf { it.key == requestKey }
+        val matchingLoad = context.activeLoads[requestKey]
         val daySnapshot = (matchingLoad as? ActiveLoad.Ready)?.snapshot
             ?: cachedDayLookup(date, effectiveFilter)
         if (!isSelected && daySnapshot == null && matchingLoad == null) continue

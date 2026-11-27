@@ -82,7 +82,9 @@ import top.yukonga.miuix.kmp.nav.core.rememberNavController
 import top.yukonga.miuix.kmp.nav.core.rememberNavSystemCornerRadius
 import top.yukonga.miuix.kmp.nav.gesture.PredictiveBackHandler
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.PagerGestureNestedScrollConnection
 import top.yukonga.miuix.kmp.utils.PagerNavigationSpringSpec
+import top.yukonga.miuix.kmp.utils.pagerGestureOverride
 import top.yukonga.miuix.kmp.utils.springAnimateToPage
 
 @Serializable
@@ -307,6 +309,8 @@ private fun MainScreen(
     val coroutineScope = rememberCoroutineScope()
     // 分页器要到本次组合之后的布局阶段才会落到变短列表中的页面。
     val selectedDestination = destinations[pagerState.targetPage.coerceAtMost(destinations.lastIndex)]
+    var isServiceSearchActive by remember { mutableStateOf(false) }
+    val isPagerSwipeEnabled = !(selectedDestination == AppDestination.Services && isServiceSearchActive)
     val onDestinationSelect: (AppDestination) -> Unit = { destination ->
         coroutineScope.launch { pagerState.springAnimateToPage(destinations.indexOf(destination)) }
     }
@@ -346,6 +350,7 @@ private fun MainScreen(
             AppPager(
                 pagerState = pagerState,
                 destinationAt = { page -> destinations[page] },
+                isUserScrollEnabled = isPagerSwipeEnabled,
                 modifier = Modifier
                     .weight(1f)
                     // 侧边导航已经覆盖了窗口的起始侧。
@@ -370,6 +375,7 @@ private fun MainScreen(
                     AppDestination.Services -> ServicesRoute(
                         onOpenNative = { service -> onNavigate(service.toRoute()) },
                         bottomPadding = bottomPadding,
+                        onSearchActiveChange = { isServiceSearchActive = it },
                     )
 
                     AppDestination.Settings -> SettingsRoute(
@@ -442,17 +448,26 @@ private fun AppBottomBar(
 private fun AppPager(
     pagerState: PagerState,
     destinationAt: (page: Int) -> AppDestination,
+    isUserScrollEnabled: Boolean,
     modifier: Modifier = Modifier,
     pageContent: @Composable (AppDestination) -> Unit,
 ) {
+    val flingBehavior = PagerDefaults.flingBehavior(
+        state = pagerState,
+        snapAnimationSpec = PagerNavigationSpringSpec,
+    )
     HorizontalPager(
         state = pagerState,
-        modifier = modifier,
-        verticalAlignment = Alignment.Top,
-        flingBehavior = PagerDefaults.flingBehavior(
-            state = pagerState,
-            snapAnimationSpec = PagerNavigationSpringSpec,
+        modifier = modifier.pagerGestureOverride(
+            pagerState = pagerState,
+            flingBehavior = flingBehavior,
+            enabled = isUserScrollEnabled,
         ),
+        verticalAlignment = Alignment.Top,
+        userScrollEnabled = false,
+        flingBehavior = flingBehavior,
+        pageNestedScrollConnection = PagerGestureNestedScrollConnection,
+        overscrollEffect = null,
         // 登录或退出改变导航项时，让用户留在同一页。
         key = destinationAt,
     ) { page ->

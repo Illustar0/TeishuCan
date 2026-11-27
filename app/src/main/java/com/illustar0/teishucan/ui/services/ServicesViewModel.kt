@@ -76,6 +76,7 @@ class ServicesViewModel @Inject constructor(
 fun ServicesRoute(
     onOpenNative: (NativeService) -> Unit,
     bottomPadding: Dp,
+    onSearchActiveChange: (Boolean) -> Unit = {},
 ) {
     val viewModel = hiltViewModel<ServicesViewModel>()
     val openingService by viewModel.openingService.collectAsStateWithLifecycle()
@@ -86,6 +87,7 @@ fun ServicesRoute(
         openingService = openingService,
         onOpen = { target -> viewModel.open(target, onOpenNative) },
         bottomPadding = bottomPadding,
+        onSearchActiveChange = onSearchActiveChange,
     )
 }
 

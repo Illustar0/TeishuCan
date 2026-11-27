@@ -11,9 +11,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +61,7 @@ fun ServicesPage(
     openingService: CampusService?,
     onOpen: (ServiceTarget) -> Unit,
     bottomPadding: Dp,
+    onSearchActiveChange: (Boolean) -> Unit = {},
 ) {
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberBlurBackdrop()
@@ -69,8 +73,17 @@ fun ServicesPage(
     var triggerWindowY by remember { mutableFloatStateOf(0f) }
     val searchBarTopPadding = { SearchBarMaxTopPadding * (1f - scrollBehavior.state.collapsedFraction) }
     val collapsedOffsetY = with(density) { (triggerWindowY - scaffoldWindowY).toDp() }
+    val isSearchActive = !searchStatus.isCollapsed
     val isSearching = searchStatus.query.isNotBlank()
     val searchEntries = if (isSearching) matchingServiceEntries(searchStatus.query) else emptyList()
+    val currentOnSearchActiveChange by rememberUpdatedState(onSearchActiveChange)
+
+    LaunchedEffect(isSearchActive) {
+        currentOnSearchActiveChange(isSearchActive)
+    }
+    DisposableEffect(Unit) {
+        onDispose { currentOnSearchActiveChange(false) }
+    }
 
     Scaffold(
         modifier = Modifier.onGloballyPositioned { coordinates ->

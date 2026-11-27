@@ -9,17 +9,135 @@ import kotlinx.datetime.atTime
 import kotlinx.datetime.plus
 import kotlinx.serialization.Serializable
 
-/**
- * 作息表里上午、下午、晚上各自的节次。
- *
- * 教务系统允许把课排到晚上最后一节之后，那些节次也算作晚上。
- */
-private val DayParts = listOf(1..4, 5..8, 9..10)
+/** 一天内的作息时段归属。 */
+@Serializable
+enum class ScheduleDayPart {
+    Morning,
+    Noon,
+    Afternoon,
+    Evening,
+}
 
-/** 展示到第 [lastPeriod] 节时一天各段的节次。不足一整天时仍给出完整的作息，晚上延伸到 [lastPeriod]。 */
-fun dayPartsThrough(lastPeriod: Int): List<IntRange> {
-    val evening = DayParts.last()
-    return DayParts.dropLast(1) + listOf(evening.first..maxOf(evening.last, lastPeriod))
+/** 每日作息表中的单节刻度：序号 [index] 从 1 开始，[label] 为不含汉字的短名（如 `"1"`、`"+1"`）。 */
+@Serializable
+data class ScheduleUnit(
+    val index: Int,
+    val label: String = index.toString(),
+    val dayPart: ScheduleDayPart,
+    val startTime: LocalTime,
+    val endTime: LocalTime,
+) {
+    val isExtra: Boolean
+        get() = label.startsWith('+')
+}
+
+/** 同一时段内连续排列的一组节次。 */
+data class ScheduleDayPartGroup(
+    val dayPart: ScheduleDayPart,
+    val units: List<ScheduleUnit>,
+) {
+    val range: IntRange
+        get() = units.first().index..units.last().index
+
+    val unitIndices: Set<Int> = units.mapTo(linkedSetOf(), ScheduleUnit::index)
+}
+
+/** 郑州大学常规 10 节真实作息表，供旧快照或未返回作息表时回退。 */
+val DefaultScheduleUnits: List<ScheduleUnit> = listOf(
+    ScheduleUnit(
+        index = 1,
+        dayPart = ScheduleDayPart.Morning,
+        startTime = LocalTime.parse("08:00"),
+        endTime = LocalTime.parse("08:45"),
+    ),
+    ScheduleUnit(
+        index = 2,
+        dayPart = ScheduleDayPart.Morning,
+        startTime = LocalTime.parse("08:55"),
+        endTime = LocalTime.parse("09:40"),
+    ),
+    ScheduleUnit(
+        index = 3,
+        dayPart = ScheduleDayPart.Morning,
+        startTime = LocalTime.parse("10:10"),
+        endTime = LocalTime.parse("10:55"),
+    ),
+    ScheduleUnit(
+        index = 4,
+        dayPart = ScheduleDayPart.Morning,
+        startTime = LocalTime.parse("11:05"),
+        endTime = LocalTime.parse("11:50"),
+    ),
+    ScheduleUnit(
+        index = 5,
+        dayPart = ScheduleDayPart.Afternoon,
+        startTime = LocalTime.parse("14:00"),
+        endTime = LocalTime.parse("14:45"),
+    ),
+    ScheduleUnit(
+        index = 6,
+        dayPart = ScheduleDayPart.Afternoon,
+        startTime = LocalTime.parse("14:55"),
+        endTime = LocalTime.parse("15:40"),
+    ),
+    ScheduleUnit(
+        index = 7,
+        dayPart = ScheduleDayPart.Afternoon,
+        startTime = LocalTime.parse("16:00"),
+        endTime = LocalTime.parse("16:45"),
+    ),
+    ScheduleUnit(
+        index = 8,
+        dayPart = ScheduleDayPart.Afternoon,
+        startTime = LocalTime.parse("16:55"),
+        endTime = LocalTime.parse("17:40"),
+    ),
+    ScheduleUnit(
+        index = 9,
+        dayPart = ScheduleDayPart.Evening,
+        startTime = LocalTime.parse("19:00"),
+        endTime = LocalTime.parse("19:45"),
+    ),
+    ScheduleUnit(
+        index = 10,
+        dayPart = ScheduleDayPart.Evening,
+        startTime = LocalTime.parse("19:55"),
+        endTime = LocalTime.parse("20:40"),
+    ),
+)
+
+/** 按相邻节次的 [ScheduleUnit.dayPart] 将作息表切分为连续的时段组；[units] 为空时回退为 [DefaultScheduleUnits]。 */
+fun groupScheduleUnitsByDayPart(units: List<ScheduleUnit>): List<ScheduleDayPartGroup> {
+    val effective = units.ifEmpty { DefaultScheduleUnits }
+    val groups = mutableListOf<ScheduleDayPartGroup>()
+    var currentPart = effective.first().dayPart
+    var currentUnits = mutableListOf<ScheduleUnit>()
+    for (unit in effective) {
+        if (unit.dayPart == currentPart) {
+            currentUnits += unit
+        } else {
+            groups += ScheduleDayPartGroup(dayPart = currentPart, units = currentUnits)
+            currentPart = unit.dayPart
+            currentUnits = mutableListOf(unit)
+        }
+    }
+    groups += ScheduleDayPartGroup(dayPart = currentPart, units = currentUnits)
+    return groups
+}
+
+/** 查找第 [period] 节的展示短名；未定义时回退为节次序号文本。 */
+fun List<ScheduleUnit>.labelOf(period: Int): String =
+    firstOrNull { it.index == period }?.label ?: period.toString()
+
+/**
+ * 展示到第 [lastPeriod] 节时一天各段的节次。
+ *
+ * 按 [units] 的时段分段（为空时回退至常规 10 节作息）；教务排课超出作息表末尾节次时，最后一段延伸到 [lastPeriod]。
+ */
+fun dayPartsThrough(lastPeriod: Int, units: List<ScheduleUnit> = emptyList()): List<IntRange> {
+    val ranges = groupScheduleUnitsByDayPart(units).map(ScheduleDayPartGroup::range)
+    val evening = ranges.last()
+    return ranges.dropLast(1) + listOf(evening.first..maxOf(evening.last, lastPeriod))
 }
 
 /** [date] 当天的一节课，属于教学班 [classId]，从第 [startPeriod] 节起连续占用 [periodSpan] 节（节次从 1 数起）。 */
@@ -89,13 +207,14 @@ data class TimetableTerm(
     val startDate: LocalDate,
     val endDate: LocalDate,
     val weeks: List<TimetableWeek>,
+    val units: List<ScheduleUnit> = emptyList(),
     val isLoaded: Boolean = false,
 ) {
     /** 课表要展示的节次数：完整的一天，有更晚的课时延伸到最晚的那一节。 */
     val periodCount: Int
         get() {
             val latestPeriod = weeks.flatMap { it.entries }.maxOfOrNull { it.lastPeriod } ?: 0
-            return dayPartsThrough(latestPeriod).last().last
+            return dayPartsThrough(latestPeriod, units).last().last
         }
 }
 
@@ -125,6 +244,7 @@ data class NextClass(
     val periods: ClassPeriods,
     val dayClasses: List<ClassPeriods>,
     val isTomorrow: Boolean,
+    val dayParts: List<IntRange> = dayPartsThrough(dayClasses.maxOfOrNull { it.lastPeriod } ?: 0),
 ) : UpcomingClass
 
 /**
@@ -146,15 +266,23 @@ fun List<TimetableTerm>.upcomingClassAfter(
     val firstStart = laterEntries.minOfOrNull { it.startsAt } ?: return UpcomingClass.None
     val firstEntries = laterEntries.filter { it.startsAt == firstStart }
     val upcoming = conflictChoices.frontIn(firstEntries) ?: firstEntries.first()
+    val dayClasses = entries.filter { it.date == upcoming.date }.map { it.periods }
+    val dayTerm = termsOfDays.find { term -> term.weeks.any { upcoming in it.entries } }
     return NextClass(
         name = upcoming.title,
         location = upcoming.location.orEmpty(),
         startTime = upcoming.startTime,
         periods = upcoming.periods,
-        dayClasses = entries.filter { it.date == upcoming.date }.map { it.periods },
+        dayClasses = dayClasses,
         isTomorrow = upcoming.date == tomorrow,
+        dayParts = dayPartsThrough(
+            lastPeriod = dayClasses.maxOf { it.lastPeriod },
+            units = dayTerm?.units.orEmpty(),
+        ),
     )
 }
 
 private val TimetableEntry.periods: ClassPeriods
     get() = ClassPeriods(startPeriod, periodSpan)
+
+internal fun Char.isAsciiDigit(): Boolean = this in '0'..'9'

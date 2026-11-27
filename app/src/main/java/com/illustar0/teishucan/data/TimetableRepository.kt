@@ -4,10 +4,15 @@ import com.illustar0.teishucan.concurrency.RefreshTracker
 import com.illustar0.teishucan.di.ApplicationScope
 import com.illustar0.teishucan.domain.CampusFeature
 import com.illustar0.teishucan.domain.ConflictChoice
+import com.illustar0.teishucan.domain.ScheduleDayPart
+import com.illustar0.teishucan.domain.ScheduleUnit
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableTerm
 import com.illustar0.teishucan.domain.TimetableWeek
+import com.illustar0.teishucan.domain.isAsciiDigit
 import com.illustar0.teishucan.domain.withFront
+import com.illustar0.zzu.eas.CourseUnit
+import com.illustar0.zzu.eas.DayPart
 import com.illustar0.zzu.eas.Semester
 import com.illustar0.zzu.eas.SemesterId
 import com.illustar0.zzu.eas.SessionTeacher
@@ -156,8 +161,53 @@ internal fun Semester.toTerm(timetable: Timetable? = null): TimetableTerm {
                 entries = timetable?.week(number)?.sessions().orEmpty().map { it.toEntry() },
             )
         },
+        units = timetable?.units.orEmpty().map(CourseUnit::toDomain),
         isLoaded = timetable != null,
     )
+}
+
+internal fun CourseUnit.toDomain(): ScheduleUnit = ScheduleUnit(
+    index = index,
+    label = extractUnitShortLabel(nameZh = nameZh, index = index),
+    dayPart = when (dayPart) {
+        DayPart.MORNING -> ScheduleDayPart.Morning
+        DayPart.NOON -> ScheduleDayPart.Noon
+        DayPart.AFTERNOON -> ScheduleDayPart.Afternoon
+        DayPart.EVENING -> ScheduleDayPart.Evening
+        else -> ScheduleDayPart.Evening
+    },
+    startTime = startTime,
+    endTime = endTime,
+)
+
+private const val ChineseDigits = "一二三四五六七八九"
+private const val TenMultiplier = 10
+
+/** 将教务节次名（如 `"1"`、`"第五节"`、`"第+1节"`）提炼为纯符号短名，兼容中日双语拼接与窄纵轴排版。 */
+internal fun extractUnitShortLabel(nameZh: String, index: Int): String {
+    val core = nameZh.trim()
+        .removePrefix("第")
+        .removeSuffix("节")
+        .trim()
+    if (core.isEmpty()) return index.toString()
+    if (core.all(Char::isAsciiDigit)) return core
+    if (core.startsWith('+') && core.length > 1 && core.substring(1).all(Char::isAsciiDigit)) return core
+    return parseChinesePositiveInt(core)?.toString() ?: index.toString()
+}
+
+private fun parseChinesePositiveInt(text: String): Int? {
+    val tenIndex = text.indexOf('十')
+    if (tenIndex < 0) return chineseDigitValue(text)
+    if (text.lastIndexOf('十') != tenIndex) return null
+    val tens = if (tenIndex == 0) 1 else chineseDigitValue(text.substring(0, tenIndex)) ?: return null
+    val ones = if (tenIndex == text.lastIndex) 0 else chineseDigitValue(text.substring(tenIndex + 1)) ?: return null
+    return tens * TenMultiplier + ones
+}
+
+private fun chineseDigitValue(text: String): Int? {
+    val single = text.singleOrNull() ?: return null
+    val offset = ChineseDigits.indexOf(single)
+    return if (offset >= 0) offset + 1 else null
 }
 
 /**

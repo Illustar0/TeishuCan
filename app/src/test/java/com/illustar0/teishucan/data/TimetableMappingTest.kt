@@ -1,8 +1,12 @@
 package com.illustar0.teishucan.data
 
+import com.illustar0.teishucan.domain.ScheduleDayPart
+import com.illustar0.teishucan.domain.ScheduleUnit
 import com.illustar0.zzu.eas.ClassOrigin
 import com.illustar0.zzu.eas.ClassSession
 import com.illustar0.zzu.eas.Course
+import com.illustar0.zzu.eas.CourseUnit
+import com.illustar0.zzu.eas.DayPart
 import com.illustar0.zzu.eas.ExperimentProject
 import com.illustar0.zzu.eas.NamedEntity
 import com.illustar0.zzu.eas.PeriodInfo
@@ -192,4 +196,55 @@ class TimetableMappingTest {
         assertEquals(LocalDate(2026, 10, 12), gapWeek.dates.first())
         assertEquals(LocalDate(2026, 10, 14), gapWeek.entries.single().date)
     }
+
+    @Test
+    fun semesterToTerm_withExtendedUnits_mapsShortLabelsDayPartsAndTimes() {
+        val units = listOf(
+            courseUnit(1, "第一节", DayPart.MORNING, LocalTime(8, 0), LocalTime(8, 45)),
+            courseUnit(5, "第+1节", DayPart.NOON, LocalTime(12, 0), LocalTime(12, 45)),
+            courseUnit(7, "第五节", DayPart.AFTERNOON, LocalTime(14, 0), LocalTime(14, 45)),
+            courseUnit(13, "第十节", DayPart.EVENING, LocalTime(19, 55), LocalTime(20, 40)),
+            courseUnit(14, "第+4节", DayPart.EVENING, LocalTime(20, 50), LocalTime(21, 35)),
+            courseUnit(15, "加试", DayPart("late_night"), LocalTime(21, 45), LocalTime(22, 30)),
+        )
+        val timetable = Timetable(
+            semester = semester,
+            units = units,
+            classes = listOf(regularClass),
+            sessions = emptyList(),
+        )
+
+        val term = semester.toTerm(timetable)
+
+        assertEquals(
+            listOf(
+                ScheduleUnit(1, "1", ScheduleDayPart.Morning, LocalTime(8, 0), LocalTime(8, 45)),
+                ScheduleUnit(5, "+1", ScheduleDayPart.Noon, LocalTime(12, 0), LocalTime(12, 45)),
+                ScheduleUnit(7, "5", ScheduleDayPart.Afternoon, LocalTime(14, 0), LocalTime(14, 45)),
+                ScheduleUnit(13, "10", ScheduleDayPart.Evening, LocalTime(19, 55), LocalTime(20, 40)),
+                ScheduleUnit(14, "+4", ScheduleDayPart.Evening, LocalTime(20, 50), LocalTime(21, 35)),
+                ScheduleUnit(15, "15", ScheduleDayPart.Evening, LocalTime(21, 45), LocalTime(22, 30)),
+            ),
+            term.units,
+        )
+        assertEquals("12", extractUnitShortLabel("第十二节", index = 12))
+        assertEquals("20", extractUnitShortLabel("第二十节", index = 20))
+        assertTrue(term.units[1].isExtra)
+        assertFalse(term.units[0].isExtra)
+    }
+
+    private fun courseUnit(
+        index: Int,
+        nameZh: String,
+        dayPart: DayPart,
+        start: LocalTime,
+        end: LocalTime,
+    ) = CourseUnit(
+        index = index,
+        nameZh = nameZh,
+        dayPart = dayPart,
+        segmentIndex = 1,
+        startTime = start,
+        endTime = end,
+    )
 }

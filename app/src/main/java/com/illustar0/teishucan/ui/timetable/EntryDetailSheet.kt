@@ -1,28 +1,22 @@
 package com.illustar0.teishucan.ui.timetable
 
-import android.content.ClipData
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,11 +25,8 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +43,8 @@ import com.illustar0.teishucan.domain.ScheduleUnit
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.frontIn
 import com.illustar0.teishucan.domain.labelOf
+import com.illustar0.teishucan.ui.component.CopyableDetailRow
+import com.illustar0.teishucan.ui.component.DetailRow
 import com.illustar0.teishucan.ui.component.EntryStack
 import com.illustar0.teishucan.ui.component.animation.CalmMotion
 import com.illustar0.teishucan.ui.component.animation.rememberFrameTransition
@@ -59,9 +52,6 @@ import com.illustar0.teishucan.ui.component.localizedDayName
 import com.illustar0.teishucan.ui.component.rememberClassTimeFormatter
 import com.illustar0.teishucan.ui.component.rememberShownContent
 import java.time.format.TextStyle
-import kotlin.time.Duration.Companion.seconds
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.datetime.toJavaLocalTime
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
@@ -72,9 +62,7 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Contacts
-import top.yukonga.miuix.kmp.icon.extended.Copy
 import top.yukonga.miuix.kmp.icon.extended.Location
-import top.yukonga.miuix.kmp.icon.extended.Ok
 import top.yukonga.miuix.kmp.icon.extended.Pin
 import top.yukonga.miuix.kmp.icon.extended.Recent
 import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
@@ -82,11 +70,6 @@ import top.yukonga.miuix.kmp.squircle.addSquircleRect
 import top.yukonga.miuix.kmp.squircle.isSquircleEnabled
 import top.yukonga.miuix.kmp.squircle.squircleBackground
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-
-private val CopiedIndicatorDuration = 2.seconds
-
-/** 行首图标与文字之间的距离：BasicComponent 自带 8 dp，这里补足到与设置页的行图标一致。 */
-private val RowIconEndPadding = 6.dp
 
 /** 「置顶」标签的圆角与内边距。 */
 private val FrontBadgeCornerRadius = 6.dp
@@ -483,7 +466,11 @@ private fun PinAction(entry: TimetableEntry, isFront: Boolean, onClick: () -> Un
 @Composable
 private fun EntryDetailRows(entry: TimetableEntry, units: List<ScheduleUnit>) {
     if (entry.location != null) {
-        LocationRow(location = entry.location)
+        CopyableDetailRow(
+            icon = MiuixIcons.Location,
+            label = stringResource(R.string.timetable_detail_location),
+            title = entry.location,
+        )
     }
     val formatter = rememberClassTimeFormatter()
     val startTime = formatter.format(entry.startTime.toJavaLocalTime())
@@ -504,95 +491,6 @@ private fun EntryDetailRows(entry: TimetableEntry, units: List<ScheduleUnit>) {
         )
     }
 }
-
-/** 行首图标的读屏文字是这一行的类别（[label]），长按整行复制 [copyText]。 */
-@Composable
-private fun DetailRow(
-    icon: ImageVector,
-    label: String,
-    title: String,
-    summary: String? = null,
-    copyText: String = title,
-    endActions: @Composable (RowScope.() -> Unit)? = null,
-) {
-    BasicComponent(
-        modifier = Modifier.longPressToCopy(copyAction(label, copyText)),
-        title = title,
-        summary = summary,
-        startAction = { RowIcon(icon = icon, contentDescription = label) },
-        endActions = endActions,
-    )
-}
-
-@Composable
-private fun RowIcon(icon: ImageVector, contentDescription: String) {
-    Icon(
-        imageVector = icon,
-        contentDescription = contentDescription,
-        modifier = Modifier.padding(end = RowIconEndPadding),
-        tint = MiuixTheme.colorScheme.onSurfaceVariantActions,
-    )
-}
-
-/** 地点常要拿去导航或发给同学，所以单独给一个复制按钮，复制后短暂显示对勾。 */
-@Composable
-private fun LocationRow(location: String) {
-    val label = stringResource(R.string.timetable_detail_location)
-    val hapticFeedback = LocalHapticFeedback.current
-    var isCopied by remember(location) { mutableStateOf(false) }
-    val copy = copyAction(label, location, onCopy = { isCopied = true })
-
-    LaunchedEffect(isCopied) {
-        if (isCopied) {
-            delay(CopiedIndicatorDuration)
-            isCopied = false
-        }
-    }
-
-    DetailRow(icon = MiuixIcons.Location, label = label, title = location) {
-        IconButton(
-            onClick = {
-                copy()
-                hapticFeedback.performHapticFeedback(HapticFeedbackType.ContextClick)
-            },
-        ) {
-            Crossfade(targetState = isCopied) { showsCheck ->
-                Icon(
-                    imageVector = if (showsCheck) MiuixIcons.Ok else MiuixIcons.Copy,
-                    contentDescription = stringResource(R.string.timetable_detail_copy),
-                    tint = if (showsCheck) {
-                        MiuixTheme.colorScheme.primary
-                    } else {
-                        MiuixTheme.colorScheme.onSurfaceVariantActions
-                    },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun copyAction(
-    label: String,
-    value: String,
-    onCopy: () -> Unit = {},
-): () -> Unit {
-    val clipboard = LocalClipboard.current
-    val coroutineScope = rememberCoroutineScope()
-    return {
-        coroutineScope.launch {
-            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(label, value)))
-            onCopy()
-        }
-    }
-}
-
-@Composable
-private fun Modifier.longPressToCopy(copy: () -> Unit): Modifier = combinedClickable(
-    onLongClickLabel = stringResource(R.string.timetable_detail_copy),
-    onLongClick = copy,
-    onClick = {},
-)
 
 /** 折叠的课程行下方的说明：地点与节次，没有地点时只有节次。 */
 @Composable

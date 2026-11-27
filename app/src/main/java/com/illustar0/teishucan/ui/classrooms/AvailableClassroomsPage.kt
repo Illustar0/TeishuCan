@@ -103,6 +103,7 @@ fun AvailableClassroomsPage(
     var scaffoldWindowY by remember { mutableFloatStateOf(0f) }
     var triggerWindowY by remember { mutableFloatStateOf(0f) }
     var activeSheet by remember { mutableStateOf<ClassroomSheet?>(null) }
+    val pagerController = rememberClassroomDatePagerController(initialDate = state.selectedDate)
     val activeFilterCount = state.filter.activeFilterCount
     val isToday = state.selectedDate == state.today
     val units = state.catalog.effectiveUnits
@@ -217,6 +218,7 @@ fun AvailableClassroomsPage(
     ) { innerPadding ->
         ClassroomBrowser(
             state = state,
+            pagerController = pagerController,
             onDateSelect = onDateSelect,
             onOpenDatePicker = { activeSheet = ClassroomSheet.DatePicker },
             onFilterChange = onFilterChange,
@@ -229,10 +231,11 @@ fun AvailableClassroomsPage(
         )
         DatePickerSheet(
             show = activeSheet is ClassroomSheet.DatePicker,
-            selectedDate = state.selectedDate,
+            selectedDate = pagerController.displayedDate,
             today = state.today,
             onDateConfirm = { date ->
                 onDateSelect(date)
+                pagerController.jumpTo(date)
                 activeSheet = null
             },
             onDismissRequest = {

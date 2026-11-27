@@ -22,12 +22,13 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,7 +73,10 @@ import com.illustar0.teishucan.ui.component.rememberClassTimeFormatter
 import com.illustar0.teishucan.ui.theme.CardSpacing
 import com.illustar0.teishucan.ui.theme.blurSource
 import kotlin.time.Instant
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -134,10 +138,78 @@ internal fun intermediatePageForJump(currentPage: Int, targetPage: Int): Int? = 
     else -> null
 }
 
+/**
+ * 管理空闲教室按日分页器的单向驱动：手势与步进直接操作 [pagerState]，
+ * 日历选择器等外部切日通过 [jumpTo] 显式触发，避免异步状态回传打断连续滑动。
+ */
+@Stable
+internal class ClassroomDatePagerController(
+    val pagerState: PagerState,
+    private val scope: CoroutineScope,
+) {
+    private var pendingJumpTarget: Int = NoPendingJumpPage
+    private var jumpJob: Job? = null
+
+    val displayedPage: Int
+        get() = pagerState.targetPage
+
+    val displayedDate: LocalDate
+        get() = classroomDateAtPage(displayedPage)
+
+    val canGoPrevious: Boolean
+        get() = displayedPage > 0
+
+    val canGoNext: Boolean
+        get() = displayedPage < TotalClassroomPagerDays - 1
+
+    fun stepBy(deltaDays: Int) {
+        val target = (pagerState.targetPage + deltaDays).coerceIn(0, TotalClassroomPagerDays - 1)
+        jumpJob?.cancel()
+        pendingJumpTarget = NoPendingJumpPage
+        jumpJob = scope.launch { pagerState.springAnimateToPage(target) }
+    }
+
+    fun jumpTo(date: LocalDate) {
+        val targetPage = date.toClassroomPageIndex()
+        jumpJob?.cancel()
+        if (pagerState.targetPage == targetPage && pagerState.settledPage == targetPage) return
+        jumpJob = scope.launch {
+            pendingJumpTarget = targetPage
+            try {
+                val intermediate = intermediatePageForJump(pagerState.currentPage, targetPage)
+                if (intermediate != null) {
+                    pagerState.scrollToPage(intermediate)
+                }
+                pagerState.springAnimateToPage(targetPage)
+            } finally {
+                if (pendingJumpTarget == targetPage) {
+                    pendingJumpTarget = NoPendingJumpPage
+                }
+            }
+        }
+    }
+
+    fun shouldReportSettled(page: Int): Boolean =
+        pendingJumpTarget == NoPendingJumpPage || page == pendingJumpTarget
+}
+
+@Composable
+internal fun rememberClassroomDatePagerController(initialDate: LocalDate): ClassroomDatePagerController {
+    val pagerState = rememberPagerState(
+        initialPage = initialDate.toClassroomPageIndex(),
+        pageCount = { TotalClassroomPagerDays },
+    )
+    val coroutineScope = rememberCoroutineScope()
+    return remember(pagerState, coroutineScope) {
+        ClassroomDatePagerController(pagerState = pagerState, scope = coroutineScope)
+    }
+}
+
 /** 空闲教室主视图：底部为按日横滑的教室列表，上方悬浮日期切换栏与筛选胶囊。 */
 @Composable
 internal fun ClassroomBrowser(
     state: AvailableClassroomsState,
+    pagerController: ClassroomDatePagerController,
     onDateSelect: (LocalDate) -> Unit,
     onOpenDatePicker: () -> Unit,
     onFilterChange: (ClassroomFilter) -> Unit,
@@ -151,59 +223,29 @@ internal fun ClassroomBrowser(
     var floatingHeaderHeight by remember { mutableStateOf(0.dp) }
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
-    val coroutineScope = rememberCoroutineScope()
     val units = state.catalog.effectiveUnits
     val topPadding = contentPadding.calculateTopPadding()
     val floatingClearance = (
         floatingHeaderHeight - FloatingToolbarDefaults.OutSidePadding.calculateBottomPadding()
     ).coerceAtLeast(0.dp)
-    val pagerState = rememberPagerState(
-        initialPage = state.selectedDate.toClassroomPageIndex(),
-        pageCount = { TotalClassroomPagerDays },
-    )
+    val pagerState = pagerController.pagerState
     val flingBehavior = PagerDefaults.flingBehavior(
         state = pagerState,
         snapAnimationSpec = PagerNavigationSpringSpec,
     )
     val currentOnDateSelect by rememberUpdatedState(onDateSelect)
-    val currentSelectedDate by rememberUpdatedState(state.selectedDate)
-    var pendingJumpTarget by remember { mutableIntStateOf(NoPendingJumpPage) }
 
-    // 仅在翻页落定后回写日期，避免拖拽半途弹回或快速连滑触发多余网络请求。
-    LaunchedEffect(pagerState) {
+    // 仅在翻页落定后单向回写日期，避免拖拽半途弹回或异步状态回传抢断连续滑动。
+    LaunchedEffect(pagerController) {
         snapshotFlow { pagerState.settledPage }
             .distinctUntilChanged()
+            .drop(1)
             .collect { page ->
-                if (pendingJumpTarget != NoPendingJumpPage && page != pendingJumpTarget) return@collect
-                val settledDate = classroomDateAtPage(page)
-                if (settledDate != currentSelectedDate) {
-                    currentOnDateSelect(settledDate)
-                }
+                if (!pagerController.shouldReportSettled(page)) return@collect
+                currentOnDateSelect(classroomDateAtPage(page))
             }
     }
 
-    // 日期选择器等外部切日时同步翻页；跨多天先瞬移到紧邻页，再以弹簧动画滑入目标页。
-    LaunchedEffect(state.selectedDate) {
-        val targetPage = state.selectedDate.toClassroomPageIndex()
-        if (pagerState.targetPage == targetPage && pagerState.settledPage == targetPage) {
-            return@LaunchedEffect
-        }
-        pendingJumpTarget = targetPage
-        try {
-            val intermediate = intermediatePageForJump(pagerState.currentPage, targetPage)
-            if (intermediate != null) {
-                pagerState.scrollToPage(intermediate)
-            }
-            pagerState.springAnimateToPage(targetPage)
-        } finally {
-            if (pendingJumpTarget == targetPage) {
-                pendingJumpTarget = NoPendingJumpPage
-            }
-        }
-    }
-
-    val displayedPage = pagerState.targetPage
-    val displayedDate = classroomDateAtPage(displayedPage)
     val listContentPadding = PaddingValues(
         start = contentPadding.calculateStartPadding(layoutDirection),
         top = topPadding + floatingClearance,
@@ -240,25 +282,15 @@ internal fun ClassroomBrowser(
         }
 
         ClassroomFloatingHeader(
-            selectedDate = displayedDate,
+            selectedDate = pagerController.displayedDate,
             today = state.today,
             rawFilter = state.rawFilter,
             catalog = state.catalog,
             backdrop = backdrop,
-            canGoPrevious = displayedPage > 0,
-            canGoNext = displayedPage < TotalClassroomPagerDays - 1,
-            onPreviousDay = {
-                coroutineScope.launch {
-                    pagerState.springAnimateToPage((pagerState.targetPage - 1).coerceAtLeast(0))
-                }
-            },
-            onNextDay = {
-                coroutineScope.launch {
-                    pagerState.springAnimateToPage(
-                        (pagerState.targetPage + 1).coerceAtMost(TotalClassroomPagerDays - 1),
-                    )
-                }
-            },
+            canGoPrevious = pagerController.canGoPrevious,
+            canGoNext = pagerController.canGoNext,
+            onPreviousDay = { pagerController.stepBy(-1) },
+            onNextDay = { pagerController.stepBy(1) },
             onOpenDatePicker = onOpenDatePicker,
             onFilterChange = onFilterChange,
             modifier = Modifier

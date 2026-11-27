@@ -16,6 +16,5 @@ enum class CampusService {
     Timetable,
     CourseOfferings,
     SchoolCalendar,
-    AvailableClassrooms,
     ClassroomTimetable,
 }

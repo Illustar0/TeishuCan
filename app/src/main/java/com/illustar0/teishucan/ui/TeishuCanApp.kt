@@ -35,6 +35,7 @@ import com.illustar0.teishucan.domain.AccountState
 import com.illustar0.teishucan.domain.PredictiveBackAnimation
 import com.illustar0.teishucan.domain.ThemeSettings
 import com.illustar0.teishucan.platform.PlatformCapabilities
+import com.illustar0.teishucan.ui.classrooms.AvailableClassroomsRoute
 import com.illustar0.teishucan.ui.component.FailureToasts
 import com.illustar0.teishucan.ui.component.OutcomeHaptics
 import com.illustar0.teishucan.ui.component.isWideWindow
@@ -109,6 +110,12 @@ internal sealed interface Route : NavKey {
     }
 
     @Serializable
+    data object AvailableClassrooms : Route {
+        override val requiresSignIn: Boolean
+            get() = true
+    }
+
+    @Serializable
     data object About : Route
 
     @Serializable
@@ -117,6 +124,7 @@ internal sealed interface Route : NavKey {
 
 private fun NativeService.toRoute(): Route = when (this) {
     NativeService.UndergradEas -> Route.UndergradEas
+    NativeService.AvailableClassrooms -> Route.AvailableClassrooms
 }
 
 internal enum class AppDestination(
@@ -231,6 +239,13 @@ internal fun TeishuCanApp(
                 onOpenNative = { service -> navigate(service.toRoute()) },
                 onBack = { navController.pop() },
             )
+        }
+        entry<Route.AvailableClassrooms> {
+            CommitOnlyBackHandler(
+                enabled = isPredictiveBackDisabled,
+                onCommit = { navController.pop() },
+            )
+            AvailableClassroomsRoute(onBack = { navController.pop() })
         }
         entry<Route.About> {
             CommitOnlyBackHandler(

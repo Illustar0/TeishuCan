@@ -67,6 +67,15 @@ class ServiceSearchTest {
     }
 
     @Test
+    fun availableClassrooms_staysInEasScheduleBeforeClassroomTimetable() {
+        assertEquals(listOf(ServiceEntry.UndergradEas), ServiceGroup.Academic.entries)
+        val scheduleEntries = ServiceGroup.EasSchedule.entries
+        val availableIndex = scheduleEntries.indexOf(ServiceEntry.AvailableClassrooms)
+        val timetableIndex = scheduleEntries.indexOf(ServiceEntry.ClassroomTimetable)
+        assertTrue(availableIndex in 0..<timetableIndex)
+    }
+
+    @Test
     fun serviceOpener_openingWebService_tracksOpeningStateAndPublishesUrl() = runTest {
         val urlDeferred = CompletableDeferred<String>()
         val opener = ServiceOpener(this) { urlDeferred.await() }

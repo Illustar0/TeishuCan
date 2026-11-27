@@ -30,6 +30,5 @@ private fun CampusService.toSsoService() = when (this) {
     CampusService.Timetable -> SsoService.UndergradEas.TIMETABLE
     CampusService.CourseOfferings -> SsoService.UndergradEas.COURSE_OFFERINGS
     CampusService.SchoolCalendar -> SsoService.UndergradEas.SCHOOL_CALENDAR
-    CampusService.AvailableClassrooms -> SsoService.UndergradEas.AVAILABLE_CLASSROOMS
     CampusService.ClassroomTimetable -> SsoService.UndergradEas.CLASSROOM_TIMETABLE
 }

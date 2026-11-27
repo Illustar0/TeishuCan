@@ -27,6 +27,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 /** 服务目录中内置原生页面的跳转目标。 */
 enum class NativeService {
     UndergradEas,
+    AvailableClassrooms,
 }
 
 /** 服务条目的打开目标：外部单点登录网页或内置原生页面。 */
@@ -150,7 +151,7 @@ internal enum class ServiceEntry(
         titleRes = R.string.service_available_classrooms,
         summaryRes = R.string.service_available_classrooms_summary,
         group = ServiceGroup.EasSchedule,
-        target = ServiceTarget.Web(CampusService.AvailableClassrooms),
+        target = ServiceTarget.Native(NativeService.AvailableClassrooms),
     ),
     ClassroomTimetable(
         titleRes = R.string.service_classroom_timetable,

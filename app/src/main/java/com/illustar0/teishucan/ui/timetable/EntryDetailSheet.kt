@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,8 +47,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.ConflictChoice
+import com.illustar0.teishucan.domain.DefaultScheduleUnits
+import com.illustar0.teishucan.domain.ScheduleUnit
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.frontIn
+import com.illustar0.teishucan.domain.labelOf
 import com.illustar0.teishucan.ui.component.EntryStack
 import com.illustar0.teishucan.ui.component.animation.CalmMotion
 import com.illustar0.teishucan.ui.component.animation.rememberFrameTransition
@@ -102,10 +106,12 @@ internal fun EntryDetailSheet(
     conflictChoices: List<ConflictChoice>,
     onPutInFront: (conflict: List<TimetableEntry>, front: TimetableEntry) -> Unit,
     onDismissRequest: () -> Unit,
+    units: List<ScheduleUnit> = emptyList(),
 ) {
     // 关闭后保留最后一格，让弹层滑走时内容不变。
     val sheet = rememberShownContent(stack)
     val shown = sheet.value ?: return
+    val effectiveUnits = units.ifEmpty { DefaultScheduleUnits }
     val title = if (shown.isConflict) {
         stringResource(R.string.timetable_conflict_sheet_title, shown.entries.size)
     } else {
@@ -125,9 +131,14 @@ internal fun EntryDetailSheet(
                 .padding(bottom = 12.dp),
         ) {
             if (shown.isConflict) {
-                ConflictDetail(stack = shown, conflictChoices = conflictChoices, onPutInFront = onPutInFront)
+                ConflictDetail(
+                    stack = shown,
+                    conflictChoices = conflictChoices,
+                    units = effectiveUnits,
+                    onPutInFront = onPutInFront,
+                )
             } else {
-                DetailCard { EntryDetailRows(shown.entries.single()) }
+                DetailCard { EntryDetailRows(entry = shown.entries.single(), units = effectiveUnits) }
             }
         }
     }
@@ -137,6 +148,7 @@ internal fun EntryDetailSheet(
 private fun ConflictDetail(
     stack: EntryStack,
     conflictChoices: List<ConflictChoice>,
+    units: List<ScheduleUnit>,
     onPutInFront: (conflict: List<TimetableEntry>, front: TimetableEntry) -> Unit,
 ) {
     // 刚点的置顶先在这里生效，不等存储写完，连点图钉时才能接着轮转。
@@ -175,13 +187,13 @@ private fun ConflictDetail(
                     previous = if (isMorphing && wasExpanded != isExpanded) {
                         {
                             val wasFront = entry == focus.previousFront
-                            ConflictCourse(entry, wasExpanded, wasFront, onFocus, onPin = { pin(entry) })
+                            ConflictCourse(entry, units, wasExpanded, wasFront, onFocus, onPin = { pin(entry) })
                         }
                     } else {
                         null
                     },
                     current = {
-                        ConflictCourse(entry, isExpanded, entry == front, onFocus, onPin = { pin(entry) })
+                        ConflictCourse(entry, units, isExpanded, entry == front, onFocus, onPin = { pin(entry) })
                     },
                 )
             }
@@ -351,30 +363,42 @@ private fun MorphContent(
 @Composable
 private fun ConflictCourse(
     entry: TimetableEntry,
+    units: List<ScheduleUnit>,
     isExpanded: Boolean,
     isFront: Boolean,
     onFocus: () -> Unit,
     onPin: () -> Unit,
 ) {
     if (isExpanded) {
-        ExpandedCourse(entry = entry, isFront = isFront, onPin = onPin)
+        ExpandedCourse(entry = entry, units = units, isFront = isFront, onPin = onPin)
     } else {
-        CollapsedCourse(entry = entry, isFront = isFront, onFocus = onFocus, onPin = onPin)
+        CollapsedCourse(entry = entry, units = units, isFront = isFront, onFocus = onFocus, onPin = onPin)
     }
 }
 
 @Composable
-private fun ExpandedCourse(entry: TimetableEntry, isFront: Boolean, onPin: () -> Unit) {
+private fun ExpandedCourse(
+    entry: TimetableEntry,
+    units: List<ScheduleUnit>,
+    isFront: Boolean,
+    onPin: () -> Unit,
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         BasicComponent(endActions = { PinAction(entry = entry, isFront = isFront, onClick = onPin) }) {
             CourseTitle(entry = entry, isFront = isFront)
         }
-        EntryDetailRows(entry)
+        EntryDetailRows(entry = entry, units = units)
     }
 }
 
 @Composable
-private fun CollapsedCourse(entry: TimetableEntry, isFront: Boolean, onFocus: () -> Unit, onPin: () -> Unit) {
+private fun CollapsedCourse(
+    entry: TimetableEntry,
+    units: List<ScheduleUnit>,
+    isFront: Boolean,
+    onFocus: () -> Unit,
+    onPin: () -> Unit,
+) {
     BasicComponent(
         modifier = Modifier.fillMaxWidth(),
         onClick = onFocus,
@@ -383,7 +407,7 @@ private fun CollapsedCourse(entry: TimetableEntry, isFront: Boolean, onFocus: ()
     ) {
         CourseTitle(entry = entry, isFront = isFront)
         Text(
-            text = otherEntrySummary(entry),
+            text = otherEntrySummary(entry, units),
             fontSize = MiuixTheme.textStyles.body2.fontSize,
             color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         )
@@ -457,14 +481,14 @@ private fun PinAction(entry: TimetableEntry, isFront: Boolean, onClick: () -> Un
 
 /** 一门课的地点、时间和老师，没有地点或老师时省去那一行。 */
 @Composable
-private fun EntryDetailRows(entry: TimetableEntry) {
+private fun EntryDetailRows(entry: TimetableEntry, units: List<ScheduleUnit>) {
     if (entry.location != null) {
         LocationRow(location = entry.location)
     }
     val formatter = rememberClassTimeFormatter()
     val startTime = formatter.format(entry.startTime.toJavaLocalTime())
     val endTime = formatter.format(entry.endTime.toJavaLocalTime())
-    val position = entryPositionText(entry)
+    val position = entryPositionText(entry, units)
     DetailRow(
         icon = MiuixIcons.Recent,
         label = stringResource(R.string.timetable_detail_time),
@@ -572,22 +596,28 @@ private fun Modifier.longPressToCopy(copy: () -> Unit): Modifier = combinedClick
 
 /** 折叠的课程行下方的说明：地点与节次，没有地点时只有节次。 */
 @Composable
-private fun otherEntrySummary(entry: TimetableEntry): String {
+@ReadOnlyComposable
+private fun otherEntrySummary(entry: TimetableEntry, units: List<ScheduleUnit>): String {
+    val startLabel = units.labelOf(entry.startPeriod)
+    val lastLabel = units.labelOf(entry.lastPeriod)
     val periods = if (entry.periodSpan > 1) {
-        stringResource(R.string.timetable_periods_range, entry.startPeriod, entry.lastPeriod)
+        stringResource(R.string.timetable_periods_range, startLabel, lastLabel)
     } else {
-        stringResource(R.string.timetable_period, entry.startPeriod)
+        stringResource(R.string.timetable_period, startLabel)
     }
     return entry.location?.let { stringResource(R.string.timetable_conflict_other_summary, it, periods) } ?: periods
 }
 
-/** 星期与节次，如「星期一第 5–6 节」。 */
+/** 星期与节次，如「星期一第 5–6 节」或「星期二第 +1–+2 节」。 */
 @Composable
-private fun entryPositionText(entry: TimetableEntry): String {
+@ReadOnlyComposable
+private fun entryPositionText(entry: TimetableEntry, units: List<ScheduleUnit>): String {
     val dayName = localizedDayName(entry.day, TextStyle.FULL)
+    val startLabel = units.labelOf(entry.startPeriod)
+    val lastLabel = units.labelOf(entry.lastPeriod)
     return if (entry.periodSpan > 1) {
-        stringResource(R.string.timetable_entry_period_range, dayName, entry.startPeriod, entry.lastPeriod)
+        stringResource(R.string.timetable_entry_period_range, dayName, startLabel, lastLabel)
     } else {
-        stringResource(R.string.timetable_entry_position, dayName, entry.startPeriod)
+        stringResource(R.string.timetable_entry_position, dayName, startLabel)
     }
 }

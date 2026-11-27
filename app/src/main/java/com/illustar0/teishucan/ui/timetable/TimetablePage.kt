@@ -219,6 +219,7 @@ fun TimetablePage(
             conflictChoices = state.conflictChoices,
             onPutInFront = onPutInFront,
             onDismissRequest = { openedStack = null },
+            units = term?.units.orEmpty(),
         )
     }
 }
@@ -278,6 +279,7 @@ private fun WeekPager(
             conflictChoices = conflictChoices,
             onEntriesClick = onEntriesClick,
             modifier = Modifier.padding(TimetablePadding),
+            units = term.units,
         )
     }
 }

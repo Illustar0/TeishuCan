@@ -82,9 +82,9 @@
     <string name="home_next_class_tomorrow">明日</string>
     <string name="home_next_class_none">予定なし。人生を楽しもう〜</string>
 
-    <string name="timetable_entry_position">%1$s %2$d 限</string>
-    <string name="timetable_entry_conflict_position">%1$s %2$d 限、重複する授業 %3$d 件</string>
-    <string name="timetable_entry_period_range">%1$s %2$d〜%3$d 限</string>
+    <string name="timetable_entry_position">%1$s %2$s 限</string>
+    <string name="timetable_entry_conflict_position">%1$s %2$s 限、重複する授業 %3$d 件</string>
+    <string name="timetable_entry_period_range">%1$s %2$s〜%3$s 限</string>
     <string name="timetable_entry_schedule">%1$s・%2$s – %3$s</string>
     <string name="timetable_conflict_sheet_title">重複する授業（%1$d 件）</string>
     <string name="timetable_detail_time">時間</string>
@@ -92,8 +92,8 @@
     <string name="timetable_detail_teacher">担当教員</string>
     <string name="timetable_detail_copy">コピー</string>
     <string name="timetable_time_range">%1$s – %2$s</string>
-    <string name="timetable_period">%1$d 限</string>
-    <string name="timetable_periods_range">%1$d〜%2$d 限</string>
+    <string name="timetable_period">%1$s 限</string>
+    <string name="timetable_periods_range">%1$s〜%2$s 限</string>
     <string name="timetable_conflict_others">同じ時間の他の授業</string>
     <string name="timetable_conflict_other_summary">%1$s・%2$s</string>
     <string name="timetable_conflict_show">表示</string>

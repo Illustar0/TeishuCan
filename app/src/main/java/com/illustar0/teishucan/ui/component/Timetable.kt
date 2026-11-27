@@ -24,21 +24,27 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.TextStyle as ComposeTextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import com.illustar0.teishucan.R
 import com.illustar0.teishucan.domain.ConflictChoice
+import com.illustar0.teishucan.domain.DefaultScheduleUnits
+import com.illustar0.teishucan.domain.ScheduleUnit
 import com.illustar0.teishucan.domain.TimetableEntry
 import com.illustar0.teishucan.domain.TimetableWeek
 import com.illustar0.teishucan.domain.frontIn
+import com.illustar0.teishucan.domain.labelOf
 import com.illustar0.teishucan.ui.component.animation.CalmMotion
 import com.illustar0.teishucan.ui.component.animation.FrameTransition
 import com.illustar0.teishucan.ui.component.animation.rememberFrameTransition
@@ -46,6 +52,7 @@ import java.time.format.TextStyle
 import kotlin.math.roundToInt
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toJavaLocalTime
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
@@ -60,6 +67,9 @@ import top.yukonga.miuix.kmp.utils.PressFeedbackType
  * 部分重叠或错位交叉的课程按节次阶梯错位叠放。用户在 [conflictChoices] 里置顶的课程放在最上层。
  * 表头显示这一周的日期，并在 [today] 落在这一周时突出显示。
  */
+private const val PeriodTimeSkeleton = "Hm"
+private const val MaxRailFontScale = 1.25f
+
 @Composable
 fun Timetable(
     week: TimetableWeek,
@@ -68,14 +78,21 @@ fun Timetable(
     conflictChoices: List<ConflictChoice>,
     onEntriesClick: (EntryStack) -> Unit,
     modifier: Modifier = Modifier,
+    units: List<ScheduleUnit> = DefaultScheduleUnits,
     periodHeight: Dp = TimetableDefaults.PeriodHeight,
     colors: TimetableColors = TimetableDefaults.timetableColors(),
 ) {
+    val effectiveUnits = units.ifEmpty { DefaultScheduleUnits }
+    val railWidth = TimetableDefaults.PeriodLabelWidth *
+        LocalDensity.current.fontScale.coerceIn(1f, MaxRailFontScale)
+
     Column(modifier = modifier) {
-        DayHeaderRow(week = week, today = today, colors = colors)
+        DayHeaderRow(week = week, today = today, railWidth = railWidth, colors = colors)
         Row {
             PeriodLabelColumn(
                 periodCount = periodCount,
+                units = effectiveUnits,
+                railWidth = railWidth,
                 periodHeight = periodHeight,
                 colors = colors,
             )
@@ -84,6 +101,7 @@ fun Timetable(
                 conflictChoices = conflictChoices,
                 onEntriesClick = onEntriesClick,
                 periodCount = periodCount,
+                units = effectiveUnits,
                 periodHeight = periodHeight,
                 colors = colors,
                 modifier = Modifier.weight(1f),
@@ -96,10 +114,11 @@ fun Timetable(
 private fun DayHeaderRow(
     week: TimetableWeek,
     today: LocalDate,
+    railWidth: Dp,
     colors: TimetableColors,
 ) {
     Row(modifier = Modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.width(TimetableDefaults.PeriodLabelWidth))
+        Spacer(modifier = Modifier.width(railWidth))
         DayOfWeek.entries.forEach { day ->
             val date = week.dates.find { it.dayOfWeek == day }
             val isToday = date == today
@@ -134,22 +153,49 @@ private fun DayHeaderRow(
 @Composable
 private fun PeriodLabelColumn(
     periodCount: Int,
+    units: List<ScheduleUnit>,
+    railWidth: Dp,
     periodHeight: Dp,
     colors: TimetableColors,
 ) {
-    Column(modifier = Modifier.width(TimetableDefaults.PeriodLabelWidth)) {
+    val unitByIndex = remember(units) { units.associateBy(ScheduleUnit::index) }
+    val timeFormatter = rememberLocalizedFormatter(PeriodTimeSkeleton)
+
+    Column(modifier = Modifier.width(railWidth)) {
         repeat(periodCount) { index ->
+            val periodNumber = index + 1
+            val unit = unitByIndex[periodNumber]
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(periodHeight),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = (index + 1).toString(),
-                    color = colors.periodColor,
-                    style = MiuixTheme.textStyles.footnote2,
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = unit?.label ?: periodNumber.toString(),
+                        color = if (unit?.isExtra == true) colors.highlightedDayColor else colors.periodNumberColor,
+                        maxLines = 1,
+                        softWrap = false,
+                        style = TimetableDefaults.PeriodNumberTextStyle,
+                    )
+                    if (unit != null) {
+                        Text(
+                            text = timeFormatter.format(unit.startTime.toJavaLocalTime()),
+                            color = colors.periodColor,
+                            maxLines = 1,
+                            softWrap = false,
+                            style = TimetableDefaults.PeriodTimeTextStyle,
+                        )
+                        Text(
+                            text = timeFormatter.format(unit.endTime.toJavaLocalTime()),
+                            color = colors.periodColor,
+                            maxLines = 1,
+                            softWrap = false,
+                            style = TimetableDefaults.PeriodTimeTextStyle,
+                        )
+                    }
+                }
             }
         }
     }
@@ -161,6 +207,7 @@ private fun EntryGrid(
     conflictChoices: List<ConflictChoice>,
     onEntriesClick: (EntryStack) -> Unit,
     periodCount: Int,
+    units: List<ScheduleUnit>,
     periodHeight: Dp,
     colors: TimetableColors,
     modifier: Modifier = Modifier,
@@ -177,6 +224,7 @@ private fun EntryGrid(
                 key(card.entry) {
                     EntryCell(
                         card = card,
+                        startPeriodLabel = units.labelOf(card.entry.startPeriod),
                         contentAlpha = { restack.contentAlphaOf(card) },
                         colors = colors,
                         onClick = { onEntriesClick(card.stack) },
@@ -238,6 +286,7 @@ private fun EntryGrid(
 @Composable
 private fun EntryCell(
     card: TimetableCardSpec,
+    startPeriodLabel: String,
     contentAlpha: () -> Float,
     colors: TimetableColors,
     onClick: () -> Unit,
@@ -252,9 +301,9 @@ private fun EntryCell(
         val dayName = localizedDayName(entry.day, TextStyle.FULL)
         val conflictCount = card.stack.entries.size
         val position = if (conflictCount > 1) {
-            stringResource(R.string.timetable_entry_conflict_position, dayName, entry.startPeriod, conflictCount)
+            stringResource(R.string.timetable_entry_conflict_position, dayName, startPeriodLabel, conflictCount)
         } else {
-            stringResource(R.string.timetable_entry_position, dayName, entry.startPeriod)
+            stringResource(R.string.timetable_entry_position, dayName, startPeriodLabel)
         }
         Modifier.semantics(mergeDescendants = true) { stateDescription = position }
     } else {
@@ -624,14 +673,33 @@ private fun TimetableColors.stackSurfaceColor(depthFromFront: Int): Color = when
     else -> entryDeepStackColor
 }
 
+private val PeriodNumberFontSize = 12.sp
+private val PeriodNumberLineHeight = 14.sp
+private val PeriodTimeFontSize = 10.sp
+private val PeriodTimeLineHeight = 12.sp
+private const val TabularNumsFeature = "tnum"
+
 object TimetableDefaults {
     val PeriodHeight = 64.dp
-    val PeriodLabelWidth = 24.dp
+    val PeriodLabelWidth = 32.dp
     val EntryGap = 2.dp
     val EntryCornerRadius = 6.dp
     val EntryPadding = 4.dp
     val StackStep = 4.dp
     val CascadeIndent = 5.dp
+
+    internal val PeriodNumberTextStyle = ComposeTextStyle(
+        fontSize = PeriodNumberFontSize,
+        lineHeight = PeriodNumberLineHeight,
+        fontWeight = FontWeight.SemiBold,
+        fontFeatureSettings = TabularNumsFeature,
+    )
+
+    internal val PeriodTimeTextStyle = ComposeTextStyle(
+        fontSize = PeriodTimeFontSize,
+        lineHeight = PeriodTimeLineHeight,
+        fontFeatureSettings = TabularNumsFeature,
+    )
 
     /** 冲突叠卡在前卡之下最多露出的张数，避免前卡在窄列被过度挤压。 */
     const val MaxStackBackLayers = 2
@@ -657,6 +725,7 @@ object TimetableDefaults {
     fun timetableColors(
         dayColor: Color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         highlightedDayColor: Color = MiuixTheme.colorScheme.primary,
+        periodNumberColor: Color = MiuixTheme.colorScheme.onSurfaceContainer,
         periodColor: Color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
         entryColor: Color = MiuixTheme.colorScheme.tertiaryContainer,
         entryContentColor: Color = MiuixTheme.colorScheme.onTertiaryContainer,
@@ -675,6 +744,7 @@ object TimetableDefaults {
     ): TimetableColors = remember(
         dayColor,
         highlightedDayColor,
+        periodNumberColor,
         periodColor,
         entryColor,
         entryContentColor,
@@ -686,6 +756,7 @@ object TimetableDefaults {
         TimetableColors(
             dayColor = dayColor,
             highlightedDayColor = highlightedDayColor,
+            periodNumberColor = periodNumberColor,
             periodColor = periodColor,
             entryColor = entryColor,
             entryContentColor = entryContentColor,
@@ -713,6 +784,7 @@ object TimetableDefaults {
 data class TimetableColors(
     val dayColor: Color,
     val highlightedDayColor: Color,
+    val periodNumberColor: Color,
     val periodColor: Color,
     val entryColor: Color,
     val entryContentColor: Color,

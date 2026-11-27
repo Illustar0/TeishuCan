@@ -115,6 +115,8 @@
     <string name="calendar_next_month">下个月</string>
     <string name="calendar_year_month">%1$d 年 %2$d 月</string>
 
+    <string name="classrooms_refresh_failed">教室数据刷新失败，请重试</string>
+
     <string name="electricity_meter_empty">还没有电表</string>
     <string name="electricity_meter_empty_hint">点右上角 + 添加</string>
     <string name="electricity_meter_add">添加电表</string>

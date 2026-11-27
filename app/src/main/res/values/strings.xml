@@ -120,6 +120,8 @@
     <string name="calendar_next_month">次の月</string>
     <string name="calendar_year_month">%1$d 年 %2$d 月</string>
 
+    <string name="classrooms_refresh_failed">教室データの更新に失敗しました。もう一度お試しください</string>
+
     <string name="electricity_meter_empty">メーターはまだありません</string>
     <string name="electricity_meter_empty_hint">右上の + から追加できます</string>
     <string name="electricity_meter_kilowatt_hours" translatable="false">%1$s kWh</string>

@@ -43,6 +43,7 @@ private val Exception.messageRes: Int?
             CampusFeature.Account -> R.string.login_failed
             CampusFeature.Profile -> R.string.profile_refresh_failed
             CampusFeature.Timetable -> R.string.timetable_refresh_failed
+            CampusFeature.Classrooms -> R.string.classrooms_refresh_failed
             CampusFeature.CampusCard -> R.string.campus_card_refresh_failed
             CampusFeature.Electricity -> R.string.electricity_refresh_failed
             CampusFeature.Services -> R.string.service_open_failed

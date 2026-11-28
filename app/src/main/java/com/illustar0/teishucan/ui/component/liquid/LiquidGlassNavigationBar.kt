@@ -265,8 +265,6 @@ private fun Modifier.liquidGlass(
         backdrop = backdrop,
         shape = { shape },
         effects = {
-            // 24dp lens refraction + 16dp press-scale reach, raised before blur() reads it.
-            padding = maxOf(padding, 40.dp.toPx())
             vibrancy()
             blur(
                 4.dp.toPx(),

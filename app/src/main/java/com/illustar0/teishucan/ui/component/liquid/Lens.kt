@@ -1,6 +1,7 @@
 // Copyright 2026, compose-miuix-ui contributors
 // SPDX-License-Identifier: Apache-2.0
-// Modified for TeishuCan from the Miuix example app (example/shared/.../component/liquid): package renamed.
+// Modified for TeishuCan from the Miuix example app (example/shared/.../component/liquid): package renamed,
+// and outward backdrop padding inflation removed because inward refraction stays inside the silhouette.
 
 package com.illustar0.teishucan.ui.component.liquid
 
@@ -29,10 +30,6 @@ fun BackdropEffectScope.lens(
 ) {
     if (!isRuntimeShaderSupported()) return
     if (refractionHeight <= 0f || refractionAmount <= 0f) return
-
-    if (padding < refractionAmount) {
-        padding = refractionAmount
-    }
 
     val radii = roundedRectCornerRadii() ?: return
 

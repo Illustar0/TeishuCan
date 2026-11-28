@@ -24,6 +24,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -241,6 +243,7 @@ private fun CalendarMonthGrid(
     today: LocalDate,
     onDateSelect: (LocalDate) -> Unit,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     val cells = remember(month) { buildCalendarMonthGrid(month) }
 
     Column(verticalArrangement = Arrangement.spacedBy(GridGap)) {
@@ -256,7 +259,10 @@ private fun CalendarMonthGrid(
                         isInDisplayedMonth = cell.isInDisplayedMonth,
                         isSelected = cell.date == selectedDate,
                         isToday = cell.date == today,
-                        onClick = { onDateSelect(cell.date) },
+                        onClick = {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
+                            onDateSelect(cell.date)
+                        },
                         modifier = Modifier.weight(1f),
                     )
                 }

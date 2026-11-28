@@ -16,6 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -61,6 +63,7 @@ internal fun WeekPickerSheet(
     onWeekSelect: (TimetableWeek) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     val rows = remember(weeks) { weeks.chunked(WeeksPerRow) }
 
     OverlayBottomSheet(
@@ -92,7 +95,10 @@ internal fun WeekPickerSheet(
                                     week = week,
                                     isSelected = week == selectedWeek,
                                     isCurrent = week == currentWeek,
-                                    onClick = { onWeekSelect(week) },
+                                    onClick = {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
+                                        onWeekSelect(week)
+                                    },
                                     modifier = Modifier.weight(1f),
                                 )
                             }

@@ -1,7 +1,7 @@
 // Copyright 2026, compose-miuix-ui contributors
 // SPDX-License-Identifier: Apache-2.0
 // Modified for TeishuCan from the Miuix example app (example/shared/.../component/liquid): package renamed,
-// and outward backdrop padding inflation removed because inward refraction stays inside the silhouette.
+// outward backdrop padding inflation removed, and refraction clamped to half the shortest side.
 
 package com.illustar0.teishucan.ui.component.liquid
 
@@ -29,7 +29,9 @@ fun BackdropEffectScope.lens(
     chromaticAberration: Float = 0f,
 ) {
     if (!isRuntimeShaderSupported()) return
-    if (refractionHeight <= 0f || refractionAmount <= 0f) return
+    val clampedHeight = clampLensReach(refractionHeight, size.minDimension)
+    val clampedAmount = clampLensReach(refractionAmount, size.minDimension)
+    if (clampedHeight <= 0f || clampedAmount <= 0f) return
 
     val radii = roundedRectCornerRadii() ?: return
 
@@ -46,8 +48,8 @@ fun BackdropEffectScope.lens(
     val scaledSizeW = size.width / sf
     val scaledSizeH = size.height / sf
     val scaledPadding = padding / sf
-    val scaledRefractionHeight = refractionHeight / sf
-    val scaledRefractionAmount = refractionAmount / sf
+    val scaledRefractionHeight = clampedHeight / sf
+    val scaledRefractionAmount = clampedAmount / sf
     for (i in radii.indices) {
         radii[i] /= sf
     }
@@ -67,6 +69,11 @@ fun BackdropEffectScope.lens(
             setFloatUniform("chromaticAberration", chromaticAberration)
         }
     }
+}
+
+internal fun clampLensReach(requested: Float, minDimension: Float): Float {
+    if (!(requested > 0f && minDimension > 0f)) return 0f
+    return requested.fastCoerceAtMost(minDimension / 2f)
 }
 
 private fun BackdropEffectScope.roundedRectCornerRadii(): FloatArray? {

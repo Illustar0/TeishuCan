@@ -287,7 +287,6 @@ private fun CalendarDayCell(
     val container = if (isToday) scheme.primary else Color.Transparent
     val textColor = when {
         isToday -> scheme.onPrimary
-        isSelected -> scheme.primary
         isInDisplayedMonth -> scheme.onSurfaceContainer
         else -> scheme.onSurfaceVariantActions
     }

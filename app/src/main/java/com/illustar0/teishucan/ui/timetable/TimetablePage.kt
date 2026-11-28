@@ -1,6 +1,12 @@
 package com.illustar0.teishucan.ui.timetable
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +21,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -24,11 +32,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -44,16 +54,19 @@ import com.illustar0.teishucan.ui.component.DateWithYearSkeleton
 import com.illustar0.teishucan.ui.component.EntryStack
 import com.illustar0.teishucan.ui.component.RefreshContainer
 import com.illustar0.teishucan.ui.component.Timetable
-import com.illustar0.teishucan.ui.component.rememberLocalizedFormatter
+import com.illustar0.teishucan.ui.component.animation.CalmMotion
 import com.illustar0.teishucan.ui.component.liquid.LiquidGlassFloatingToolbar
+import com.illustar0.teishucan.ui.component.rememberLocalizedFormatter
 import com.illustar0.teishucan.ui.theme.BlurredBar
 import com.illustar0.teishucan.ui.theme.CardSpacing
-import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import com.illustar0.teishucan.ui.theme.LocalIsBlurEnabled
 import com.illustar0.teishucan.ui.theme.LocalIsLiquidGlassEnabled
+import com.illustar0.teishucan.ui.theme.TeishuCanTheme
 import com.illustar0.teishucan.ui.theme.blurSource
 import com.illustar0.teishucan.ui.theme.rememberBlurBackdrop
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -63,6 +76,8 @@ import kotlinx.datetime.toJavaLocalDate
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.basic.FloatingActionButton
+import top.yukonga.miuix.kmp.basic.FloatingActionButtonDefaults
 import top.yukonga.miuix.kmp.basic.FloatingToolbarDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -76,6 +91,7 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.ChevronBackward
 import top.yukonga.miuix.kmp.icon.extended.ChevronForward
 import top.yukonga.miuix.kmp.icon.extended.Filter
+import top.yukonga.miuix.kmp.icon.extended.Reset
 import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
@@ -83,6 +99,10 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import top.yukonga.miuix.kmp.utils.springAnimateToPage
 
 private val TimetablePadding = PaddingValues(start = 4.dp, end = 8.dp, bottom = 8.dp)
+private val WeekToolbarInnerPadding = 4.dp
+private val WeekCenterHorizontalPadding = 8.dp
+private val FabSpacing = 16.dp
+private const val FabHiddenScale = 0.6f
 
 enum class TimetableStatus { Ready, NoLessons, Loading, Failed, NotFetched }
 
@@ -121,9 +141,25 @@ fun TimetablePage(
         )
     }
     val coroutineScope = rememberCoroutineScope()
+    val weekNavigator = remember(pagerState, coroutineScope) {
+        WeekNavigator(pagerState = pagerState, scope = coroutineScope)
+    }
     val density = LocalDensity.current
     var weekSwitcherHeight by remember { mutableStateOf(0.dp) }
     var openedStack by remember { mutableStateOf<EntryStack?>(null) }
+    var isWeekPickerOpen by remember(term?.id) { mutableStateOf(false) }
+    val selectedWeek = weeks.getOrNull(pagerState.targetPage)
+    val activeCurrentWeek = remember(weeks, today) { currentWeek(weeks, today) }
+    val isBackToCurrentVisible = readyTerm != null &&
+        shouldShowBackToCurrentWeek(selectedWeek = selectedWeek, currentWeek = activeCurrentWeek)
+    val fabClearance by animateDpAsState(
+        targetValue = if (isBackToCurrentVisible) {
+            FloatingActionButtonDefaults.MinHeight + FabSpacing
+        } else {
+            0.dp
+        },
+        animationSpec = CalmMotion.spring(),
+    )
 
     Scaffold(
         topBar = {
@@ -171,7 +207,7 @@ fun TimetablePage(
                         .nestedScroll(scrollBehavior.nestedScrollConnection),
                     contentPadding = PaddingValues(
                         top = topPadding + weekSwitcherClearance,
-                        bottom = bottomPadding + CardSpacing,
+                        bottom = bottomPadding + CardSpacing + fabClearance,
                     ),
                     overscrollEffect = null,
                 ) {
@@ -197,20 +233,40 @@ fun TimetablePage(
                         }
                     }
                 }
-                // 不放进 Scaffold 的 floatingToolbar 槽位，它会在顶栏下方再加一次状态栏内边距。
-                if (readyTerm != null) {
+                // 不走 Scaffold 槽位，否则工具栏与悬浮按钮都会再算一次系统栏内边距。
+                if (readyTerm != null && selectedWeek != null) {
                     WeekSwitcher(
                         weeks = weeks,
-                        selectedWeek = weeks[pagerState.targetPage],
-                        currentWeek = currentWeek(weeks, today),
-                        onWeekSelect = { week ->
-                            coroutineScope.launch { pagerState.springAnimateToPage(weeks.indexOf(week)) }
-                        },
+                        selectedWeek = selectedWeek,
+                        onWeekSelect = { week -> weekNavigator.jumpTo(weeks.indexOf(week)) },
+                        onOpenPicker = { isWeekPickerOpen = true },
                         backdrop = backdrop,
                         modifier = Modifier
                             .padding(top = topPadding)
                             .onSizeChanged { size -> weekSwitcherHeight = with(density) { size.height.toDp() } },
                     )
+                }
+                AnimatedVisibility(
+                    visible = isBackToCurrentVisible,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = FabSpacing, bottom = bottomPadding + FabSpacing),
+                    enter = fadeIn(animationSpec = CalmMotion.spring()) +
+                        scaleIn(animationSpec = CalmMotion.spring(), initialScale = FabHiddenScale),
+                    exit = fadeOut(animationSpec = CalmMotion.spring()) +
+                        scaleOut(animationSpec = CalmMotion.spring(), targetScale = FabHiddenScale),
+                ) {
+                    FloatingActionButton(
+                        onClick = {
+                            activeCurrentWeek?.let { week -> weekNavigator.jumpTo(weeks.indexOf(week)) }
+                        },
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Reset,
+                            contentDescription = stringResource(R.string.timetable_back_to_current_week),
+                            tint = MiuixTheme.colorScheme.onPrimary,
+                        )
+                    }
                 }
             }
         }
@@ -220,6 +276,17 @@ fun TimetablePage(
             onPutInFront = onPutInFront,
             onDismissRequest = { openedStack = null },
             units = term?.units.orEmpty(),
+        )
+        WeekPickerSheet(
+            show = isWeekPickerOpen && readyTerm != null,
+            weeks = weeks,
+            selectedWeek = selectedWeek,
+            currentWeek = activeCurrentWeek,
+            onWeekSelect = { week ->
+                isWeekPickerOpen = false
+                weekNavigator.jumpTo(weeks.indexOf(week))
+            },
+            onDismissRequest = { isWeekPickerOpen = false },
         )
     }
 }
@@ -315,12 +382,34 @@ private fun TermMenu(
     }
 }
 
+/** 驱动周课表翻页：新跳转会取消未完成的动画，跨多周时先跳到邻页再滑入目标周。 */
+@Stable
+private class WeekNavigator(
+    private val pagerState: PagerState,
+    private val scope: CoroutineScope,
+) {
+    private var jumpJob: Job? = null
+
+    fun jumpTo(targetPage: Int) {
+        if (targetPage !in 0 until pagerState.pageCount) return
+        jumpJob?.cancel()
+        if (pagerState.targetPage == targetPage && pagerState.settledPage == targetPage) return
+        jumpJob = scope.launch {
+            intermediateWeekPageForJump(
+                currentPage = pagerState.currentPage,
+                targetPage = targetPage,
+            )?.let { adjacentPage -> pagerState.scrollToPage(adjacentPage) }
+            pagerState.springAnimateToPage(targetPage)
+        }
+    }
+}
+
 @Composable
 private fun WeekSwitcher(
     weeks: List<TimetableWeek>,
     selectedWeek: TimetableWeek,
-    currentWeek: TimetableWeek?,
     onWeekSelect: (TimetableWeek) -> Unit,
+    onOpenPicker: () -> Unit,
     backdrop: LayerBackdrop?,
     modifier: Modifier = Modifier,
 ) {
@@ -330,7 +419,7 @@ private fun WeekSwitcher(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(4.dp),
+                .padding(WeekToolbarInnerPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             WeekStepButton(
@@ -342,11 +431,13 @@ private fun WeekSwitcher(
             Column(
                 modifier = Modifier
                     .weight(1f)
+                    .clip(CircleShape)
                     .clickable(
-                        enabled = currentWeek != null && currentWeek != selectedWeek,
-                        onClickLabel = stringResource(R.string.timetable_back_to_current_week),
-                        onClick = { currentWeek?.let(onWeekSelect) },
-                    ),
+                        onClickLabel = stringResource(R.string.timetable_select_week),
+                        role = Role.Button,
+                        onClick = onOpenPicker,
+                    )
+                    .padding(horizontal = WeekCenterHorizontalPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
